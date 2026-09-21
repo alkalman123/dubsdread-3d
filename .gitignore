@@ -1,2 +1,4 @@
 business/
 node_modules/
+garmin-viewer/.env
+garmin-viewer/server/.data/

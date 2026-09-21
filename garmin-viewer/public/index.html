@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<title>Alpine Log — Garmin Mountain Viewer</title>
+<meta name="description" content="Your Garmin data, seen like a mountain athlete." />
+<meta name="theme-color" content="#0f1217" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icons/icon-32.png" />
+<link rel="apple-touch-icon" href="icons/icon-180.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Alpine Log" />
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <h1>🏔️ Alpine Log <span id="modePill" class="mode-pill demo">demo</span></h1>
+    <button class="icon-btn" id="settingsBtn" aria-label="Settings">⚙️</button>
+  </header>
+
+  <main id="main">
+    <section id="view-today" class="view active"></section>
+    <section id="view-activities" class="view"></section>
+    <section id="view-trends" class="view"></section>
+    <section id="view-plan" class="view"></section>
+  </main>
+
+  <nav class="tabbar">
+    <div class="inner">
+      <button data-tab="today" class="active"><span class="ic">🏠</span>Today</button>
+      <button data-tab="activities"><span class="ic">📋</span>Activities</button>
+      <button data-tab="trends"><span class="ic">📈</span>Trends</button>
+      <button data-tab="plan"><span class="ic">🎯</span>Plan</button>
+    </div>
+  </nav>
+</div>
+
+<div class="sheet-backdrop" id="backdrop"></div>
+<div class="sheet" id="activitySheet"></div>
+<div class="sheet" id="settingsSheet"></div>
+<div class="toast" id="toast"></div>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="vendor/chartjs/chart.umd.js"></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
