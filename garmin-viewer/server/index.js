@@ -12,6 +12,9 @@ const PORT = process.env.PORT || 8123;
 
 app.use(express.json());
 
+// Render (and most PaaS hosts) poll this to know the service is alive.
+app.get('/healthz', (req, res) => res.status(200).send('ok'));
+
 const garminClient = new GarminClient();
 
 app.use('/api', createRouter(garminClient));

@@ -1,0 +1,26 @@
+# Render Blueprint — deploys garmin-viewer/ as a standalone web service.
+# In the Render dashboard: New + -> Blueprint -> pick this repo -> Apply.
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: alpine-log-garmin-viewer
+    runtime: node
+    rootDir: garmin-viewer
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      # Your own Garmin Connect login. Set these in the Render dashboard
+      # (not here) so the value never touches the repo. Leaving them unset
+      # is fine — the app runs in demo mode until they're filled in.
+      - key: GARMIN_USERNAME
+        sync: false
+      - key: GARMIN_PASSWORD
+        sync: false
+      # Optional: phrases briefings with Claude instead of the built-in
+      # template. Leave unset to use the free template.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: SYNC_CRON
+        value: "0 */2 * * *"

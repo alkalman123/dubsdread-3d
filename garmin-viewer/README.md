@@ -36,6 +36,32 @@ computer's LAN IP instead of `localhost`) in Safari or Chrome, then use
 
 By default it starts in **demo mode** — no account needed.
 
+## Deploying to Render (so it's on your phone as a real installed app)
+
+This repo includes a `render.yaml` Blueprint at the repo root, so deploy is:
+
+1. Push this repo to GitHub (already done if you're reading this from the repo).
+2. On [render.com](https://render.com), sign up/log in (GitHub login is easiest).
+3. **New +** → **Blueprint** → pick this repo → Render reads `render.yaml`
+   and proposes one service, `alpine-log-garmin-viewer`, rooted at `garmin-viewer/`.
+4. Click **Apply**. It'll deploy on the **free** plan by default.
+5. In the new service's **Environment** tab, optionally set `GARMIN_USERNAME`
+   / `GARMIN_PASSWORD` to your real Garmin Connect login — the app logs in
+   automatically on every boot when these are set. Leave them unset to run
+   in demo mode.
+6. Once deployed, Render gives you a URL like
+   `https://alpine-log-garmin-viewer.onrender.com` — open it on your phone
+   and **Add to Home Screen**.
+
+**Free plan tradeoffs:** the service spins down after 15 minutes idle, so
+opening the app after a gap takes ~30-50s to wake up, and its disk resets on
+each restart — which is why setting `GARMIN_USERNAME`/`GARMIN_PASSWORD` as
+environment variables (rather than only logging in through the in-app form)
+matters here: the app re-logs-in automatically every time it wakes up,
+instead of you having to. If the wake-up delay bothers you, switch the
+service's plan to **Starter** ($7/mo) in the Render dashboard — same
+deploy, just always-on.
+
 ### Connecting your real Garmin account
 
 Open the app → the gear icon → **Connect Garmin**, and enter your Garmin
