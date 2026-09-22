@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contact — Crux</title>
+<meta name="description" content="Get in touch with Crux about an order, a return, or a custom request.">
+<link rel="icon" type="image/png" sizes="512x512" href="img/favicon-512.png">
+<link rel="icon" type="image/png" sizes="192x192" href="img/favicon-192.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<a class="visually-hidden" href="#main">Skip to content</a>
+<div class="announce">Free standard shipping over $60 · Made to order — ships in 2–4 business days</div>
+
+<header class="site-header">
+  <div class="container">
+    <a href="index.html" class="logo">
+      <span class="mark"><svg viewBox="0 0 20 22" fill="none"><path d="M2 20.5V10C2 5 5.6 1.5 10 1.5S18 5 18 10v10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="5.5" y="8.6" width="9" height="3.1" rx="1.55" fill="currentColor"/><rect x="5.5" y="13.6" width="9" height="3.1" rx="1.55" fill="currentColor"/></svg></span>
+      CRUX
+    </a>
+    <nav class="nav-links">
+      <a href="shop.html">Shop</a>
+      <a href="about.html">About</a>
+      <a href="faq.html">FAQ</a>
+      <a href="contact.html" class="active">Contact</a>
+    </nav>
+    <div class="header-actions">
+      <a href="shop.html" class="btn btn-outline btn-sm hide-mobile">Shop now</a>
+      <button class="btn-icon" id="menuToggle" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <button class="btn-icon" data-cart-open aria-label="Open cart">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l1 13H5L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+        <span class="icon-badge" data-cart-count style="display:none;">0</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="mobile-nav" id="mobileNav" aria-hidden="true">
+  <div class="backdrop"></div>
+  <div class="panel">
+    <div class="panel-top">
+      <span class="logo"><span class="mark"><svg viewBox="0 0 20 22" fill="none"><path d="M2 20.5V10C2 5 5.6 1.5 10 1.5S18 5 18 10v10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="5.5" y="8.6" width="9" height="3.1" rx="1.55" fill="currentColor"/><rect x="5.5" y="13.6" width="9" height="3.1" rx="1.55" fill="currentColor"/></svg></span>CRUX</span>
+      <button class="btn-icon" id="mobileNavClose" aria-label="Close menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <a href="shop.html">Shop</a>
+    <a href="about.html">About</a>
+    <a href="faq.html">FAQ</a>
+    <a href="shipping-returns.html">Shipping &amp; Returns</a>
+    <a href="contact.html">Contact</a>
+  </div>
+</div>
+
+<div class="cart-drawer-root" id="cartDrawerRoot" aria-hidden="true">
+  <div class="backdrop"></div>
+  <div class="cart-drawer">
+    <div class="cart-drawer-head">
+      <h3>Your cart</h3>
+      <button class="btn-icon" id="cartDrawerClose" aria-label="Close cart">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="cart-drawer-items" id="cartDrawerItems"></div>
+    <div class="cart-drawer-foot" id="cartDrawerFoot" style="display:none;">
+      <div class="cart-subtotal-row"><span>Subtotal</span><span class="num" id="cartDrawerSubtotal">$0.00</span></div>
+      <div class="cart-ship-note" id="cartShipNote"></div>
+      <a href="checkout.html" class="btn btn-primary btn-block">Checkout</a>
+      <a href="cart.html" class="btn btn-ghost btn-block" style="justify-content:center;margin-top:10px;">View full cart</a>
+    </div>
+  </div>
+</div>
+
+<main id="main">
+
+<section class="page-hero">
+  <div class="container">
+    <div class="breadcrumbs"><a href="index.html">Home</a><span class="sep">/</span><span class="current">Contact</span></div>
+    <span class="eyebrow">Contact</span>
+    <h1>Get in touch.</h1>
+    <p>Order questions, returns, custom requests — a real person reads every message, usually within one business day.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="checkout-layout">
+      <form data-mailto-form data-mailto-subject="Message from the Crux contact page">
+        <div class="field">
+          <label for="cName">Name</label>
+          <input type="text" id="cName" name="name" required>
+        </div>
+        <div class="field">
+          <label for="cEmail">Email</label>
+          <input type="email" id="cEmail" name="email" required>
+        </div>
+        <div class="field">
+          <label for="cOrder">Order number <span class="opt">(optional)</span></label>
+          <input type="text" id="cOrder" name="order number" placeholder="RR-…">
+        </div>
+        <div class="field">
+          <label for="cMsg">Message</label>
+          <textarea id="cMsg" name="message" rows="5" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg">Send message</button>
+        <p class="muted" data-form-note style="display:none;font-size:12.5px;margin-top:12px;"></p>
+      </form>
+
+      <div>
+        <div class="order-summary-card">
+          <h3 style="margin-bottom:14px;">Other ways to reach us</h3>
+          <p style="font-size:14.5px;color:var(--ink-2);line-height:1.7;">
+            <strong style="color:var(--ink);">Email</strong><br>
+            <a href="mailto:hello@cruxsupply.example" style="color:var(--ember-dark);">hello@cruxsupply.example</a>
+          </p>
+          <p style="font-size:14.5px;color:var(--ink-2);line-height:1.7;margin-top:14px;">
+            <strong style="color:var(--ink);">Studio</strong><br>
+            Chicago, IL — a home studio, not a storefront, so please reach out by email rather than dropping by.
+          </p>
+          <p style="font-size:14.5px;color:var(--ink-2);line-height:1.7;margin-top:14px;">
+            <strong style="color:var(--ink);">Response time</strong><br>
+            Usually within one business day.
+          </p>
+          <div class="divider" style="margin:18px 0;"></div>
+          <p style="font-size:13.5px;">Order or shipping question? Check the <a href="faq.html" style="color:var(--ember-dark);">FAQ</a> or <a href="shipping-returns.html" style="color:var(--ember-dark);">shipping &amp; returns</a> page first — it might save you a wait.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="logo"><span class="mark"><svg viewBox="0 0 20 22" fill="none"><path d="M2 20.5V10C2 5 5.6 1.5 10 1.5S18 5 18 10v10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="5.5" y="8.6" width="9" height="3.1" rx="1.55" fill="currentColor"/><rect x="5.5" y="13.6" width="9" height="3.1" rx="1.55" fill="currentColor"/></svg></span>CRUX</a>
+        <p>Small-batch 3D-printed gear storage for climbers, designed and printed to order in Chicago.</p>
+        <div class="footer-newsletter">
+          <form data-mailto-form data-mailto-subject="Add me to the Crux list">
+            <input type="email" name="email" placeholder="you@email.com" required aria-label="Email address">
+            <button class="btn btn-ember btn-sm" type="submit">Join</button>
+          </form>
+          <p class="muted" data-form-note style="display:none;font-size:12px;margin-top:8px;"></p>
+        </div>
+      </div>
+      <div>
+        <h4>Shop</h4>
+        <ul>
+          <li><a href="product-rock-ring.html">The Rock Ring</a></li>
+          <li><a href="product-big-biner.html">The Big Biner</a></li>
+          <li><a href="product-bottle-adapter.html">Bottle Adapter</a></li>
+          <li><a href="product-gift-duo.html">Gift Duo</a></li>
+          <li><a href="product-felt-pads.html">Felt Base Pads</a></li>
+          <li><a href="shop.html">All products</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Help</h4>
+        <ul>
+          <li><a href="faq.html">FAQ</a></li>
+          <li><a href="shipping-returns.html">Shipping &amp; returns</a></li>
+          <li><a href="contact.html">Contact us</a></li>
+          <li><a href="cart.html">Your cart</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Studio</h4>
+        <ul>
+          <li><a href="about.html">Our story</a></li>
+          <li><a href="mailto:hello@cruxsupply.example">hello@cruxsupply.example</a></li>
+          <li><span>Chicago, IL</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© <span data-year></span> Crux Supply Co. Not affiliated with any climbing-gear manufacturer or safety-equipment standard.</span>
+      <div class="legal-links">
+        <a href="shipping-returns.html">Returns</a>
+        <a href="faq.html">FAQ</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="js/store-data.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>

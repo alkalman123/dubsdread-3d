@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Rock Ring — Crux</title>
+<meta name="description" content="A freestanding, 3D-printed gear valet with two open ports. Printed in PLA+ in six colorways. 127×114×64mm, approx. 180g.">
+<link rel="icon" type="image/png" sizes="512x512" href="img/favicon-512.png">
+<link rel="icon" type="image/png" sizes="192x192" href="img/favicon-192.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">{"imports": {"three": "./js/vendor/three.module.min.js"}}</script>
+</head>
+<body>
+<a class="visually-hidden" href="#main">Skip to content</a>
+<div class="announce">Free standard shipping over $60 · Made to order — ships in 2–4 business days</div>
+
+<header class="site-header">
+  <div class="container">
+    <a href="index.html" class="logo">
+      <span class="mark"><svg viewBox="0 0 20 22" fill="none"><path d="M2 20.5V10C2 5 5.6 1.5 10 1.5S18 5 18 10v10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="5.5" y="8.6" width="9" height="3.1" rx="1.55" fill="currentColor"/><rect x="5.5" y="13.6" width="9" height="3.1" rx="1.55" fill="currentColor"/></svg></span>
+      CRUX
+    </a>
+    <nav class="nav-links">
+      <a href="shop.html" class="active">Shop</a>
+      <a href="about.html">About</a>
+      <a href="faq.html">FAQ</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <div class="header-actions">
+      <a href="shop.html" class="btn btn-outline btn-sm hide-mobile">Shop now</a>
+      <button class="btn-icon" id="menuToggle" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <button class="btn-icon" data-cart-open aria-label="Open cart">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l1 13H5L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+        <span class="icon-badge" data-cart-count style="display:none;">0</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="mobile-nav" id="mobileNav" aria-hidden="true">
+  <div class="backdrop"></div>
+  <div class="panel">
+    <div class="panel-top">
+      <span class="logo"><span class="mark"><svg viewBox="0 0 20 22" fill="none"><path d="M2 20.5V10C2 5 5.6 1.5 10 1.5S18 5 18 10v10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="5.5" y="8.6" width="9" height="3.1" rx="1.55" fill="currentColor"/><rect x="5.5" y="13.6" width="9" height="3.1" rx="1.55" fill="currentColor"/></svg></span>CRUX</span>
+      <button class="btn-icon" id="mobileNavClose" aria-label="Close menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <a href="shop.html">Shop</a>
+    <a href="about.html">About</a>
+    <a href="faq.html">FAQ</a>
+    <a href="shipping-returns.html">Shipping &amp; Returns</a>
+    <a href="contact.html">Contact</a>
+  </div>
+</div>
+
+<div class="cart-drawer-root" id="cartDrawerRoot" aria-hidden="true">
+  <div class="backdrop"></div>
+  <div class="cart-drawer">
+    <div class="cart-drawer-head">
+      <h3>Your cart</h3>
+      <button class="btn-icon" id="cartDrawerClose" aria-label="Close cart">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="cart-drawer-items" id="cartDrawerItems"></div>
+    <div class="cart-drawer-foot" id="cartDrawerFoot" style="display:none;">
+      <div class="cart-subtotal-row"><span>Subtotal</span><span class="num" id="cartDrawerSubtotal">$0.00</span></div>
+      <div class="cart-ship-note" id="cartShipNote"></div>
+      <a href="checkout.html" class="btn btn-primary btn-block">Checkout</a>
+      <a href="cart.html" class="btn btn-ghost btn-block" style="justify-content:center;margin-top:10px;">View full cart</a>
+    </div>
+  </div>
+</div>
+
+<main id="main">
+<section class="section-tight">
+  <div class="container">
+    <div class="breadcrumbs">
+      <a href="index.html">Home</a><span class="sep">/</span>
+      <a href="shop.html">Shop</a><span class="sep">/</span>
+      <span class="current">The Rock Ring</span>
+    </div>
+
+    <div class="pdp">
+      <div class="pdp-gallery">
+        <div class="filter-row gallery-tabs" role="group" aria-label="Gallery view">
+          <button type="button" class="filter-chip active" data-gallery-tab="photos">Photos</button>
+          <button type="button" class="filter-chip" data-gallery-tab="3d">3D View</button>
+        </div>
+        <div class="main-frame" id="galleryPhotoFrame">
+          <img id="pdpMainImg" src="img/rockring-rock-hero.jpg" alt="The Rock Ring">
+        </div>
+        <div class="main-frame" id="gallery3DFrame" style="display:none;">
+          <div id="viewer3D" style="width:100%;height:100%;"></div>
+          <span class="viewer-hint">Drag to rotate · Scroll to zoom</span>
+        </div>
+        <div class="pdp-thumbs">
+          <button type="button" data-angle="hero" class="active"><img src="img/rockring-rock-hero.jpg" alt="Angle view"></button>
+          <button type="button" data-angle="front"><img src="img/rockring-rock-front.jpg" alt="Front view"></button>
+          <button type="button" data-angle="profile"><img src="img/rockring-rock-profile.jpg" alt="Profile view"></button>
+          <button type="button" data-angle="detail"><img src="img/rockring-rock-detail.jpg" alt="Detail view"></button>
+        </div>
+      </div>
+
+      <div class="pdp-info">
+        <div class="badges-row">
+          <span class="badge badge-ember">Best seller</span>
+          <span class="badge">V1 release</span>
+        </div>
+        <h1>The Rock Ring</h1>
+        <p class="muted" style="margin-top:6px;font-weight:650;">Freestanding gear valet</p>
+        <div class="price-row">
+          <span class="price num">$34.00</span>
+        </div>
+        <p class="desc">A dome-topped block that sits on its own base — no wall, no hardware. Two open ports run straight through it so a chalk bag drawstring, a keyring, a folded pair of sunglasses or a watch have somewhere to live besides the bottom of your pack.</p>
+
+        <div class="option-block">
+          <div class="opt-title"><span>Color</span><span id="selectedColorName">Rock</span></div>
+          <div class="swatch-picker" id="swatchPicker">
+            <button type="button" class="swatch-btn" data-color-key="rock" style="background:#63707c;" aria-label="Rock"></button>
+            <button type="button" class="swatch-btn" data-color-key="moss" style="background:#55805a;" aria-label="Moss"></button>
+            <button type="button" class="swatch-btn" data-color-key="ice" style="background:#4a90c2;" aria-label="Ice"></button>
+            <button type="button" class="swatch-btn" data-color-key="sand" style="background:#c9a86a;" aria-label="Sand"></button>
+            <button type="button" class="swatch-btn" data-color-key="ink" style="background:#202326;" aria-label="Ink"></button>
+            <button type="button" class="swatch-btn" data-color-key="ember" style="background:#d85c2a;" aria-label="Ember"></button>
+          </div>
+        </div>
+
+        <div class="buy-row">
+          <div class="qty-stepper" id="pdpQty">
+            <button type="button" data-step="dec" aria-label="Decrease quantity">−</button>
+            <input type="text" inputmode="numeric" value="1" readonly aria-label="Quantity">
+            <button type="button" data-step="inc" aria-label="Increase quantity">+</button>
+          </div>
+          <button type="button" id="addToCartBtn" class="btn btn-primary">Add to cart</button>
+          <button type="button" id="buyNowBtn" class="btn btn-ember">Buy now</button>
+        </div>
+
+        <ul class="pdp-trust">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Made to order — ships in 2–4 business days</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> 30-day returns on unused, undamaged prints</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Free standard shipping over $60</li>
+        </ul>
+
+        <div class="safety-note">
+          <b>Not climbing protection</b>
+          The Rock Ring is a gear-storage accessory for your bench, desk or van — it is not rated climbing equipment. Never use it as an anchor, belay point, or any other load-bearing part of a climbing system.
+        </div>
+
+        <div class="accordion" id="details">
+          <details open>
+            <summary>Details &amp; specs<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></summary>
+            <div class="panel">
+              <table class="spec-table">
+                <tr><th>Dimensions</th><td>127 × 114 × 64 mm (5.0 × 4.5 × 2.5 in), H×W×D</td></tr>
+                <tr><th>Weight</th><td>Approx. 180 g (0.4 lb) — varies slightly by color/infill</td></tr>
+                <tr><th>Material</th><td>PLA+, matte finish, visible layer lines</td></tr>
+                <tr><th>Lower port</th><td>~90 × 27 mm, open through the full 64mm depth</td></tr>
+                <tr><th>Upper port</th><td>~60 × 24 mm, open through the full 64mm depth</td></tr>
+                <tr><th>Base</th><td>Flat, freestanding — no mounting hardware required</td></tr>
+                <tr><th>Colorways</th><td>Rock, Moss, Ice, Sand, Ink, Ember</td></tr>
+              </table>
+              <div class="spec-image"><img src="img/rockring-dimensions.jpg" alt="Dimension diagram: 127mm tall, 114.3mm wide, 63.5mm deep"></div>
+            </div>
+          </details>
+          <details>
+            <summary>Material &amp; care<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></summary>
+            <div class="panel">
+              <p>Printed in PLA+, a plant-based bioplastic that's tougher and less brittle than standard PLA. It keeps its shape well at room temperature but will soften above roughly 50–60°C (122–140°F) — so it's happy on a desk or gear bench, less happy on a hot car dashboard in July.</p>
+              <ul>
+                <li>Wipe clean with a dry or slightly damp cloth</li>
+                <li>Indoor use only</li>
+                <li>Keep out of prolonged direct summer sun or hot vehicle interiors</li>
+                <li>Not dishwasher or microwave safe</li>
+              </ul>
+            </div>
+          </details>
+          <details>
+            <summary>Shipping &amp; returns<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></summary>
+            <div class="panel">
+              <p>Every Rock Ring is printed to order, so please allow 2–4 business days before it ships. Standard shipping runs 3–6 business days after that (free over $60); expedited shipping is available at checkout.</p>
+              <p>Not the right fit? Return an unused, undamaged print within 30 days for a refund. Full details on the <a href="shipping-returns.html" style="color:var(--ember-dark);text-decoration:underline;">shipping &amp; returns page</a>.</p>
+            </div>
+          </details>
+          <details>
+            <summary>Is this made for climbing gear specifically?<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></summary>
+            <div class="panel">
+              <p>It's sized and shaped for the small stuff that piles up around a climbing habit — a chalk bag's drawstring, a keyring, folded sunglasses, a watch — not for racking hardware like quickdraws or cams. Think gear-bench valet, not a gear loop.</p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--paper-dim);">
+  <div class="container">
+    <div class="section-head center">
+      <span class="eyebrow">More from Crux</span>
+      <h2>Pairs well with</h2>
+    </div>
+    <div class="grid grid-3">
+      <a href="product-gift-duo.html" class="product-card">
+        <div class="thumb"><div class="badges"><span class="badge badge-dark">Bundle</span></div><img src="img/rockring-ember-hero.jpg" alt="Rock Ring Gift Duo"></div>
+        <div class="body"><div class="title-row"><h3>Gift Duo</h3><span class="price">$62.00</span></div><p class="desc">Two Rock Rings, any two colorways.</p></div>
+      </a>
+      <a href="product-felt-pads.html" class="product-card">
+        <div class="thumb"><div class="badges"><span class="badge">Add-on</span></div><img src="img/rockring-sand-profile.jpg" alt="Felt base pad set"></div>
+        <div class="body"><div class="title-row"><h3>Felt Base Pads</h3><span class="price">$5.00</span></div><p class="desc">Four self-adhesive pads for the base.</p></div>
+      </a>
+      <a href="product-big-biner.html" class="product-card">
+        <div class="thumb"><div class="badges"><span class="badge badge-ember">New</span></div><img src="img/bigbiner-rock-hero.jpg" alt="The Big Biner wall rack"></div>
+        <div class="body"><div class="title-row"><h3>The Big Biner</h3><span class="price">$29.00</span></div><p class="desc">Wall rack for the rest of your gear.</p></div>
+      </a>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="logo"><span class="mark"><svg viewBox="0 0 20 22" fill="none"><path d="M2 20.5V10C2 5 5.6 1.5 10 1.5S18 5 18 10v10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="5.5" y="8.6" width="9" height="3.1" rx="1.55" fill="currentColor"/><rect x="5.5" y="13.6" width="9" height="3.1" rx="1.55" fill="currentColor"/></svg></span>CRUX</a>
+        <p>Small-batch 3D-printed gear storage for climbers, designed and printed to order in Chicago.</p>
+        <div class="footer-newsletter">
+          <form data-mailto-form data-mailto-subject="Add me to the Crux list">
+            <input type="email" name="email" placeholder="you@email.com" required aria-label="Email address">
+            <button class="btn btn-ember btn-sm" type="submit">Join</button>
+          </form>
+          <p class="muted" data-form-note style="display:none;font-size:12px;margin-top:8px;"></p>
+        </div>
+      </div>
+      <div>
+        <h4>Shop</h4>
+        <ul>
+          <li><a href="product-rock-ring.html">The Rock Ring</a></li>
+          <li><a href="product-big-biner.html">The Big Biner</a></li>
+          <li><a href="product-bottle-adapter.html">Bottle Adapter</a></li>
+          <li><a href="product-gift-duo.html">Gift Duo</a></li>
+          <li><a href="product-felt-pads.html">Felt Base Pads</a></li>
+          <li><a href="shop.html">All products</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Help</h4>
+        <ul>
+          <li><a href="faq.html">FAQ</a></li>
+          <li><a href="shipping-returns.html">Shipping &amp; returns</a></li>
+          <li><a href="contact.html">Contact us</a></li>
+          <li><a href="cart.html">Your cart</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Studio</h4>
+        <ul>
+          <li><a href="about.html">Our story</a></li>
+          <li><a href="mailto:hello@cruxsupply.example">hello@cruxsupply.example</a></li>
+          <li><span>Chicago, IL</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© <span data-year></span> Crux Supply Co. Not affiliated with any climbing-gear manufacturer or safety-equipment standard.</span>
+      <div class="legal-links">
+        <a href="shipping-returns.html">Returns</a>
+        <a href="faq.html">FAQ</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="js/store-data.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/ui.js"></script>
+<script type="module">
+  import { mountModelViewer } from './js/model-viewer.js';
+  window.mountModelViewer = mountModelViewer;
+</script>
+<script>
+(function () {
+  const params = new URLSearchParams(location.search);
+  const requested = params.get('color');
+  let selected = COLORWAYS.some((c) => c.key === requested) ? requested : 'rock';
+  let activeAngle = 'hero';
+
+  const mainImg = document.getElementById('pdpMainImg');
+  const thumbBtns = document.querySelectorAll('.pdp-thumbs button');
+  const swatchBtns = document.querySelectorAll('.swatch-btn');
+  const colorLabel = document.getElementById('selectedColorName');
+
+  let viewer = null;
+  const tabBtns = document.querySelectorAll('[data-gallery-tab]');
+  const photoFrame = document.getElementById('galleryPhotoFrame');
+  const frame3D = document.getElementById('gallery3DFrame');
+  const viewerContainer = document.getElementById('viewer3D');
+
+  function ensureViewer() {
+    if (viewer || !window.mountModelViewer) return;
+    const loading = document.createElement('div');
+    loading.className = 'viewer-loading';
+    loading.textContent = 'Loading 3D model…';
+    viewerContainer.appendChild(loading);
+    viewer = window.mountModelViewer(viewerContainer, {
+      stlUrl: 'models/rock-ring.stl',
+      color: colorway(selected).hex,
+      onReady: () => loading.remove(),
+      onError: () => { loading.textContent = 'Could not load the 3D model.'; },
+    });
+  }
+
+  tabBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      tabBtns.forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      const is3D = btn.getAttribute('data-gallery-tab') === '3d';
+      photoFrame.style.display = is3D ? 'none' : '';
+      frame3D.style.display = is3D ? '' : 'none';
+      if (is3D) ensureViewer();
+    });
+  });
+
+  function render() {
+    const set = rockRingImages(selected);
+    const c = colorway(selected);
+    mainImg.src = set[activeAngle];
+    mainImg.alt = `The Rock Ring in ${c.name}, ${activeAngle} view`;
+    thumbBtns.forEach((b) => {
+      const angle = b.getAttribute('data-angle');
+      b.querySelector('img').src = set[angle];
+      b.classList.toggle('active', angle === activeAngle);
+    });
+    swatchBtns.forEach((b) => b.classList.toggle('selected', b.getAttribute('data-color-key') === selected));
+    colorLabel.textContent = c.name;
+    if (viewer) viewer.setColor(c.hex);
+  }
+
+  swatchBtns.forEach((b) => b.addEventListener('click', () => { selected = b.getAttribute('data-color-key'); render(); }));
+  thumbBtns.forEach((b) => b.addEventListener('click', () => { activeAngle = b.getAttribute('data-angle'); render(); }));
+  render();
+
+  const qty = initQtyStepper(document.getElementById('pdpQty'), { min: 1, max: 10 });
+
+  function currentItem() {
+    const c = colorway(selected);
+    return {
+      key: `rock-ring:${selected}`,
+      productId: 'rock-ring',
+      name: 'The Rock Ring',
+      variant: c.name,
+      variantHex: c.hex,
+      price: PRODUCTS['rock-ring'].price,
+      qty: qty.get(),
+      image: rockRingImages(selected).hero,
+    };
+  }
+
+  document.getElementById('addToCartBtn').addEventListener('click', () => addToCartAndNotify(currentItem()));
+  document.getElementById('buyNowBtn').addEventListener('click', () => {
+    const stripeLink = getStripeLink('rock-ring');
+    if (stripeLink) { window.location.href = stripeLink; return; }
+    cartAdd(currentItem());
+    window.location.href = 'checkout.html';
+  });
+})();
+</script>
+</body>
+</html>

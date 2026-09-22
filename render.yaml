@@ -1,6 +1,15 @@
-# Render Blueprint — deploys garmin-viewer/ as a standalone web service.
-# In the Render dashboard: New + -> Blueprint -> pick this repo -> Apply.
-# Docs: https://render.com/docs/blueprint-spec
+# Render Blueprint — deploys garmin-viewer/ and crux-shop/ as separate
+# services from this one repo. In the Render dashboard: New + -> Blueprint
+# -> pick this repo -> Apply. Docs: https://render.com/docs/blueprint-spec
+#
+# The crux-shop entry below is a best-effort static-site blueprint — this
+# session's network egress to render.com was blocked, so its exact syntax
+# (`runtime: static` vs an older `env: static`) could not be verified
+# against Render's current docs before writing it. If "Apply" rejects it,
+# skip the blueprint for that service and use the manual path instead:
+# Render dashboard -> New + -> Static Site -> connect this repo -> set
+# Root Directory to crux-shop, Build Command to blank/echo, Publish
+# Directory to "." — see business/RENDER-DEPLOYMENT.md for full steps.
 services:
   - type: web
     name: alpine-log-garmin-viewer
@@ -24,3 +33,16 @@ services:
         sync: false
       - key: SYNC_CRON
         value: "0 */2 * * *"
+
+  # Crux — the climbing-gear storefront. Static site, no build step.
+  - type: web
+    name: crux-shop
+    runtime: static
+    rootDir: crux-shop
+    buildCommand: "true"
+    staticPublishPath: .
+    pullRequestPreviewsEnabled: false
+    routes:
+      - type: rewrite
+        source: /404
+        destination: /404.html
