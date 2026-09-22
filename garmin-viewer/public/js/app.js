@@ -325,13 +325,116 @@ function switchTab(tab) {
 }
 $$('nav.tabbar button').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
 
+const TAB_LABEL = { today: 'Today', activities: 'Activities', trends: 'Trends', sleep: 'Sleep', body: 'Body', plan: 'Plan' };
+
 function render(tab) {
-  if (tab === 'today') renderToday();
-  else if (tab === 'activities') renderActivities();
-  else if (tab === 'trends') renderTrends();
-  else if (tab === 'sleep') renderSleep();
-  else if (tab === 'body') renderBody();
-  else if (tab === 'plan') renderPlan();
+  const largeTitle = $('#largeTitle');
+  if (largeTitle) largeTitle.textContent = TAB_LABEL[tab] || '';
+  $('#main').scrollTop = 0;
+  $('header.topbar').classList.remove('condensed');
+  if (tab === 'today') return renderToday();
+  if (tab === 'activities') return renderActivities();
+  if (tab === 'trends') return renderTrends();
+  if (tab === 'sleep') return renderSleep();
+  if (tab === 'body') return renderBody();
+  if (tab === 'plan') return renderPlan();
+  return Promise.resolve();
+}
+
+// Scroll-aware header: condenses (gains a shadow) once the large title has
+// scrolled out of the way. One listener for every tab, since #main is the
+// single shared scroll container regardless of which .view is active.
+$('#main').addEventListener(
+  'scroll',
+  () => {
+    $('header.topbar').classList.toggle('condensed', $('#main').scrollTop > 28);
+  },
+  { passive: true }
+);
+
+// Pull-to-refresh: only meaningful on the three tabs whose content actually
+// changes between visits without user action (fresh Garmin/import data).
+// Rubber-banded (finger travel is damped, not tracked 1:1) so a 300px drag
+// doesn't yank the indicator 300px down, then a real reload of the current
+// tab once the ~50px commit threshold is released -- render() now returns
+// the awaited renderX() promise specifically so this can know when to stop
+// spinning instead of guessing with a timeout.
+const PULL_REFRESH_TABS = new Set(['today', 'activities', 'trends']);
+function wirePullToRefresh() {
+  const main = $('#main');
+  const indicator = $('#pullIndicator');
+  if (!main || !indicator) return;
+  const THRESHOLD = 50;
+  const MAX_PULL = 70;
+  let startY = 0;
+  let dy = 0;
+  let tracking = false;
+  let refreshing = false;
+
+  main.addEventListener(
+    'touchstart',
+    (e) => {
+      if (refreshing || !PULL_REFRESH_TABS.has(state.tab)) return;
+      if (main.scrollTop > 0) return;
+      tracking = true;
+      startY = e.touches[0].clientY;
+      dy = 0;
+    },
+    { passive: true }
+  );
+
+  main.addEventListener(
+    'touchmove',
+    (e) => {
+      if (!tracking || refreshing) return;
+      const raw = e.touches[0].clientY - startY;
+      if (raw <= 0) {
+        dy = 0;
+        indicator.classList.remove('pulling', 'ready');
+        indicator.style.transform = '';
+        return;
+      }
+      if (main.scrollTop > 0) {
+        tracking = false;
+        return;
+      }
+      e.preventDefault();
+      dy = Math.min(MAX_PULL, raw * 0.45);
+      indicator.classList.add('pulling');
+      indicator.classList.toggle('ready', dy >= THRESHOLD);
+      indicator.style.transform = `translateY(${dy}px)`;
+    },
+    { passive: false }
+  );
+
+  main.addEventListener('touchend', async () => {
+    if (!tracking || refreshing) {
+      tracking = false;
+      return;
+    }
+    tracking = false;
+    const shouldRefresh = dy >= THRESHOLD;
+    if (!shouldRefresh) {
+      indicator.classList.remove('pulling', 'ready');
+      indicator.style.transform = '';
+      return;
+    }
+    refreshing = true;
+    if (navigator.vibrate) navigator.vibrate(8);
+    indicator.classList.remove('ready');
+    indicator.classList.add('spinning');
+    indicator.style.transform = `translateY(${THRESHOLD}px)`;
+    try {
+      await refreshStatus();
+      await render(state.tab);
+    } finally {
+      // A brief settle so a very fast refresh doesn't just flash the spinner.
+      await new Promise((r) => setTimeout(r, 350));
+      indicator.classList.remove('pulling', 'ready', 'spinning');
+      indicator.style.transform = '';
+      refreshing = false;
+    }
+  });
 }
 
 // -------------------------------------------------------------- status ----
@@ -2087,6 +2190,7 @@ function initStaticIcons() {
 
 (async function init() {
   initStaticIcons();
+  wirePullToRefresh();
   const status = await refreshStatus();
   await restoreImportIfNeeded(status);
   await restoreContextIfNeeded();
