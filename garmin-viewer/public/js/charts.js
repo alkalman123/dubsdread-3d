@@ -133,6 +133,44 @@ export function gaugeArc(canvas, value, max, color) {
   });
 }
 
+// A minimal inline trend line for a stat tile: no axes, no gridlines, no
+// tooltip chrome -- just the shape of the last N days, end-anchored like
+// the full-size lineChart, so a glance tells you "trending up/down" without
+// competing with the big number it sits under.
+export function sparkline(canvas, data, color) {
+  return makeChart(canvas, {
+    type: 'line',
+    data: {
+      labels: data.map((_, i) => i),
+      datasets: [
+        {
+          data,
+          borderColor: color,
+          backgroundColor: `${color}22`,
+          borderWidth: 1.5,
+          pointRadius: endMarkerRadii(data),
+          pointBackgroundColor: color,
+          pointBorderWidth: 0,
+          tension: 0.35,
+          fill: true,
+          spanGaps: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 500 },
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: {
+        x: { display: false },
+        y: { display: false },
+      },
+      elements: { point: { radius: 0 } },
+    },
+  });
+}
+
 // Bedtime/wake consistency: one floating bar per night spanning bedtime to
 // wake time, on a "clock" axis anchored at 6pm (so a night crossing
 // midnight is just one contiguous bar instead of wrapping). ranges are

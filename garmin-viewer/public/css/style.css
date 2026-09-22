@@ -158,6 +158,16 @@ main {
 .view.active { display: block; animation: fade 0.18s ease; }
 @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
+/* ---- scroll-reveal ------------------------------------------------------
+   Cards start slightly lower + transparent, then rise/fade in as they enter
+   the viewport (see revealCards() in app.js), staggered by a per-element
+   transition-delay set from JS. The global prefers-reduced-motion rule
+   near the top of this file already zeroes every transition-duration, so
+   a reduced-motion visitor just gets the end state with no extra rule
+   needed here. */
+.reveal { opacity: 0; transform: translateY(18px) scale(0.985); transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+.reveal.in-view { opacity: 1; transform: none; }
+
 h2.section-title {
   font-size: 11px;
   text-transform: uppercase;
@@ -255,6 +265,42 @@ h2.section-title:first-child { margin-top: 6px; }
 .ring-center .rv { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
 .ring-center .ru { font-size: 12px; font-weight: 650; color: var(--muted); margin-left: 1px; }
 .ring-lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 650; margin-top: 6px; }
+
+/* ---- hero readiness ring (Today) --------------------------------------- */
+.hero-ring-card {
+  position: relative;
+  background: radial-gradient(600px 320px at 50% -20%, rgba(79, 163, 224, 0.16), transparent 65%), var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 20px;
+  padding: 22px 18px 18px;
+  margin-bottom: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+}
+.hero-ring-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Cg fill='none' stroke='%234fa3e0' stroke-opacity='0.10' stroke-width='1'%3E%3Cpath d='M-10 170 L60 90 L110 130 L170 40 L230 100 L310 20'/%3E%3Cpath d='M-10 190 L60 120 L110 155 L170 75 L230 130 L310 55'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: bottom right;
+  background-size: 70% auto;
+  opacity: 0.8;
+  pointer-events: none;
+}
+.hero-ring-top { display: flex; align-items: center; justify-content: space-between; position: relative; }
+.hero-ring-kicker { font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); font-weight: 800; }
+.hero-ring-status { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--rule); }
+.hero-ring-body { display: flex; align-items: center; gap: 18px; margin-top: 10px; position: relative; }
+.hero-ring-canvas-wrap { position: relative; width: 148px; height: 148px; flex-shrink: 0; }
+.hero-ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.hero-ring-center .v { font-size: 40px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+.hero-ring-center .o { font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 2px; }
+.hero-ring-facts { flex: 1; display: flex; flex-direction: column; gap: 9px; }
+.hero-fact { display: flex; align-items: baseline; justify-content: space-between; font-size: 12.5px; border-bottom: 1px solid var(--rule-soft); padding-bottom: 8px; }
+.hero-fact:last-child { border-bottom: none; padding-bottom: 0; }
+.hero-fact .k { color: var(--ink2); font-weight: 600; }
+.hero-fact .v { font-weight: 800; font-size: 14px; }
 
 .stat-row {
   display: grid;
@@ -378,7 +424,6 @@ h2.section-title:first-child { margin-top: 6px; }
   height: 273px;
   display: block;
   filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.4));
-  transform: perspective(900px) rotateY(-7deg);
 }
 .figureLegend { display: flex; gap: 16px; margin-top: 6px; }
 .figureLegend span { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #7fa3b2; font-weight: 650; }
@@ -564,6 +609,37 @@ nav.tabbar button.active .ic { background: var(--accent-soft); }
 
 .chart-wrap { position: relative; height: 150px; margin: 10px 0 6px; }
 .chart-wrap.tall { height: 190px; }
+.chart-wrap.short { height: 80px; }
+
+/* ---- delta pills (week-over-week) -------------------------------------- */
+.delta { display: inline-flex; align-items: center; gap: 2px; font-size: 11.5px; font-weight: 800; padding: 1px 7px; border-radius: 999px; margin-left: 6px; }
+.delta.up { color: var(--moss); background: rgba(111, 174, 112, 0.14); }
+.delta.down { color: var(--red); background: rgba(227, 90, 72, 0.14); }
+.delta.flat { color: var(--muted); background: rgba(255, 255, 255, 0.06); }
+
+/* ---- stat tile with an inline sparkline --------------------------------- */
+.stat-tile.spark { text-align: left; padding: 12px 12px 10px; }
+.stat-tile.spark .val { font-size: 17px; }
+.stat-tile.spark .spark-canvas-wrap { height: 26px; margin-top: 6px; }
+
+/* ---- training-consistency heatmap (contribution-grid style) ------------ */
+.heatmap-wrap { overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.heatmap-wrap::-webkit-scrollbar { display: none; }
+.heatmap-grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 1fr); gap: 3px; width: max-content; padding: 4px 2px; }
+.heatmap-cell { width: 12px; height: 12px; border-radius: 3px; background: rgba(255, 255, 255, 0.06); }
+.heatmap-legend { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted); margin-top: 8px; justify-content: flex-end; }
+.heatmap-legend .heatmap-cell { width: 9px; height: 9px; }
+
+/* ---- 3D body figure: pointer-driven tilt -------------------------------
+   .figureWrap sets --tx/--ty from a pointermove listener in app.js; the
+   transform reads them with a safe default so the figure still renders
+   correctly (a fixed, gentle angle) before any pointer event ever fires,
+   and on touch devices that never send pointermove at all. */
+.figureWrap { --tx: -7deg; --ty: 2deg; perspective: 900px; }
+.bodyFigure {
+  transform: perspective(900px) rotateY(var(--tx)) rotateX(var(--ty));
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
 .chart-title {
   font-size: 12.5px;
   font-weight: 750;

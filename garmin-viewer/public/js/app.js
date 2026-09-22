@@ -1,5 +1,5 @@
 import { api } from './api.js';
-import { lineChart, barChart, gaugeArc, stackedBarChart, sleepConsistencyChart } from './charts.js';
+import { lineChart, barChart, gaugeArc, stackedBarChart, sleepConsistencyChart, sparkline } from './charts.js';
 import { importStore } from './importStore.js';
 import { contextStore } from './contextStore.js';
 
@@ -160,6 +160,42 @@ function errorCard(err) {
   return `<div class="card"><b style="color:var(--red)">Couldn't load this.</b><div class="hint">${err.message || err}</div></div>`;
 }
 
+// Staggered scroll-reveal: called once at the end of each render*() function,
+// right after its innerHTML lands. Cards already on-screen (the top of a
+// freshly-switched tab) reveal almost immediately in a quick cascade; cards
+// further down wait for IntersectionObserver to say they've scrolled into
+// view. `data-revealed` guards against double-wiring the same element if a
+// render function re-runs (range-chip clicks, filter changes, etc.).
+function revealCards(container) {
+  if (!container) return;
+  const els = Array.from(container.querySelectorAll('.card, .ic, .ring-tile, .score-panel, .verdict, .scanner, .hero-ring-card'));
+  if (!els.length) return;
+  if (!('IntersectionObserver' in window)) {
+    els.forEach((el) => el.classList.add('in-view'));
+    return;
+  }
+  els.forEach((el, i) => {
+    if (el.dataset.revealed) return;
+    el.dataset.revealed = '1';
+    el.classList.add('reveal');
+    el.style.transitionDelay = `${Math.min(i * 50, 300)}ms`;
+  });
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in-view');
+          io.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.1, rootMargin: '0px 0px -30px 0px' }
+  );
+  els.forEach((el) => {
+    if (!el.classList.contains('in-view')) io.observe(el);
+  });
+}
+
 // ---------------------------------------------------------------- tabs ----
 
 function switchTab(tab) {
@@ -234,6 +270,12 @@ function scorePanelHtml(sc) {
 
 // --------------------------------------------------------------- Today ----
 
+function readinessTier(score) {
+  if (score >= 70) return { label: 'Strong', color: '#6fae70' };
+  if (score >= 40) return { label: 'Building', color: '#d6bb85' };
+  return { label: 'Recover', color: '#e35a48' };
+}
+
 async function renderToday() {
   const view = $('#view-today');
   view.innerHTML = skeletonCards(1) + skeletonCards(2);
@@ -242,7 +284,7 @@ async function renderToday() {
     const isMorning = hour < 15;
     const [briefing, wellnessRes, actsRes, insightsRes] = await Promise.all([
       isMorning ? api.briefingMorning() : api.briefingEvening(),
-      api.wellness(2),
+      api.wellness(14),
       api.activities(5),
       api.insights(),
     ]);
@@ -259,20 +301,43 @@ async function renderToday() {
         <p>${briefing.text}</p>
       </div>
 
-      <h2 class="section-title">Today's Numbers</h2>
-      <div class="ring-row">
-        <div class="ring-tile">
-          <div class="ring-canvas-wrap"><canvas id="bbRing"></canvas><div class="ring-center"><div class="rv">${today.bodyBatteryHigh ?? '–'}</div></div></div>
-          <div class="ring-lbl">Body Battery</div>
+      <h2 class="section-title">Today's Readiness</h2>
+      ${(() => {
+        const r = plan?.readiness;
+        const tier = readinessTier(r?.score ?? 0);
+        return `
+      <div class="hero-ring-card">
+        <div class="hero-ring-top">
+          <div class="hero-ring-kicker">Overall readiness</div>
+          <div class="hero-ring-status" style="color:${tier.color};border-color:${tier.color}55;background:${tier.color}18">${tier.label}</div>
         </div>
-        <div class="ring-tile">
-          <div class="ring-canvas-wrap"><canvas id="sleepRing"></canvas><div class="ring-center"><div class="rv">${today.sleepHours ?? '–'}<span class="ru">h</span></div></div></div>
-          <div class="ring-lbl">Sleep</div>
+        <div class="hero-ring-body">
+          <div class="hero-ring-canvas-wrap">
+            <canvas id="heroReadinessRing"></canvas>
+            <div class="hero-ring-center">
+              <div class="v num">${r?.score ?? '–'}</div>
+              <div class="o">/ 100</div>
+            </div>
+          </div>
+          <div class="hero-ring-facts">
+            <div class="hero-fact"><span class="k">Sleep score</span><span class="v num">${r?.factors?.sleepScore ?? '–'}</span></div>
+            <div class="hero-fact"><span class="k">Body battery</span><span class="v num">${r?.factors?.bodyBatteryHigh ?? today.bodyBatteryHigh ?? '–'}</span></div>
+            <div class="hero-fact"><span class="k">Resting HR</span><span class="v num">${r?.factors?.restingHR ?? today.restingHR ?? '–'} bpm</span></div>
+          </div>
         </div>
-      </div>
+      </div>`;
+      })()}
       <div class="stat-row two">
-        <div class="stat-tile"><div class="val">${today.restingHR ?? '–'}</div><div class="lbl">Resting HR</div></div>
-        <div class="stat-tile"><div class="val">${today.steps != null ? (today.steps / 1000).toFixed(1) + 'k' : '–'}</div><div class="lbl">Steps</div></div>
+        <div class="stat-tile spark">
+          <div class="val num">${today.sleepHours ?? '–'}<span style="font-size:12px">h</span></div>
+          <div class="lbl">Sleep last night</div>
+          <div class="spark-canvas-wrap"><canvas id="sleepSpark"></canvas></div>
+        </div>
+        <div class="stat-tile spark">
+          <div class="val num">${today.steps != null ? (today.steps / 1000).toFixed(1) + 'k' : '–'}</div>
+          <div class="lbl">Steps</div>
+          <div class="spark-canvas-wrap"><canvas id="stepsSpark"></canvas></div>
+        </div>
       </div>
 
       <h2 class="section-title">Today's Plan</h2>
@@ -294,11 +359,13 @@ async function renderToday() {
     `;
     $('#planPreviewCard').addEventListener('click', () => switchTab('plan'));
     renderActivityListInto($('#recentList'), acts, { compact: true });
-    // Canvas fillStyle can't resolve CSS custom properties, so these mirror
-    // --teal/--blue from style.css as literal values rather than var(...).
-    gaugeArc($('#bbRing'), today.bodyBatteryHigh ?? 0, 100, '#2ec4cb');
-    gaugeArc($('#sleepRing'), Math.min(((today.sleepHours ?? 0) / 9) * 100, 100), 100, '#4fa3e0');
+    // Canvas fillStyle can't resolve CSS custom properties, so this mirrors
+    // the readiness tier color from style.css as a literal value.
+    gaugeArc($('#heroReadinessRing'), plan?.readiness?.score ?? 0, 100, readinessTier(plan?.readiness?.score ?? 0).color);
+    sparkline($('#sleepSpark'), wellnessRes.wellness.map((d) => d.sleepHours), '#4fa3e0');
+    sparkline($('#stepsSpark'), wellnessRes.wellness.map((d) => d.steps), '#6fae70');
     await initCoachUI();
+    revealCards(view);
   } catch (err) {
     view.innerHTML = errorCard(err);
   }
@@ -357,6 +424,7 @@ async function renderActivities() {
     $('#logActivityBtn').addEventListener('click', openLogActivitySheet);
     const filtered = state.activityFilter === 'all' ? state.activities : state.activities.filter((a) => a.discipline === state.activityFilter);
     renderActivityListInto($('#activityList'), filtered);
+    revealCards(view);
   } catch (err) {
     view.innerHTML = `<h2 class="section-title">Activities</h2>${errorCard(err)}`;
   }
@@ -543,6 +611,140 @@ function recordsCardHtml(activities) {
   `;
 }
 
+// ---------------------------------------------------------- mountain UX ----
+// Everything below reads only fields normalizeActivity() already computes
+// server-side (elevationGainM, vam) -- no new metrics invented client-side,
+// just aggregated differently for a "how's my vertical fitness" view.
+
+function weekStart(d) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  x.setDate(x.getDate() - x.getDay());
+  return x;
+}
+
+function weeklyElevation(activities, weeks = 10) {
+  const thisWeek = weekStart(new Date());
+  const buckets = Array.from({ length: weeks }, (_, i) => {
+    const start = new Date(thisWeek);
+    start.setDate(start.getDate() - (weeks - 1 - i) * 7);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    return { start, end, gainM: 0, label: start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) };
+  });
+  for (const a of activities) {
+    const t = new Date(a.startTime);
+    const b = buckets.find((x) => t >= x.start && t < x.end);
+    if (b) b.gainM += a.elevationGainM || 0;
+  }
+  return buckets;
+}
+
+function mountainFitnessStats(activities) {
+  const withGain = activities.filter((a) => (a.elevationGainM || 0) >= 100);
+  if (!withGain.length) return null;
+  const longest = [...withGain].sort((a, b) => b.durationMin - a.durationMin)[0];
+  const avgVam = Math.round(mean(withGain.map((a) => a.vam).filter((v) => v > 0)) || 0);
+  return { longest, avgVam, count: withGain.length };
+}
+
+function deltaPillHtml(current, previous) {
+  if (previous == null || previous <= 0) return '';
+  const pct = Math.round(((current - previous) / previous) * 100);
+  if (pct === 0) return `<span class="delta flat">flat</span>`;
+  return `<span class="delta ${pct > 0 ? 'up' : 'down'}">${pct > 0 ? '↑' : '↓'} ${Math.abs(pct)}%</span>`;
+}
+
+// A GitHub-contributions-style grid: 12 weeks x 7 days, colored by that
+// day's total training minutes. The grid always starts on a Sunday and ends
+// on the Saturday of the current week (so `grid-auto-flow: column` with 7
+// rows lines each column up to a real calendar week without extra markup).
+function trainingHeatmapCells(activities, weeks = 12) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const endOfWeek = new Date(today);
+  endOfWeek.setDate(endOfWeek.getDate() + (6 - endOfWeek.getDay()));
+  const start = new Date(endOfWeek);
+  start.setDate(start.getDate() - weeks * 7 + 1);
+
+  const byDay = {};
+  for (const a of activities) {
+    const d = new Date(a.startTime);
+    d.setHours(0, 0, 0, 0);
+    const key = d.toISOString().slice(0, 10);
+    byDay[key] = (byDay[key] || 0) + a.durationMin;
+  }
+  return Array.from({ length: weeks * 7 }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    const key = d.toISOString().slice(0, 10);
+    return { date: key, min: byDay[key] || 0, future: d > today };
+  });
+}
+
+function heatColor(min) {
+  if (min <= 0) return 'rgba(255,255,255,0.06)';
+  if (min < 30) return 'rgba(79,163,224,0.32)';
+  if (min < 60) return 'rgba(79,163,224,0.58)';
+  if (min < 120) return 'rgba(46,196,203,0.78)';
+  return '#2ec4cb';
+}
+
+function trainingHeatmapHtml(activities) {
+  const cells = trainingHeatmapCells(activities, 12);
+  return `
+    <div class="heatmap-wrap">
+      <div class="heatmap-grid">
+        ${cells
+          .map(
+            (c) =>
+              `<div class="heatmap-cell" style="background:${c.future ? 'transparent' : heatColor(c.min)}" title="${c.date}${c.future ? '' : c.min ? ': ' + Math.round(c.min) + ' min' : ': rest day'}"></div>`
+          )
+          .join('')}
+      </div>
+    </div>
+    <div class="heatmap-legend">
+      <span>Less</span>
+      ${[0, 15, 45, 90, 150].map((m) => `<div class="heatmap-cell" style="background:${heatColor(m)}"></div>`).join('')}
+      <span>More</span>
+    </div>
+  `;
+}
+
+function mountainFitnessSectionHtml(activities) {
+  const mtn = mountainFitnessStats(activities);
+  const weeks = weeklyElevation(activities, 10);
+  const thisWeekGain = weeks[weeks.length - 1].gainM;
+  const lastWeekGain = weeks[weeks.length - 2]?.gainM;
+  return `
+      <h2 class="section-title">Mountain Fitness</h2>
+      <div class="card">
+        <div class="chart-title">Vertical gain per week</div>
+        <div class="chart-subtitle">Total recorded elevation gain across all activities, last 10 weeks.</div>
+        <div class="chart-wrap"><canvas id="vertGainChart"></canvas></div>
+      </div>
+      ${
+        mtn
+          ? `
+      <div class="card">
+        <div class="stat-row three">
+          <div class="stat-tile"><div class="val num">${Math.round(thisWeekGain).toLocaleString()}m ${deltaPillHtml(thisWeekGain, lastWeekGain)}</div><div class="lbl">This week's gain</div></div>
+          <div class="stat-tile"><div class="val small num">${fmtDuration(mtn.longest.durationMin)}</div><div class="lbl">Longest uphill effort</div></div>
+          <div class="stat-tile"><div class="val num">${mtn.avgVam}</div><div class="lbl">Avg VAM (m/hr)</div></div>
+        </div>
+        <div class="hint">VAM (vertical ascent rate) is how fast you climb, independent of distance — a solid proxy for uphill fitness. Based on your ${mtn.count} session${mtn.count === 1 ? '' : 's'} with 100m+ of gain.</div>
+      </div>`
+          : `<div class="card"><div class="empty">No activities with significant elevation gain yet — this fills in once you've logged some climbing, hiking, or mountaineering sessions.</div></div>`
+      }
+
+      <h2 class="section-title">Training Consistency</h2>
+      <div class="card">
+        <div class="chart-subtitle">Daily training minutes, last 12 weeks. Darker = more volume that day.</div>
+        ${trainingHeatmapHtml(activities)}
+      </div>
+  `;
+}
+
 async function renderTrends() {
   const view = $('#view-trends');
   view.innerHTML = `<h2 class="section-title">Training Load</h2>${skeletonCards(3)}`;
@@ -576,6 +778,8 @@ async function renderTrends() {
         <div class="chart-title">Hours trained, by sport</div>
         <div class="chart-wrap tall"><canvas id="disciplineChart"></canvas></div>
       </div>
+
+      ${mountainFitnessSectionHtml(activities)}
 
       <h2 class="section-title">Daily Training Load</h2>
       <div class="card">
@@ -632,6 +836,14 @@ async function renderTrends() {
       valueLabel: 'Hours',
     });
 
+    const vertWeeks = weeklyElevation(activities, 10);
+    barChart($('#vertGainChart'), {
+      labels: vertWeeks.map((w) => w.label),
+      data: vertWeeks.map((w) => Math.round(w.gainM)),
+      colors: vertWeeks.map(() => '#4fa3e0'),
+      valueLabel: 'Meters',
+    });
+
     const byDay = {};
     for (const r of summary.recentLoad) {
       const day = r.date.slice(0, 10);
@@ -667,6 +879,7 @@ async function renderTrends() {
       fill: true,
       yLabel: 'Hours',
     });
+    revealCards(view);
   } catch (err) {
     view.innerHTML = `<h2 class="section-title">Training Load</h2>${errorCard(err)}`;
   }
@@ -776,6 +989,7 @@ async function renderSleep() {
       fill: true,
       yLabel: 'Hours',
     });
+    revealCards(view);
   } catch (err) {
     view.innerHTML = `<h2 class="section-title">Sleep</h2>${errorCard(err)}`;
   }
@@ -900,6 +1114,31 @@ function bodyFigureSvg(seg) {
   `;
 }
 
+// Pointer-driven tilt: moving the cursor (or a finger, via touch-to-pointer
+// events) across the figure nudges its rotation toward where you're
+// pointing, then eases back to the resting angle on leave -- a cheap,
+// WebGL-free way for a flat SVG to actually feel like a 3D object sitting
+// under your cursor rather than a static image with a fixed camera angle.
+// Reads/writes the --tx/--ty custom properties .bodyFigure's transform
+// already consumes (see style.css), so this needs no chart/canvas library.
+function wireFigureTilt(wrap) {
+  if (!wrap || wrap.dataset.tiltWired) return;
+  wrap.dataset.tiltWired = '1';
+  const REST = { x: -7, y: 2 };
+  const RANGE = { x: 16, y: 10 };
+  wrap.addEventListener('pointermove', (e) => {
+    const r = wrap.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width - 0.5;
+    const py = (e.clientY - r.top) / r.height - 0.5;
+    wrap.style.setProperty('--tx', `${(REST.x + px * RANGE.x * 2).toFixed(1)}deg`);
+    wrap.style.setProperty('--ty', `${(REST.y - py * RANGE.y * 2).toFixed(1)}deg`);
+  });
+  wrap.addEventListener('pointerleave', () => {
+    wrap.style.setProperty('--tx', `${REST.x}deg`);
+    wrap.style.setProperty('--ty', `${REST.y}deg`);
+  });
+}
+
 async function renderBody() {
   const view = $('#view-body');
   view.innerHTML = `<h2 class="section-title">Body Composition</h2>${skeletonCards(1)}`;
@@ -983,6 +1222,8 @@ async function renderBody() {
         ],
       });
     }
+    wireFigureTilt($('.figureWrap'));
+    revealCards(view);
   } catch (err) {
     view.innerHTML = `<h2 class="section-title">Body Composition</h2>${errorCard(err)}`;
   }
@@ -1068,6 +1309,7 @@ async function renderPlan() {
       </div>
       <div class="hint" style="margin:0 2px 12px">This preview re-rotates each time you open Plan, based on today's actual readiness — it's a guide, not a fixed schedule.</div>
     `;
+    revealCards(view);
   } catch (err) {
     view.innerHTML = `<h2 class="section-title">Today's Plan</h2>${errorCard(err)}`;
   }
