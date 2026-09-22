@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import logging
+import threading
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from fastapi import Depends, FastAPI, Query
+from fastapi import Depends, FastAPI, HTTPException, Query
 from starlette.requests import Request
 from starlette.responses import Response
 
@@ -16,6 +17,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 logger = logging.getLogger("garmin_backend.main")
 
 scheduler = BackgroundScheduler()
+_backfill_lock = threading.Lock()
 
 
 def _scheduled_sync() -> None:
@@ -79,6 +81,8 @@ def get_status():
     try:
         last_sync_at = db.get_state(conn, "last_sync_at")
         last_backfill_at = db.get_state(conn, "last_backfill_at")
+        backfill_status = db.get_state(conn, "backfill_status")
+        backfill_progress = db.get_state(conn, "backfill_progress")
     finally:
         conn.close()
 
@@ -89,6 +93,11 @@ def get_status():
         "last_sync_at": last_sync_at,
         "last_backfill_at": last_backfill_at,
         "sync_interval_minutes": config.SYNC_INTERVAL_MINUTES,
+        # A full backfill takes minutes (deliberately paced, see sync.py),
+        # so it always runs in the background -- poll these two fields
+        # instead of waiting on POST /api/sync/trigger's response.
+        "backfill_status": backfill_status,  # "running" | "done" | "error" | None
+        "backfill_progress": backfill_progress,  # "N/total" days synced so far
     }
 
 
@@ -123,7 +132,28 @@ def get_activities(limit: int = Query(default=50, ge=1, le=200), offset: int = Q
     return {"limit": limit, "offset": offset, "activities": activities}
 
 
+def _run_backfill_in_background() -> None:
+    try:
+        result = sync.backfill()
+        if not result.get("ok"):
+            logger.warning("background backfill did not complete cleanly: %s", result)
+    finally:
+        _backfill_lock.release()
+
+
 @app.post("/api/sync/trigger", dependencies=[Depends(require_bearer_token)])
 def trigger_sync(full_backfill: bool = Query(default=False)):
-    result = sync.backfill() if full_backfill else sync.sync_recent_days()
-    return result
+    if not full_backfill:
+        # Small (few-day) window -- fast enough to run in-request.
+        return sync.sync_recent_days()
+
+    # A full backfill takes minutes (paced deliberately, see sync.py), far
+    # longer than Render's (or any) HTTP proxy will hold a request open.
+    # Kick it off in a background thread and return immediately; the
+    # caller polls GET /api/status for backfill_status / backfill_progress.
+    if not _backfill_lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="a backfill is already running -- check /api/status")
+
+    thread = threading.Thread(target=_run_backfill_in_background, daemon=True)
+    thread.start()
+    return {"ok": True, "started": True, "message": "backfill running in background -- poll GET /api/status"}

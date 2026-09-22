@@ -53,5 +53,10 @@ services:
         sync: false
       - key: SYNC_INTERVAL_MINUTES
         value: "30"
+      # How far back a full backfill reaches. 120 covers a few months of
+      # margin past however long you've actually owned the watch --
+      # pulling further back than your device's own history just means
+      # hundreds of extra all-empty days that still cost API calls and
+      # backfill time for nothing.
       - key: BACKFILL_DAYS
-        value: "365"
+        value: "120"
