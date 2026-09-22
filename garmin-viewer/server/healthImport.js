@@ -47,9 +47,29 @@ function parseImportPayload(raw) {
   return data;
 }
 
+// Body composition (from a smart scale like a Hume Pod) and free-text
+// insights don't come from every export -- notably the large converted
+// Apple Health dump doesn't carry them at all, only the original
+// Health-Dashboard.html export did. Body comp changes slowly enough that a
+// stale snapshot is still worth having, so a re-import that's missing
+// these fields keeps whatever was already on record rather than silently
+// dropping it. A re-import that DOES carry a new value still overwrites,
+// same as always -- this only fills gaps, never blocks a real update.
+function mergeForward(newData, existingData) {
+  if (!existingData) return newData;
+  const merged = { ...newData };
+  if (!merged.body && existingData.body) merged.body = existingData.body;
+  if ((!Array.isArray(merged.insights) || !merged.insights.length) && Array.isArray(existingData.insights) && existingData.insights.length) {
+    merged.insights = existingData.insights;
+  }
+  return merged;
+}
+
 function saveImport(data) {
   ensureDir();
-  fs.writeFileSync(IMPORT_FILE, JSON.stringify(data));
+  const merged = mergeForward(data, loadImport());
+  fs.writeFileSync(IMPORT_FILE, JSON.stringify(merged));
+  return merged;
 }
 
 function loadImport() {

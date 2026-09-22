@@ -47,7 +47,9 @@ export function lineChart(canvas, { labels, series, yLabel, fill = false }) {
   });
 }
 
-export function barChart(canvas, { labels, data, colors, horizontal = false }) {
+export function barChart(canvas, { labels, data, colors, horizontal = false, valueLabel }) {
+  const valueAxis = { grid: { color: GRID }, title: valueLabel ? { display: true, text: valueLabel, color: TICK } : undefined };
+  const categoryAxis = { grid: { display: false } };
   return makeChart(canvas, {
     type: 'bar',
     data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 6, maxBarThickness: 28 }] },
@@ -56,10 +58,7 @@ export function barChart(canvas, { labels, data, colors, horizontal = false }) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { display: !horizontal, color: GRID } },
-        y: { grid: { display: horizontal, color: GRID } },
-      },
+      scales: horizontal ? { x: valueAxis, y: categoryAxis } : { x: categoryAxis, y: valueAxis },
     },
   });
 }

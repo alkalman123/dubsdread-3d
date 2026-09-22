@@ -28,7 +28,11 @@ export const api = {
   // (years of daily records), and JSON-escaping a blob that size just to
   // unwrap it server-side would waste memory and bandwidth for nothing.
   importHealth: (raw) => req('/import/health', { method: 'POST', headers: { 'content-type': 'text/plain' }, body: raw }),
+  importHealthRaw: () => req('/import/health/raw'),
   clearImport: () => req('/import/health', { method: 'DELETE' }),
   addManualActivity: (entry) => req('/activities/manual', { method: 'POST', body: JSON.stringify(entry) }),
   chat: (messages) => req('/chat', { method: 'POST', body: JSON.stringify({ messages }) }),
+  context: () => req('/context'),
+  restoreContext: (notes) => req('/context', { method: 'POST', body: JSON.stringify({ notes }) }),
+  deleteContextNote: (id) => req(`/context/${id}`, { method: 'DELETE' }),
 };

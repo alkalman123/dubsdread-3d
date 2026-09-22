@@ -1,6 +1,7 @@
 import { api } from './api.js';
 import { lineChart, barChart, gaugeArc } from './charts.js';
 import { importStore } from './importStore.js';
+import { contextStore } from './contextStore.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -12,6 +13,7 @@ const state = {
   activities: null,
   trendsRange: '90',
   chatMessages: [],
+  contextNotes: [],
 };
 
 // Range chips on Trends map to a day count sent to the wellness API.
@@ -441,17 +443,26 @@ async function renderTrends() {
 
       <h2 class="section-title">Training Load</h2>
       <div class="card" style="text-align:center;">
-        <div class="chart-wrap" style="height:130px"><canvas id="acwrGauge"></canvas></div>
-        <div style="margin-top:-46px;font-size:26px;font-weight:800;">${acwr.ratio}</div>
+        <div class="chart-title" style="text-align:left">Acute:Chronic Workload Ratio (ACWR)</div>
+        <div class="chart-wrap" style="height:130px;margin-top:4px"><canvas id="acwrGauge"></canvas></div>
+        <div class="gauge-scale"><span>0</span><span>2.0×</span></div>
+        <div style="margin-top:-38px;font-size:26px;font-weight:800;">${acwr.ratio}×</div>
         <div class="readiness-badge" style="margin-top:8px"><span class="dot" style="background:${acwrColor}"></span>${acwr.status.replace('-', ' ')}</div>
-        <div class="hint">Acute (7d avg) ${acwr.acute7d ? Math.round(acwr.acute7d / 7) : 0} vs chronic (28d avg) ${acwr.chronic28dAvgDaily} training load per day.</div>
+        <div class="hint">Ratio of your acute (7-day avg) to chronic (28-day avg) training load — ${acwr.acute7d ? Math.round(acwr.acute7d / 7) : 0} vs ${acwr.chronic28dAvgDaily} load-points/day. Under 0.8 = undertrained, 0.8-1.3 = sweet spot, over 1.5 = injury-risk territory.</div>
       </div>
 
       <h2 class="section-title">Last 28 Days by Discipline</h2>
-      <div class="card"><div class="chart-wrap tall"><canvas id="disciplineChart"></canvas></div></div>
+      <div class="card">
+        <div class="chart-title">Hours trained, by sport</div>
+        <div class="chart-wrap tall"><canvas id="disciplineChart"></canvas></div>
+      </div>
 
       <h2 class="section-title">Daily Training Load</h2>
-      <div class="card"><div class="chart-wrap"><canvas id="loadChart"></canvas></div></div>
+      <div class="card">
+        <div class="chart-title">Session load score (duration × intensity)</div>
+        <div class="chart-subtitle">Higher = harder/longer session. Not a real-world unit — only meaningful relative to your own other days.</div>
+        <div class="chart-wrap"><canvas id="loadChart"></canvas></div>
+      </div>
 
       <div style="display:flex;align-items:baseline;justify-content:space-between">
         <h2 class="section-title" style="margin-bottom:10px">Long-Term Trends</h2>
@@ -464,9 +475,21 @@ async function renderTrends() {
           )
           .join('')}
       </div>
-      <div class="card"><div class="chart-wrap"><canvas id="bbChart"></canvas></div></div>
-      <div class="card"><div class="chart-wrap"><canvas id="rhrChart"></canvas></div></div>
-      <div class="card"><div class="chart-wrap"><canvas id="sleepTrendChart"></canvas></div></div>
+      <div class="card">
+        <div class="chart-title">Body Battery — daily high &amp; low</div>
+        <div class="chart-subtitle">Garmin's 0-100 energy-reserve estimate. High = your peak for the day (usually on waking); Low = your lowest point.</div>
+        <div class="chart-wrap"><canvas id="bbChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="chart-title">Resting Heart Rate</div>
+        <div class="chart-subtitle">Beats per minute, lowest overnight reading. A rising trend can be an early sign of fatigue or illness.</div>
+        <div class="chart-wrap"><canvas id="rhrChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="chart-title">Sleep Duration</div>
+        <div class="chart-subtitle">Hours per night.</div>
+        <div class="chart-wrap"><canvas id="sleepTrendChart"></canvas></div>
+      </div>
 
       ${recordsCardHtml(activities)}
     `;
@@ -486,6 +509,7 @@ async function renderTrends() {
       data: byD.map((d) => Math.round(d.durationMin / 60)),
       colors: byD.map((d) => d.color),
       horizontal: true,
+      valueLabel: 'Hours',
     });
 
     const byDay = {};
@@ -498,6 +522,7 @@ async function renderTrends() {
       labels: dayKeys.map((d) => d.slice(5)),
       series: [{ label: 'Load', data: dayKeys.map((d) => byDay[d]), color: '#e8622c' }],
       fill: true,
+      yLabel: 'Load score',
     });
 
     const rawW = wellnessRes.wellness;
@@ -506,18 +531,21 @@ async function renderTrends() {
     lineChart($('#bbChart'), {
       labels: w.map((d) => dateLabel(d.date)),
       series: [
-        { label: 'Body Battery High', data: w.map((d) => d.bodyBatteryHigh), color: '#00b0b9' },
-        { label: 'Body Battery Low', data: w.map((d) => d.bodyBatteryLow), color: '#0e7cf0' },
+        { label: 'High', data: w.map((d) => d.bodyBatteryHigh), color: '#00b0b9' },
+        { label: 'Low', data: w.map((d) => d.bodyBatteryLow), color: '#0e7cf0' },
       ],
+      yLabel: '0-100',
     });
     lineChart($('#rhrChart'), {
       labels: w.map((d) => dateLabel(d.date)),
       series: [{ label: 'Resting HR', data: w.map((d) => d.restingHR), color: '#c9392a' }],
+      yLabel: 'bpm',
     });
     lineChart($('#sleepTrendChart'), {
       labels: w.map((d) => dateLabel(d.date)),
-      series: [{ label: 'Sleep (h)', data: w.map((d) => d.sleepHours), color: '#8b5e83' }],
+      series: [{ label: 'Sleep', data: w.map((d) => d.sleepHours), color: '#8b5e83' }],
       fill: true,
+      yLabel: 'Hours',
     });
   } catch (err) {
     view.innerHTML = `<h2 class="section-title">Training Load</h2>${errorCard(err)}`;
@@ -528,6 +556,70 @@ async function renderTrends() {
 
 function bandClass(band) {
   return String(band || '').toLowerCase().replace(/\s+/g, '-');
+}
+
+// Teal (lean) -> orange (higher body fat), scaled across a typical
+// athletic-to-average range so the figure actually shows contrast between
+// segments instead of everything landing in one narrow color band.
+function fatColor(pct) {
+  if (pct == null) return '#2c4a52';
+  const t = Math.max(0, Math.min(1, (pct - 6) / (28 - 6)));
+  const lo = [0, 176, 185]; // teal
+  const hi = [232, 98, 44]; // orange
+  const mix = lo.map((c, i) => Math.round(c + (hi[i] - c) * t));
+  return `rgb(${mix.join(',')})`;
+}
+
+// A small stylized front-view figure, shaded per-segment by fat% and
+// depth-shaded with gradients/highlights for a subtle 3D feel — not a true
+// 3D model (no WebGL dependency for a five-region body scan), but reads as
+// dimensional rather than flat. Hover/long-press each region for its exact
+// numbers via the native <title> tooltip.
+function bodyFigureSvg(seg) {
+  const region = (key) => seg[key] || {};
+  const label = (key, name) => {
+    const s = region(key);
+    return `${name}: ${s.lean_lbs ?? '–'} lbs lean, ${s.fat_pct ?? '–'}% fat`;
+  };
+  // Anatomical right/left as if the figure is facing you (its right arm
+  // renders on your left), matching how body-scan UIs usually present this.
+  const c = {
+    trunk: fatColor(region('trunk').fat_pct),
+    rArm: fatColor(region('right_arm').fat_pct),
+    lArm: fatColor(region('left_arm').fat_pct),
+    rLeg: fatColor(region('right_leg').fat_pct),
+    lLeg: fatColor(region('left_leg').fat_pct),
+  };
+  return `
+    <svg class="bodyFigure" viewBox="0 0 200 300" role="img" aria-label="Body composition by segment">
+      <defs>
+        <radialGradient id="bfHead" cx="35%" cy="30%" r="75%">
+          <stop offset="0%" stop-color="#4a6672"/><stop offset="100%" stop-color="#1c2e36"/>
+        </radialGradient>
+        ${Object.entries(c)
+          .map(
+            ([key, color]) => `
+          <linearGradient id="bf-${key}" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="${color}" stop-opacity="0.95"/>
+            <stop offset="55%" stop-color="${color}"/>
+            <stop offset="100%" stop-color="${color}" stop-opacity="0.55"/>
+          </linearGradient>`
+          )
+          .join('')}
+      </defs>
+      <circle cx="100" cy="28" r="20" fill="url(#bfHead)"><title>Head</title></circle>
+      <rect x="90" y="46" width="20" height="14" rx="6" fill="#2c4a52"/>
+      <rect x="62" y="56" width="76" height="92" rx="24" fill="url(#bf-trunk)"><title>${label('trunk', 'Trunk')}</title></rect>
+      <rect x="30" y="60" width="28" height="88" rx="14" fill="url(#bf-rArm)"><title>${label('right_arm', 'Right arm')}</title></rect>
+      <rect x="142" y="60" width="28" height="88" rx="14" fill="url(#bf-lArm)"><title>${label('left_arm', 'Left arm')}</title></rect>
+      <rect x="66" y="144" width="32" height="112" rx="15" fill="url(#bf-rLeg)"><title>${label('right_leg', 'Right leg')}</title></rect>
+      <rect x="102" y="144" width="32" height="112" rx="15" fill="url(#bf-lLeg)"><title>${label('left_leg', 'Left leg')}</title></rect>
+    </svg>
+    <div class="figureLegend">
+      <span><i style="background:${fatColor(6)}"></i>Leaner</span>
+      <span><i style="background:${fatColor(28)}"></i>Higher fat%</span>
+    </div>
+  `;
 }
 
 async function renderBody() {
@@ -566,6 +658,8 @@ async function renderBody() {
         <div class="scanSub">${body.date ? new Date(body.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : ''}</div>
 
         <div class="weightRow"><span class="wv num">${body.weight_lbs ?? '–'}</span><span class="wu">lbs</span></div>
+
+        <div class="figureWrap">${bodyFigureSvg(seg)}</div>
 
         <div class="segGrid" style="margin-top:14px">
           ${Object.entries(seg)
@@ -667,6 +761,24 @@ async function renderPlan() {
         <div class="hint">${plan.reason}</div>
       </div>
 
+      <h2 class="section-title">Daily Micro-Habits</h2>
+      <div class="card" style="padding:4px 12px">
+        <div class="activity-item">
+          <div class="glyph" style="background:#c25b9e22;color:#c25b9e">🤸</div>
+          <div>
+            <div class="name">5min on the Gibbon board</div>
+            <div class="meta">Every day, no exceptions — a little daily balance time beats occasional long sessions for actually getting better.</div>
+          </div>
+        </div>
+        <div class="activity-item">
+          <div class="glyph" style="background:#e8622c22;color:#e8622c">🖐️</div>
+          <div>
+            <div class="name">Hangboard power reps on WFH days</div>
+            <div class="meta">A few short max-hang sets between meetings, 2-3x/week — little and often builds finger strength ahead of peak season without eating into a real session.</div>
+          </div>
+        </div>
+      </div>
+
       <h2 class="section-title">Readiness — ${r.score}/100</h2>
       <div class="card">
         <div class="stat-row">
@@ -724,20 +836,63 @@ async function handleChatSubmit(e) {
   appendChatBubble('user', text);
   const typing = appendChatBubble('assistant typing', 'Thinking…');
   try {
-    const { reply } = await api.chat(state.chatMessages);
+    const { reply, notes } = await api.chat(state.chatMessages);
     typing.remove();
     state.chatMessages.push({ role: 'assistant', content: reply });
     appendChatBubble('assistant', reply);
+    if (Array.isArray(notes)) {
+      state.contextNotes = notes;
+      contextStore.save(notes);
+      renderRememberedNotes();
+    }
   } catch (err) {
     typing.remove();
     appendChatBubble('assistant error', err.message || 'Something went wrong reaching the coach.');
   }
 }
 
-function renderCoach() {
+const NOTE_CATEGORY_ICON = { objective: '🎯', equipment: '🏠', schedule: '📅', other: '💡' };
+
+function renderRememberedNotes() {
+  const box = $('#rememberedNotes');
+  if (!box) return;
+  if (!state.contextNotes.length) {
+    box.innerHTML = '';
+    box.style.display = 'none';
+    return;
+  }
+  box.style.display = '';
+  box.innerHTML = `
+    <div class="chart-subtitle" style="margin:0 2px 6px">What the coach remembers about you:</div>
+    <div class="chip-row" style="margin-bottom:8px">
+      ${state.contextNotes
+        .map(
+          (n) => `
+        <div class="chip note-chip" data-id="${n.id}" title="${n.note.replace(/"/g, '&quot;')}">
+          ${NOTE_CATEGORY_ICON[n.category] || '💡'} ${n.note.length > 40 ? n.note.slice(0, 40) + '…' : n.note}
+          <span class="note-remove" data-id="${n.id}">×</span>
+        </div>`
+        )
+        .join('')}
+    </div>
+  `;
+  $$('.note-remove', box).forEach((btn) =>
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      const { notes } = await api.deleteContextNote(id);
+      state.contextNotes = notes;
+      contextStore.save(notes);
+      renderRememberedNotes();
+    })
+  );
+}
+
+async function renderCoach() {
   const view = $('#view-coach');
   view.innerHTML = `
     <h2 class="section-title">Coach</h2>
+    <div id="rememberedNotes"></div>
     <div class="chat-card">
       <div class="chat-messages" id="chatMessages"></div>
       <form class="chat-input-row" id="chatForm">
@@ -745,8 +900,17 @@ function renderCoach() {
         <button class="btn chat-send" type="submit" aria-label="Send">➤</button>
       </form>
     </div>
-    <div class="hint">Grounded in your real recent training and health data — not generic advice. Not a substitute for a doctor.</div>
+    <div class="hint">Grounded in your real recent training and health data — not generic advice. Not a substitute for a doctor. Tell it about upcoming trips, objectives, or equipment (e.g. "I have a hangboard at home") and it'll remember for next time.</div>
   `;
+  try {
+    const { notes } = await api.context();
+    state.contextNotes = notes;
+    contextStore.save(notes);
+  } catch {
+    // Non-fatal — chat still works without the remembered-notes list loaded.
+  }
+  renderRememberedNotes();
+
   const container = $('#chatMessages');
   if (!state.chatMessages.length) {
     appendChatBubble(
@@ -774,6 +938,21 @@ $('#backdrop').addEventListener('click', closeSheets);
 
 function invalidateAllCaches() {
   state.activities = null;
+}
+
+// Cache the server's CURRENT (merged) import, not the raw file that was
+// just uploaded — the server may have carried forward fields the upload
+// itself didn't include (e.g. a body-comp snapshot from an older export
+// when re-importing a newer one that lacks it, see healthImport.js). This
+// is what a redeploy restores from, so it needs to reflect the merged
+// truth or a later restore would silently undo the merge.
+async function cacheServerImport() {
+  try {
+    const raw = await api.importHealthRaw();
+    await importStore.save(JSON.stringify(raw));
+  } catch (err) {
+    console.warn('Failed to cache import for redeploy-resilience:', err);
+  }
 }
 
 async function openSettings() {
@@ -846,11 +1025,12 @@ async function openSettings() {
       try {
         const text = await file.text();
         const res = await api.importHealth(text);
-        // Also keep a copy in this browser's own storage — Render's free
-        // tier wipes the server's disk on every deploy, so without this a
-        // code push would silently erase the import until it's noticed and
-        // re-uploaded by hand. See public/js/importStore.js.
-        await importStore.save(text);
+        // Also keep a copy of the server's merged result in this browser's
+        // own storage — Render's free tier wipes the server's disk on
+        // every deploy, so without this a code push would silently erase
+        // the import until it's noticed and re-uploaded by hand. See
+        // public/js/importStore.js and cacheServerImport() above.
+        await cacheServerImport();
         toast(`Imported ${res.import.totalWorkouts} workouts`);
         invalidateAllCaches();
         await refreshStatus();
@@ -937,7 +1117,7 @@ function openSettingsWithImportForm() {
     try {
       const text = await file.text();
       const res = await api.importHealth(text);
-      await importStore.save(text);
+      await cacheServerImport();
       toast(`Imported ${res.import.totalWorkouts} workouts`);
       invalidateAllCaches();
       await refreshStatus();
@@ -967,6 +1147,7 @@ async function restoreImportIfNeeded(status) {
   if (!cached) return status;
   try {
     await api.importHealth(cached);
+    await cacheServerImport();
     toast('Restored your imported history on this device');
     return refreshStatus();
   } catch (err) {
@@ -975,8 +1156,29 @@ async function restoreImportIfNeeded(status) {
   }
 }
 
+// Same redeploy-survival pattern as restoreImportIfNeeded, for the Coach's
+// remembered notes (see public/js/contextStore.js). This one doesn't need
+// a status flag from the server to know whether to run — it just checks
+// directly whether the server has anything on record.
+async function restoreContextIfNeeded() {
+  try {
+    const { notes: serverNotes } = await api.context();
+    if (serverNotes && serverNotes.length) {
+      state.contextNotes = serverNotes;
+      return;
+    }
+    const cached = await contextStore.get();
+    if (!cached || !cached.length) return;
+    const { notes } = await api.restoreContext(cached);
+    state.contextNotes = notes;
+  } catch (err) {
+    console.warn('Failed to restore cached context notes:', err);
+  }
+}
+
 (async function init() {
   const status = await refreshStatus();
   await restoreImportIfNeeded(status);
+  await restoreContextIfNeeded();
   render(state.tab);
 })();

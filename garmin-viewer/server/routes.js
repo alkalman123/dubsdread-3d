@@ -12,6 +12,7 @@ const manualActivities = require('./manualActivities');
 const { computeScorecard, computeVerdict } = require('./scorecard');
 const { generateInsights } = require('./insightsFallback');
 const { chatReply, buildContext } = require('./chat');
+const contextNotes = require('./contextNotes');
 
 const MANUAL_ID_MIN = 800000000;
 const IMPORT_ID_MIN = 900000000;
@@ -203,15 +204,28 @@ function createRouter(garminClient) {
     res.json({ import: healthImport.importSummary(healthImport.loadImport()) });
   });
 
+  // Returns the full current import verbatim (post field-merge -- see
+  // healthImport.mergeForward), not just its summary. The frontend uses
+  // this to re-cache what's actually on record after every successful
+  // import/restore, so a later redeploy restores the merged result
+  // (including any body-comp snapshot carried forward from an older
+  // upload) rather than re-restoring whatever was literally last
+  // uploaded, which might be missing fields the server had filled in.
+  router.get('/import/health/raw', (req, res) => {
+    const data = healthImport.loadImport();
+    if (!data) return res.status(404).json({ ok: false, error: 'no import on record' });
+    res.json(data);
+  });
+
   router.post('/import/health', (req, res) => {
     const raw = typeof req.body === 'string' ? req.body : req.body?.raw;
     if (!raw) return res.status(400).json({ ok: false, error: 'No file content received' });
     try {
       const data = healthImport.parseImportPayload(raw);
-      healthImport.saveImport(data);
+      const merged = healthImport.saveImport(data);
       cache.invalidate('activities');
       cache.invalidate('wellness');
-      res.json({ ok: true, import: healthImport.importSummary(data) });
+      res.json({ ok: true, import: healthImport.importSummary(merged) });
     } catch (err) {
       res.status(400).json({ ok: false, error: String(err.message || err) });
     }
@@ -404,12 +418,39 @@ function createRouter(garminClient) {
       const importData = currentImportData();
       const body = loadBody(mode, importData);
       const importSummary = healthImport.importSummary(importData);
-      const context = buildContext({ activities, wellness, scorecard, verdict, plan, body, importSummary });
+      const notes = contextNotes.loadNotes();
+      const context = buildContext({ activities, wellness, scorecard, verdict, plan, body, importSummary, notes });
       const reply = await chatReply({ messages, context });
-      res.json({ ok: true, reply });
+      // The reply may have just added a note (remember_context) -- send the
+      // current list back so the frontend can refresh its own cache
+      // (see public/js/contextStore.js) without a second round-trip.
+      res.json({ ok: true, reply, notes: contextNotes.loadNotes() });
     } catch (err) {
       res.status(502).json({ ok: false, error: 'Could not get a reply', detail: String(err.message || err) });
     }
+  });
+
+  // ---- coach's remembered context (trips/objectives/equipment/schedule) --
+
+  router.get('/context', (req, res) => {
+    res.json({ notes: contextNotes.loadNotes() });
+  });
+
+  // Wholesale replace -- used only to restore this browser's cached copy
+  // after a redeploy wiped the server's disk (same pattern as
+  // POST /api/import/health/raw's client-side counterpart), not a general
+  // "add a note" endpoint. Individual notes are added by the coach chat's
+  // remember_context tool (see server/chat.js).
+  router.post('/context', (req, res) => {
+    const { notes } = req.body || {};
+    if (!Array.isArray(notes)) return res.status(400).json({ ok: false, error: 'notes[] required' });
+    contextNotes.saveNotes(notes);
+    res.json({ ok: true, notes });
+  });
+
+  router.delete('/context/:id', (req, res) => {
+    const notes = contextNotes.removeNote(req.params.id);
+    res.json({ ok: true, notes });
   });
 
   return router;
