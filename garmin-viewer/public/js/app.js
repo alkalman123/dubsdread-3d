@@ -1,5 +1,6 @@
 import { api } from './api.js';
 import { lineChart, barChart, gaugeArc } from './charts.js';
+import { importStore } from './importStore.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -9,7 +10,14 @@ const state = {
   mode: 'demo',
   activityFilter: 'all',
   activities: null,
+  trendsRange: '90',
+  chatMessages: [],
 };
+
+// Range chips on Trends map to a day count sent to the wellness API.
+// "all" asks for a decade, which the server caps to whatever's actually
+// on record — it's just a "give me everything you've got" signal.
+const TRENDS_RANGES = { '30': 30, '90': 90, '365': 365, all: 3650 };
 
 function toast(msg) {
   const t = $('#toast');
@@ -51,6 +59,7 @@ function render(tab) {
   else if (tab === 'trends') renderTrends();
   else if (tab === 'body') renderBody();
   else if (tab === 'plan') renderPlan();
+  else if (tab === 'coach') renderCoach();
 }
 
 // -------------------------------------------------------------- status ----
@@ -134,9 +143,17 @@ async function renderToday() {
       </div>
 
       <h2 class="section-title">Today's Numbers</h2>
-      <div class="stat-row">
-        <div class="stat-tile"><div class="val">${today.bodyBatteryHigh ?? '–'}</div><div class="lbl">Body Battery</div></div>
-        <div class="stat-tile"><div class="val">${today.sleepHours ?? '–'}h</div><div class="lbl">Sleep</div></div>
+      <div class="ring-row">
+        <div class="ring-tile">
+          <div class="ring-canvas-wrap"><canvas id="bbRing"></canvas><div class="ring-center"><div class="rv">${today.bodyBatteryHigh ?? '–'}</div></div></div>
+          <div class="ring-lbl">Body Battery</div>
+        </div>
+        <div class="ring-tile">
+          <div class="ring-canvas-wrap"><canvas id="sleepRing"></canvas><div class="ring-center"><div class="rv">${today.sleepHours ?? '–'}<span class="ru">h</span></div></div></div>
+          <div class="ring-lbl">Sleep</div>
+        </div>
+      </div>
+      <div class="stat-row two">
         <div class="stat-tile"><div class="val">${today.restingHR ?? '–'}</div><div class="lbl">Resting HR</div></div>
         <div class="stat-tile"><div class="val">${today.steps != null ? (today.steps / 1000).toFixed(1) + 'k' : '–'}</div><div class="lbl">Steps</div></div>
       </div>
@@ -156,6 +173,10 @@ async function renderToday() {
     `;
     $('#planPreviewCard').addEventListener('click', () => switchTab('plan'));
     renderActivityListInto($('#recentList'), acts, { compact: true });
+    // Canvas fillStyle can't resolve CSS custom properties, so these mirror
+    // --teal/--blue from style.css as literal values rather than var(...).
+    gaugeArc($('#bbRing'), today.bodyBatteryHigh ?? 0, 100, '#00b0b9');
+    gaugeArc($('#sleepRing'), Math.min(((today.sleepHours ?? 0) / 9) * 100, 100), 100, '#0e7cf0');
   } catch (err) {
     view.innerHTML = errorCard(err);
   }
@@ -190,11 +211,8 @@ async function renderActivities() {
   const view = $('#view-activities');
   view.innerHTML = `<h2 class="section-title">Activities</h2>${skeletonCards(3)}`;
   try {
-    if (!state.activities) {
-      const res = await api.activities(300);
-      state.activities = res.activities;
-    }
-    const disciplines = Array.from(new Map(state.activities.map((a) => [a.discipline, a])).values());
+    const allActivities = await ensureActivitiesLoaded();
+    const disciplines = Array.from(new Map(allActivities.map((a) => [a.discipline, a])).values());
     const chips = ['all', ...disciplines.map((d) => d.discipline)];
     const labelFor = (d) => (d === 'all' ? 'All' : disciplines.find((x) => x.discipline === d)?.disciplineLabel || d);
 
@@ -331,11 +349,88 @@ async function openActivitySheet(id) {
 
 // --------------------------------------------------------------- Trends ----
 
+async function ensureActivitiesLoaded() {
+  if (!state.activities) {
+    const res = await api.activities(5000);
+    state.activities = res.activities;
+  }
+  return state.activities;
+}
+
+function mean(xs) {
+  const v = xs.filter((x) => x != null && !Number.isNaN(x));
+  return v.length ? Number((v.reduce((a, b) => a + b, 0) / v.length).toFixed(1)) : null;
+}
+
+// A year+ of daily points crushes into an unreadable smear on a phone-width
+// line chart, so once a range gets long, average into weekly buckets
+// instead of plotting every single day.
+function bucketWeekly(wellness) {
+  const buckets = new Map();
+  for (const d of wellness) {
+    const date = new Date(d.date);
+    const weekStart = new Date(date);
+    weekStart.setDate(date.getDate() - date.getDay());
+    const key = weekStart.toISOString().slice(0, 10);
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(d);
+  }
+  return Array.from(buckets.entries())
+    .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+    .map(([week, days]) => ({
+      date: week,
+      bodyBatteryHigh: mean(days.map((d) => d.bodyBatteryHigh)),
+      bodyBatteryLow: mean(days.map((d) => d.bodyBatteryLow)),
+      restingHR: mean(days.map((d) => d.restingHR)),
+      sleepHours: mean(days.map((d) => d.sleepHours)),
+    }));
+}
+
+function computeRecords(activities) {
+  if (!activities || !activities.length) return null;
+  const totalHours = activities.reduce((s, a) => s + a.durationMin, 0) / 60;
+  const totalElevation = activities.reduce((s, a) => s + (a.elevationGainM || 0), 0);
+  const byDiscipline = {};
+  for (const a of activities) {
+    byDiscipline[a.discipline] = byDiscipline[a.discipline] || { hours: 0, km: 0, meta: a };
+    byDiscipline[a.discipline].hours += a.durationMin / 60;
+    byDiscipline[a.discipline].km += a.distanceKm || 0;
+  }
+  const longest = [...activities].sort((a, b) => b.durationMin - a.durationMin)[0];
+  const mostElevation = [...activities].sort((a, b) => (b.elevationGainM || 0) - (a.elevationGainM || 0))[0];
+  const topDiscipline = Object.entries(byDiscipline).sort((a, b) => b[1].hours - a[1].hours)[0];
+  return { totalActivities: activities.length, totalHours, totalElevation, longest, mostElevation, topDiscipline };
+}
+
+function recordsCardHtml(activities) {
+  const r = computeRecords(activities);
+  if (!r) return '';
+  return `
+    <h2 class="section-title">All-Time Records</h2>
+    <div class="card">
+      <div class="stat-row three">
+        <div class="stat-tile"><div class="val">${r.totalActivities}</div><div class="lbl">Activities logged</div></div>
+        <div class="stat-tile"><div class="val">${Math.round(r.totalHours)}h</div><div class="lbl">Total training time</div></div>
+        <div class="stat-tile"><div class="val">${Math.round(r.totalElevation).toLocaleString()}m</div><div class="lbl">Total elevation</div></div>
+        <div class="stat-tile"><div class="val small">${fmtDuration(r.longest.durationMin)}</div><div class="lbl">Longest session</div></div>
+        <div class="stat-tile"><div class="val small">${Math.round(r.mostElevation.elevationGainM || 0)}m</div><div class="lbl">Biggest climb day</div></div>
+        <div class="stat-tile"><div class="val small">${r.topDiscipline[1].meta.disciplineLabel}</div><div class="lbl">Most-trained sport</div></div>
+      </div>
+    </div>
+  `;
+}
+
 async function renderTrends() {
   const view = $('#view-trends');
   view.innerHTML = `<h2 class="section-title">Training Load</h2>${skeletonCards(3)}`;
   try {
-    const [summary, wellnessRes, scorecardRes] = await Promise.all([api.summary(), api.wellness(60), api.scorecard()]);
+    const rangeDays = TRENDS_RANGES[state.trendsRange] ?? 90;
+    const [summary, wellnessRes, scorecardRes, activities] = await Promise.all([
+      api.summary(),
+      api.wellness(rangeDays),
+      api.scorecard(),
+      ensureActivitiesLoaded(),
+    ]);
     const acwr = summary.acwr;
     const acwrColor = { 'high-risk': '#c9392a', monitor: '#c9a86a', 'sweet-spot': '#5b8c5a', undertrained: '#4a90c2' }[acwr.status] || '#5b8c5a';
 
@@ -357,10 +452,30 @@ async function renderTrends() {
       <h2 class="section-title">Daily Training Load</h2>
       <div class="card"><div class="chart-wrap"><canvas id="loadChart"></canvas></div></div>
 
-      <h2 class="section-title">Recovery Trend</h2>
+      <div style="display:flex;align-items:baseline;justify-content:space-between">
+        <h2 class="section-title" style="margin-bottom:10px">Long-Term Trends</h2>
+      </div>
+      <div class="chip-row" id="rangeChips">
+        ${Object.keys(TRENDS_RANGES)
+          .map(
+            (k) =>
+              `<div class="chip ${k === state.trendsRange ? 'active' : ''}" data-r="${k}">${{ '30': '30D', '90': '90D', '365': '1Y', all: 'All Time' }[k]}</div>`
+          )
+          .join('')}
+      </div>
       <div class="card"><div class="chart-wrap"><canvas id="bbChart"></canvas></div></div>
       <div class="card"><div class="chart-wrap"><canvas id="rhrChart"></canvas></div></div>
+      <div class="card"><div class="chart-wrap"><canvas id="sleepTrendChart"></canvas></div></div>
+
+      ${recordsCardHtml(activities)}
     `;
+
+    $$('#rangeChips .chip').forEach((chip) =>
+      chip.addEventListener('click', () => {
+        state.trendsRange = chip.dataset.r;
+        renderTrends();
+      })
+    );
 
     gaugeArc($('#acwrGauge'), Math.min(acwr.ratio, 2), 2, acwrColor);
 
@@ -384,17 +499,24 @@ async function renderTrends() {
       fill: true,
     });
 
-    const w = wellnessRes.wellness;
+    const rawW = wellnessRes.wellness;
+    const w = rawW.length > 120 ? bucketWeekly(rawW) : rawW;
+    const dateLabel = (d) => (rawW.length > 120 ? new Date(d).toLocaleDateString(undefined, { month: 'short', year: '2-digit' }) : d.slice(5));
     lineChart($('#bbChart'), {
-      labels: w.map((d) => d.date.slice(5)),
+      labels: w.map((d) => dateLabel(d.date)),
       series: [
-        { label: 'Body Battery High', data: w.map((d) => d.bodyBatteryHigh), color: '#5b8c5a' },
-        { label: 'Body Battery Low', data: w.map((d) => d.bodyBatteryLow), color: '#4a90c2' },
+        { label: 'Body Battery High', data: w.map((d) => d.bodyBatteryHigh), color: '#00b0b9' },
+        { label: 'Body Battery Low', data: w.map((d) => d.bodyBatteryLow), color: '#0e7cf0' },
       ],
     });
     lineChart($('#rhrChart'), {
-      labels: w.map((d) => d.date.slice(5)),
+      labels: w.map((d) => dateLabel(d.date)),
       series: [{ label: 'Resting HR', data: w.map((d) => d.restingHR), color: '#c9392a' }],
+    });
+    lineChart($('#sleepTrendChart'), {
+      labels: w.map((d) => dateLabel(d.date)),
+      series: [{ label: 'Sleep (h)', data: w.map((d) => d.sleepHours), color: '#8b5e83' }],
+      fill: true,
     });
   } catch (err) {
     view.innerHTML = `<h2 class="section-title">Training Load</h2>${errorCard(err)}`;
@@ -576,6 +698,67 @@ async function renderPlan() {
   }
 }
 
+// ----------------------------------------------------------------- Coach ----
+
+// textContent, never innerHTML, for chat bubbles — this is the one place in
+// the app that renders arbitrary free-text (the athlete's own questions),
+// so there's no escaping-html-by-hand XSS surface to get wrong.
+function appendChatBubble(role, text, container = $('#chatMessages')) {
+  const div = document.createElement('div');
+  div.className = `chat-bubble ${role}`;
+  div.textContent = text;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+async function handleChatSubmit(e) {
+  e.preventDefault();
+  const input = $('#chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  input.focus();
+  state.chatMessages.push({ role: 'user', content: text });
+  appendChatBubble('user', text);
+  const typing = appendChatBubble('assistant typing', 'Thinking…');
+  try {
+    const { reply } = await api.chat(state.chatMessages);
+    typing.remove();
+    state.chatMessages.push({ role: 'assistant', content: reply });
+    appendChatBubble('assistant', reply);
+  } catch (err) {
+    typing.remove();
+    appendChatBubble('assistant error', err.message || 'Something went wrong reaching the coach.');
+  }
+}
+
+function renderCoach() {
+  const view = $('#view-coach');
+  view.innerHTML = `
+    <h2 class="section-title">Coach</h2>
+    <div class="chat-card">
+      <div class="chat-messages" id="chatMessages"></div>
+      <form class="chat-input-row" id="chatForm">
+        <input type="text" id="chatInput" placeholder="Ask about your training, sleep, recovery…" autocomplete="off" />
+        <button class="btn chat-send" type="submit" aria-label="Send">➤</button>
+      </form>
+    </div>
+    <div class="hint">Grounded in your real recent training and health data — not generic advice. Not a substitute for a doctor.</div>
+  `;
+  const container = $('#chatMessages');
+  if (!state.chatMessages.length) {
+    appendChatBubble(
+      'assistant',
+      "Ask me anything about your training, sleep, recovery, or what to focus on next — I can see your real recent data.",
+      container
+    );
+  } else {
+    state.chatMessages.forEach((m) => appendChatBubble(m.role, m.content, container));
+  }
+  $('#chatForm').addEventListener('submit', handleChatSubmit);
+}
+
 // ------------------------------------------------------------- Settings ----
 
 function openSheet(sheet, backdrop) {
@@ -662,6 +845,11 @@ async function openSettings() {
       try {
         const text = await file.text();
         const res = await api.importHealth(text);
+        // Also keep a copy in this browser's own storage — Render's free
+        // tier wipes the server's disk on every deploy, so without this a
+        // code push would silently erase the import until it's noticed and
+        // re-uploaded by hand. See public/js/importStore.js.
+        await importStore.save(text);
         toast(`Imported ${res.import.totalWorkouts} workouts`);
         invalidateAllCaches();
         await refreshStatus();
@@ -678,6 +866,7 @@ async function openSettings() {
   if (clearImportBtn) {
     clearImportBtn.addEventListener('click', async () => {
       await api.clearImport();
+      await importStore.clear();
       toast('Import cleared');
       invalidateAllCaches();
       await refreshStatus();
@@ -747,6 +936,7 @@ function openSettingsWithImportForm() {
     try {
       const text = await file.text();
       const res = await api.importHealth(text);
+      await importStore.save(text);
       toast(`Imported ${res.import.totalWorkouts} workouts`);
       invalidateAllCaches();
       await refreshStatus();
@@ -766,7 +956,26 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/service-worker.js').catch(() => {}));
 }
 
+// If the server has no import on file but this browser has a cached copy
+// (see public/js/importStore.js), silently re-upload it. This is what
+// makes an import survive a Render redeploy without you having to notice
+// it's gone and re-upload by hand every time.
+async function restoreImportIfNeeded(status) {
+  if (status.import) return status;
+  const cached = await importStore.get();
+  if (!cached) return status;
+  try {
+    await api.importHealth(cached);
+    toast('Restored your imported history on this device');
+    return refreshStatus();
+  } catch (err) {
+    console.warn('Failed to restore cached import:', err);
+    return status;
+  }
+}
+
 (async function init() {
-  await refreshStatus();
+  const status = await refreshStatus();
+  await restoreImportIfNeeded(status);
   render(state.tab);
 })();

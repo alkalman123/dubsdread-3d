@@ -11,6 +11,7 @@ const { importedActivities, importedWellnessDays } = require('./importAdapter');
 const manualActivities = require('./manualActivities');
 const { computeScorecard, computeVerdict } = require('./scorecard');
 const { generateInsights } = require('./insightsFallback');
+const { chatReply, buildContext } = require('./chat');
 
 const MANUAL_ID_MIN = 800000000;
 const IMPORT_ID_MIN = 900000000;
@@ -247,7 +248,11 @@ function createRouter(garminClient) {
 
   router.get('/activities', async (req, res) => {
     try {
-      const limit = Math.min(Number(req.query.limit) || 40, 500);
+      // High ceiling: this needs to comfortably cover years of imported
+      // history (hundreds to low thousands of workouts), not just recent
+      // live-Garmin activity — the old 500 cap was silently dropping the
+      // oldest imported activities off the end of the list.
+      const limit = Math.min(Number(req.query.limit) || 40, 5000);
       const { mode, activities } = await loadActivities();
       const list = activities.slice(0, limit).map(({ _demo, ...rest }) => rest);
       res.json({ mode, activities: list });
@@ -386,6 +391,24 @@ function createRouter(garminClient) {
       res.json({ mode, text, todayActivities, totalLoad });
     } catch (err) {
       res.status(502).json({ error: 'Could not build evening briefing', detail: String(err.message || err) });
+    }
+  });
+
+  router.post('/chat', async (req, res) => {
+    try {
+      const { messages } = req.body || {};
+      if (!Array.isArray(messages) || !messages.length) {
+        return res.status(400).json({ ok: false, error: 'messages[] required' });
+      }
+      const { mode, activities, wellness, scorecard, verdict, plan } = await loadDashboardContext();
+      const importData = currentImportData();
+      const body = loadBody(mode, importData);
+      const importSummary = healthImport.importSummary(importData);
+      const context = buildContext({ activities, wellness, scorecard, verdict, plan, body, importSummary });
+      const reply = await chatReply({ messages, context });
+      res.json({ ok: true, reply });
+    } catch (err) {
+      res.status(502).json({ ok: false, error: 'Could not get a reply', detail: String(err.message || err) });
     }
   });
 

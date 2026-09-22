@@ -30,4 +30,5 @@ export const api = {
   importHealth: (raw) => req('/import/health', { method: 'POST', headers: { 'content-type': 'text/plain' }, body: raw }),
   clearImport: () => req('/import/health', { method: 'DELETE' }),
   addManualActivity: (entry) => req('/activities/manual', { method: 'POST', body: JSON.stringify(entry) }),
+  chat: (messages) => req('/chat', { method: 'POST', body: JSON.stringify({ messages }) }),
 };
