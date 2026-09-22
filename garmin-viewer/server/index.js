@@ -5,6 +5,7 @@ const express = require('express');
 const cron = require('node-cron');
 
 const { GarminClient } = require('./garminClient');
+const { PythonBackendClient } = require('./pythonBackendClient');
 const { createRouter } = require('./routes');
 
 const app = express();
@@ -25,24 +26,38 @@ app.use(express.text({ limit: '150mb', type: ['text/plain', 'text/html'] }));
 // Render (and most PaaS hosts) poll this to know the service is alive.
 app.get('/healthz', (req, res) => res.status(200).send('ok'));
 
-const garminClient = new GarminClient();
+// When PYTHON_BACKEND_URL is set, live data comes from the standalone
+// garmin-backend/ Python service (see its README) instead of a live Garmin
+// login done directly from this process -- that login is Cloudflare-blocked
+// from Render's datacenter IPs, which is the whole reason that service
+// exists. Leaving it unset keeps the old direct-login path working exactly
+// as before for anyone not using the new backend.
+const usingPythonBackend = Boolean(process.env.PYTHON_BACKEND_URL);
+const garminClient = usingPythonBackend
+  ? new PythonBackendClient({ baseUrl: process.env.PYTHON_BACKEND_URL, apiToken: process.env.PYTHON_BACKEND_TOKEN })
+  : new GarminClient();
 
 app.use('/api', createRouter(garminClient));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 async function bootstrap() {
-  const restored = await garminClient.restoreSession();
-  if (!restored && process.env.GARMIN_USERNAME && process.env.GARMIN_PASSWORD) {
-    try {
-      await garminClient.login(process.env.GARMIN_USERNAME, process.env.GARMIN_PASSWORD);
-      console.log('[garmin] logged in with GARMIN_USERNAME from .env');
-    } catch (err) {
-      console.warn('[garmin] auto-login failed, starting in demo mode:', err.message);
-    }
-  } else if (restored) {
-    console.log('[garmin] restored saved session');
+  if (usingPythonBackend) {
+    const connected = await garminClient.restoreSession();
+    console.log(connected ? '[garmin-backend] connected' : '[garmin-backend] not connected yet — starting in demo mode');
   } else {
-    console.log('[garmin] no saved session and no credentials in .env — starting in demo mode');
+    const restored = await garminClient.restoreSession();
+    if (!restored && process.env.GARMIN_USERNAME && process.env.GARMIN_PASSWORD) {
+      try {
+        await garminClient.login(process.env.GARMIN_USERNAME, process.env.GARMIN_PASSWORD);
+        console.log('[garmin] logged in with GARMIN_USERNAME from .env');
+      } catch (err) {
+        console.warn('[garmin] auto-login failed, starting in demo mode:', err.message);
+      }
+    } else if (restored) {
+      console.log('[garmin] restored saved session');
+    } else {
+      console.log('[garmin] no saved session and no credentials in .env — starting in demo mode');
+    }
   }
 
   const schedule = process.env.SYNC_CRON || '0 */2 * * *';

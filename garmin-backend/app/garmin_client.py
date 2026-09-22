@@ -174,6 +174,7 @@ class GarminClient:
         rhr = safe("get_rhr_day", lambda: client.get_rhr_day(ds))
         hrv = safe("get_hrv_data", lambda: client.get_hrv_data(ds))
         training_readiness = safe("get_training_readiness", lambda: client.get_training_readiness(ds))
+        stress = safe("get_stress_data", lambda: client.get_stress_data(ds))
 
         return {
             "date": ds,
@@ -185,6 +186,7 @@ class GarminClient:
             "rhr": rhr,
             "hrv": hrv,
             "training_readiness": training_readiness,
+            "stress": stress,
         }
 
     def fetch_sleep_shifted(self, day: date) -> dict[str, Any] | None:

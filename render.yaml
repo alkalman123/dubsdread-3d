@@ -24,6 +24,16 @@ services:
         sync: false
       - key: SYNC_CRON
         value: "0 */2 * * *"
+      # Point these at the alpine-log-garmin-backend service below (its URL,
+      # and the same BACKEND_API_TOKEN you set on it) to get real live
+      # Garmin data instead of GARMIN_USERNAME/PASSWORD -- Garmin's login
+      # is Cloudflare-blocked from Render, which is why that separate
+      # service exists (it authenticates via a one-time local login
+      # instead). Leaving these unset keeps the old direct-login path.
+      - key: PYTHON_BACKEND_URL
+        sync: false
+      - key: PYTHON_BACKEND_TOKEN
+        sync: false
 
   - type: web
     name: alpine-log-garmin-backend
