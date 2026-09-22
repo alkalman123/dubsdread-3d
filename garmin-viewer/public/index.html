@@ -6,6 +6,18 @@
 <title>Alpine Log — Garmin Mountain Viewer</title>
 <meta name="description" content="Your Garmin data, seen like a bike/run/climb athlete." />
 <meta name="theme-color" content="#0f1217" />
+<script>
+  // Applies a saved System/Light/Dark override before the stylesheet even
+  // loads, so an explicit choice that disagrees with the OS setting (e.g.
+  // "Light" while the phone is in dark mode) never flashes the wrong theme
+  // for a frame. The full logic (persisting a change, keeping <meta
+  // theme-color> in sync) lives in app.js's applyTheme() -- this is just
+  // its first, synchronous run.
+  try {
+    var t = localStorage.getItem('alpineLogTheme');
+    if (t && t !== 'system') document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="icon" href="icons/icon-32.png" />
 <link rel="apple-touch-icon" href="icons/icon-180.png" />
@@ -18,8 +30,8 @@
 <body>
 <div id="app">
   <header class="topbar">
-    <h1>🏔️ Alpine Log <span id="modePill" class="mode-pill demo">demo</span></h1>
-    <button class="icon-btn" id="settingsBtn" aria-label="Settings">⚙️</button>
+    <h1><span class="ic" data-icon="mountain" data-icon-size="22"></span> Alpine Log <span id="modePill" class="mode-pill demo">demo</span></h1>
+    <button class="icon-btn" id="settingsBtn" aria-label="Settings"><span class="ic" data-icon="settings" data-icon-size="19"></span></button>
   </header>
 
   <main id="main">
@@ -33,12 +45,12 @@
 
   <nav class="tabbar">
     <div class="inner">
-      <button data-tab="today" class="active"><span class="ic">🏠</span>Today</button>
-      <button data-tab="activities"><span class="ic">📋</span>Activities</button>
-      <button data-tab="trends"><span class="ic">📈</span>Trends</button>
-      <button data-tab="sleep"><span class="ic">🌙</span>Sleep</button>
-      <button data-tab="body"><span class="ic">🧬</span>Body</button>
-      <button data-tab="plan"><span class="ic">🎯</span>Plan</button>
+      <button data-tab="today" class="active"><span class="ic" data-icon="home"></span>Today</button>
+      <button data-tab="activities"><span class="ic" data-icon="list"></span>Activities</button>
+      <button data-tab="trends"><span class="ic" data-icon="trending-up"></span>Trends</button>
+      <button data-tab="sleep"><span class="ic" data-icon="moon"></span>Sleep</button>
+      <button data-tab="body"><span class="ic" data-icon="dna"></span>Body</button>
+      <button data-tab="plan"><span class="ic" data-icon="target"></span>Plan</button>
     </div>
   </nav>
 </div>

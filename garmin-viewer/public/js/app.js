@@ -1,10 +1,65 @@
 import { api } from './api.js';
 import { lineChart, barChart, gaugeArc, stackedBarChart, sleepConsistencyChart, sparkline } from './charts.js';
+import { icon, ICON_FOR_DISCIPLINE, ICON_FOR_INTENSITY, ICON_FOR_TAB } from './icons.js';
 import { importStore } from './importStore.js';
 import { contextStore } from './contextStore.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+// Canvas fillStyle (Chart.js colors, inline glyph backgrounds) can't resolve
+// var(--x) the way a CSS property can, so anywhere a color needs to follow
+// the live light/dark theme, it's read through this instead of a literal
+// hex -- called fresh at render/chart-draw time, never cached, so a theme
+// switch that re-renders the current tab picks up the new value for free.
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+// ------------------------------------------------------------------ theme --
+// System/Light/Dark, persisted, layered on top of prefers-color-scheme (see
+// the :root/[data-theme] rules in style.css). Applied as early as possible
+// (before the first paint's worth of JS even runs render()) so there's no
+// flash of the wrong theme, and kept in sync with <meta name="theme-color">
+// so the OS status bar / task switcher never disagrees with the page --
+// this is also the fix for the color they used to just permanently disagree
+// on before dark mode existed at all.
+const THEME_KEY = 'alpineLogTheme';
+
+function getThemePref() {
+  try {
+    return localStorage.getItem(THEME_KEY) || 'system';
+  } catch {
+    return 'system';
+  }
+}
+
+function applyTheme(pref) {
+  document.documentElement.dataset.theme = pref === 'system' ? '' : pref;
+  // Read back the token that just took effect (rather than re-deriving the
+  // system/override logic a second time here) so the meta tag can never
+  // drift from what :root/[data-theme] actually resolved to.
+  const resolvedBg = getComputedStyle(document.documentElement).getPropertyValue('--paper').trim();
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta && resolvedBg) meta.setAttribute('content', resolvedBg);
+}
+
+function setThemePref(pref) {
+  try {
+    localStorage.setItem(THEME_KEY, pref);
+  } catch {
+    // Private-browsing/storage-disabled: the choice just won't survive a reload.
+  }
+  applyTheme(pref);
+}
+
+if (window.matchMedia) {
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (getThemePref() === 'system') applyTheme('system');
+  });
+}
+
+applyTheme(getThemePref());
 
 function loadSavedObjective() {
   try {
@@ -129,14 +184,14 @@ function microHabitsCardHtml() {
       <h2 class="section-title">Today's Micro-Habits</h2>
       <div class="card" style="padding:4px 12px">
         <div class="activity-item">
-          <div class="glyph" style="background:#c25b9e22;color:#c25b9e">🤸</div>
+          <div class="glyph" style="background:#c25b9e22;color:#c25b9e">${icon('route', { size: 20 })}</div>
           <div>
             <div class="name">${slackline.title}</div>
             <div class="meta">${slackline.detail}</div>
           </div>
         </div>
         <div class="activity-item">
-          <div class="glyph" style="background:#f0793d22;color:#f0793d">🖐️</div>
+          <div class="glyph" style="background:#f0793d22;color:#f0793d">${icon('hand', { size: 20 })}</div>
           <div>
             <div class="name">${hangboard.title}</div>
             <div class="meta">${hangboard.detail}</div>
@@ -207,11 +262,27 @@ function revealCards(container) {
 
 // ---------------------------------------------------------------- tabs ----
 
+function prefersReducedMotion() {
+  return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
 function switchTab(tab) {
-  state.tab = tab;
-  $$('nav.tabbar button').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
-  $$('.view').forEach((v) => v.classList.toggle('active', v.id === `view-${tab}`));
-  render(tab);
+  if (state.tab === tab) return;
+  if (navigator.vibrate) navigator.vibrate(6);
+  const apply = () => {
+    state.tab = tab;
+    $$('nav.tabbar button').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+    $$('.view').forEach((v) => v.classList.toggle('active', v.id === `view-${tab}`));
+    render(tab);
+  };
+  // Native-feeling tab transitions where supported; the existing
+  // .view.active fade (see style.css) is the fallback everywhere else,
+  // including whenever reduced motion is requested.
+  if (document.startViewTransition && !prefersReducedMotion()) {
+    document.startViewTransition(apply);
+  } else {
+    apply();
+  }
 }
 $$('nav.tabbar button').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
 
@@ -280,9 +351,9 @@ function scorePanelHtml(sc, { label = 'Training Score', desc = 'A transparent av
 // --------------------------------------------------------------- Today ----
 
 function readinessTier(score) {
-  if (score >= 70) return { label: 'Strong', color: '#6fae70' };
-  if (score >= 40) return { label: 'Building', color: '#d6bb85' };
-  return { label: 'Recover', color: '#e35a48' };
+  if (score >= 70) return { label: 'Strong', color: cssVar('--moss') };
+  if (score >= 40) return { label: 'Building', color: cssVar('--sand') };
+  return { label: 'Recover', color: cssVar('--red') };
 }
 
 async function renderToday() {
@@ -306,7 +377,7 @@ async function renderToday() {
 
       <h2 class="section-title">${isMorning ? 'Morning Briefing' : 'Evening Wrap-up'}</h2>
       <div class="card briefing-card">
-        <div class="kicker">${isMorning ? '☀️ Good morning' : '🌙 Day complete'}</div>
+        <div class="kicker">${icon(isMorning ? 'sun' : 'moon', { size: 16 })} ${isMorning ? 'Good morning' : 'Day complete'}</div>
         <p>${briefing.text}</p>
       </div>
 
@@ -351,7 +422,7 @@ async function renderToday() {
 
       <h2 class="section-title">Today's Plan</h2>
       <div class="card tappable plan-preview" id="planPreviewCard">
-        <div class="glyph">${plan?.icon || '🎯'}</div>
+        <div class="glyph">${icon(ICON_FOR_DISCIPLINE[plan?.discipline] || 'target', { size: 22 })}</div>
         <div>
           <div class="title">${plan?.title || 'Loading...'}</div>
           <div class="sub">${plan?.disciplineLabel || ''} · ${plan?.intensity || ''}</div>
@@ -371,8 +442,8 @@ async function renderToday() {
     // Canvas fillStyle can't resolve CSS custom properties, so this mirrors
     // the readiness tier color from style.css as a literal value.
     gaugeArc($('#heroReadinessRing'), plan?.readiness?.score ?? 0, 100, readinessTier(plan?.readiness?.score ?? 0).color);
-    sparkline($('#sleepSpark'), wellnessRes.wellness.map((d) => d.sleepHours), '#4fa3e0');
-    sparkline($('#stepsSpark'), wellnessRes.wellness.map((d) => d.steps), '#6fae70');
+    sparkline($('#sleepSpark'), wellnessRes.wellness.map((d) => d.sleepHours), cssVar('--blue'));
+    sparkline($('#stepsSpark'), wellnessRes.wellness.map((d) => d.steps), cssVar('--moss'));
     await initCoachUI();
     revealCards(view);
   } catch (err) {
@@ -391,7 +462,7 @@ function renderActivityListInto(container, activities, { compact = false } = {})
     .map(
       (a) => `
     <div class="activity-item tappable" data-id="${a.id}">
-      <div class="glyph" style="background:${a.color}22;color:${a.color}">${a.icon}</div>
+      <div class="glyph" style="background:${a.color}22;color:${a.color}">${icon(ICON_FOR_DISCIPLINE[a.discipline] || 'circle-dot', { size: 19 })}</div>
       <div>
         <div class="name">${a.name}</div>
         <div class="meta">${a.distanceKm ? a.distanceKm + ' km · ' : ''}${fmtDuration(a.durationMin)}${a.elevationGainM ? ' · ↑' + a.elevationGainM + 'm' : ''}</div>
@@ -503,7 +574,7 @@ async function openActivitySheet(id) {
     const hasTrack = track && track.length > 1;
     sheet.innerHTML = `
       <div class="sheet-handle"></div>
-      <h3>${a.icon} ${a.name}</h3>
+      <h3 style="display:flex;align-items:center;gap:8px">${icon(ICON_FOR_DISCIPLINE[a.discipline] || 'circle-dot', { size: 20, className: 'sheet-title-icon' })} ${a.name}</h3>
       <div class="hint">${new Date(a.startTime).toLocaleString()}</div>
       ${hasTrack ? '<div class="detail-map" id="detailMap"></div>' : ''}
       <div class="detail-grid">
@@ -536,12 +607,17 @@ async function openActivitySheet(id) {
 
     if (streams.hr && streams.hr.length) {
       const labels = (streams.timeSec || []).map((s) => `${Math.round(s / 60)}m`);
-      lineChart($('#hrChart'), { labels, series: [{ label: 'HR', data: streams.hr, color: '#e35a48' }] });
+      lineChart($('#hrChart'), { labels, series: [{ label: 'HR', data: streams.hr, color: cssVar('--red') }] });
     }
     if (streams.elevation && streams.elevation.length) {
       const labels = (streams.timeSec || []).map((s) => `${Math.round(s / 60)}m`);
-      lineChart($('#eleChart'), { labels, series: [{ label: 'Elevation', data: streams.elevation, color: '#ac82a5' }], fill: true });
+      lineChart($('#eleChart'), { labels, series: [{ label: 'Elevation', data: streams.elevation, color: cssVar('--plum') }], fill: true });
     }
+    // The skeleton's own handle got wired to close-drag when the sheet
+    // first opened, but this innerHTML swap just replaced it with a brand
+    // new (unwired) one -- wireSheetDrag() no-ops harmlessly everywhere
+    // else it's called after the real handle is already wired.
+    wireSheetDrag(sheet);
   } catch (err) {
     sheet.innerHTML = `<div class="sheet-handle"></div>${errorCard(err)}`;
   }
@@ -696,7 +772,7 @@ function heatColor(min) {
   if (min < 30) return 'rgba(79,163,224,0.32)';
   if (min < 60) return 'rgba(79,163,224,0.58)';
   if (min < 120) return 'rgba(46,196,203,0.78)';
-  return '#2ec4cb';
+  return cssVar('--teal');
 }
 
 function trainingHeatmapHtml(activities) {
@@ -866,7 +942,7 @@ async function renderTrends() {
       ensureActivitiesLoaded(),
     ]);
     const acwr = summary.acwr;
-    const acwrColor = { 'high-risk': '#e35a48', monitor: '#d6bb85', 'sweet-spot': '#6fae70', undertrained: '#6fb6e0' }[acwr.status] || '#6fae70';
+    const acwrColor = { 'high-risk': cssVar('--red'), monitor: cssVar('--sand'), 'sweet-spot': cssVar('--moss'), undertrained: cssVar('--ice') }[acwr.status] || cssVar('--moss');
 
     view.innerHTML = `
       <h2 class="section-title">Training Score</h2>
@@ -940,7 +1016,7 @@ async function renderTrends() {
 
     const byD = summary.byDiscipline28;
     barChart($('#disciplineChart'), {
-      labels: byD.map((d) => `${d.icon} ${d.label}`),
+      labels: byD.map((d) => d.label),
       data: byD.map((d) => Math.round(d.durationMin / 60)),
       colors: byD.map((d) => d.color),
       horizontal: true,
@@ -951,7 +1027,7 @@ async function renderTrends() {
     barChart($('#vertGainChart'), {
       labels: vertWeeks.map((w) => w.label),
       data: vertWeeks.map((w) => Math.round(w.gainM)),
-      colors: vertWeeks.map(() => '#4fa3e0'),
+      colors: vertWeeks.map(() => cssVar('--blue')),
       valueLabel: 'Meters',
     });
 
@@ -962,8 +1038,8 @@ async function renderTrends() {
         labels: climbWeeks.map((w) => w.label),
         series: [
           { label: 'Indoor', data: climbWeeks.map((w) => Number(w.indoorHr.toFixed(1))), color: '#eb6834' },
-          { label: 'Outdoor', data: climbWeeks.map((w) => Number(w.outdoorHr.toFixed(1))), color: '#4fa3e0' },
-          { label: 'Unspecified', data: climbWeeks.map((w) => Number(w.unspecHr.toFixed(1))), color: '#67717c' },
+          { label: 'Outdoor', data: climbWeeks.map((w) => Number(w.outdoorHr.toFixed(1))), color: cssVar('--blue') },
+          { label: 'Unspecified', data: climbWeeks.map((w) => Number(w.unspecHr.toFixed(1))), color: cssVar('--muted') },
         ],
       });
     }
@@ -976,7 +1052,7 @@ async function renderTrends() {
     const dayKeys = Object.keys(byDay).sort();
     lineChart($('#loadChart'), {
       labels: dayKeys.map((d) => d.slice(5)),
-      series: [{ label: 'Load', data: dayKeys.map((d) => byDay[d]), color: '#f0793d' }],
+      series: [{ label: 'Load', data: dayKeys.map((d) => byDay[d]), color: cssVar('--orange') }],
       fill: true,
       yLabel: 'Load score',
     });
@@ -987,19 +1063,19 @@ async function renderTrends() {
     lineChart($('#bbChart'), {
       labels: w.map((d) => dateLabel(d.date)),
       series: [
-        { label: 'High', data: w.map((d) => d.bodyBatteryHigh), color: '#2ec4cb' },
-        { label: 'Low', data: w.map((d) => d.bodyBatteryLow), color: '#4fa3e0' },
+        { label: 'High', data: w.map((d) => d.bodyBatteryHigh), color: cssVar('--teal') },
+        { label: 'Low', data: w.map((d) => d.bodyBatteryLow), color: cssVar('--blue') },
       ],
       yLabel: '0-100',
     });
     lineChart($('#rhrChart'), {
       labels: w.map((d) => dateLabel(d.date)),
-      series: [{ label: 'Resting HR', data: w.map((d) => d.restingHR), color: '#e35a48' }],
+      series: [{ label: 'Resting HR', data: w.map((d) => d.restingHR), color: cssVar('--red') }],
       yLabel: 'bpm',
     });
     lineChart($('#sleepTrendChart'), {
       labels: w.map((d) => dateLabel(d.date)),
-      series: [{ label: 'Sleep', data: w.map((d) => d.sleepHours), color: '#ac82a5' }],
+      series: [{ label: 'Sleep', data: w.map((d) => d.sleepHours), color: cssVar('--plum') }],
       fill: true,
       yLabel: 'Hours',
     });
@@ -1104,12 +1180,12 @@ async function renderSleep() {
         const end = hoursSince6pm(d.sleepEndMs);
         return start != null && end != null ? [start, end] : null;
       }),
-      color: '#ac82a5',
+      color: cssVar('--plum'),
     });
 
     lineChart($('#sleepDurationChart'), {
       labels: nights.map((d) => d.date.slice(5)),
-      series: [{ label: 'Sleep', data: nights.map((d) => d.sleepHours), color: '#ac82a5' }],
+      series: [{ label: 'Sleep', data: nights.map((d) => d.sleepHours), color: cssVar('--plum') }],
       fill: true,
       yLabel: 'Hours',
     });
@@ -1342,7 +1418,7 @@ async function renderBody() {
       lineChart($('#bodyTrendChart'), {
         labels: body.history.map((h) => h.date.slice(5)),
         series: [
-          { label: 'Body fat %', data: body.history.map((h) => h.body_fat_pct), color: '#f0793d' },
+          { label: 'Body fat %', data: body.history.map((h) => h.body_fat_pct), color: cssVar('--orange') },
         ],
       });
     }
@@ -1380,7 +1456,12 @@ function previewWeek(plan) {
   return days;
 }
 
-const INTENSITY_COLOR = { recovery: '#6fb6e0', moderate: '#d6bb85', hard: '#f0793d' };
+// A function, not a module-level object literal, so a theme switch that
+// re-renders the current tab picks up the new palette -- cssVar() reads
+// the live computed value each call rather than freezing it at module load.
+function intensityColor(intensity) {
+  return { recovery: cssVar('--ice'), moderate: cssVar('--sand'), hard: cssVar('--orange') }[intensity];
+}
 
 // ---------------------------------------------------------- objectives ----
 // Per-objective weekly-volume guideline targets: vertical gain (m/wk),
@@ -1393,14 +1474,14 @@ const INTENSITY_COLOR = { recovery: '#6fb6e0', moderate: '#d6bb85', hard: '#f079
 // Training Score already uses (see scorecard.js) -- just re-parameterized
 // per objective instead of computed once for general fitness.
 const OBJECTIVES = [
-  { id: 'rainier', label: 'Mount Rainier', icon: '🗻', targets: { vertical: 2500, endurance: 5, climbing: 1 } },
-  { id: 'whitney', label: 'Mt. Whitney', icon: '⛰️', targets: { vertical: 2000, endurance: 5, climbing: 0.5 } },
-  { id: 'hood', label: 'Mt. Hood', icon: '🗻', targets: { vertical: 2200, endurance: 4.5, climbing: 1 } },
-  { id: 'matterhorn', label: 'Matterhorn', icon: '⛰️', targets: { vertical: 2500, endurance: 4, climbing: 3 } },
-  { id: 'montblanc', label: 'Mont Blanc', icon: '🗻', targets: { vertical: 3000, endurance: 6, climbing: 1.5 } },
-  { id: 'aconcagua', label: 'Aconcagua', icon: '🏔️', targets: { vertical: 2000, endurance: 7, climbing: 0.5 } },
-  { id: 'yosemite', label: 'Yosemite Trip', icon: '🧗', targets: { vertical: 500, endurance: 2, climbing: 5 } },
-  { id: 'redrock', label: 'Red Rock Trip', icon: '🧗', targets: { vertical: 500, endurance: 2, climbing: 5 } },
+  { id: 'rainier', label: 'Mount Rainier', icon: 'mountain-snow', targets: { vertical: 2500, endurance: 5, climbing: 1 } },
+  { id: 'whitney', label: 'Mt. Whitney', icon: 'mountain', targets: { vertical: 2000, endurance: 5, climbing: 0.5 } },
+  { id: 'hood', label: 'Mt. Hood', icon: 'mountain-snow', targets: { vertical: 2200, endurance: 4.5, climbing: 1 } },
+  { id: 'matterhorn', label: 'Matterhorn', icon: 'mountain', targets: { vertical: 2500, endurance: 4, climbing: 3 } },
+  { id: 'montblanc', label: 'Mont Blanc', icon: 'mountain-snow', targets: { vertical: 3000, endurance: 6, climbing: 1.5 } },
+  { id: 'aconcagua', label: 'Aconcagua', icon: 'mountain-snow', targets: { vertical: 2000, endurance: 7, climbing: 0.5 } },
+  { id: 'yosemite', label: 'Yosemite Trip', icon: 'hand', targets: { vertical: 500, endurance: 2, climbing: 5 } },
+  { id: 'redrock', label: 'Red Rock Trip', icon: 'hand', targets: { vertical: 500, endurance: 2, climbing: 5 } },
 ];
 
 function objectiveActuals(activities) {
@@ -1419,7 +1500,7 @@ function objectiveActuals(activities) {
 function objectiveScorecard(activities, objective) {
   const actual = objectiveActuals(activities);
   const pct = (a, t) => Math.max(0, Math.min(100, Math.round((a / t) * 100)));
-  const colorFor = (v) => (v >= 80 ? '#6fae70' : v >= 50 ? '#d6bb85' : '#e35a48');
+  const colorFor = (v) => (v >= 80 ? cssVar('--moss') : v >= 50 ? cssVar('--sand') : cssVar('--red'));
   const axes = [
     { key: 'vertical', k: 'Vertical', unit: 'm/wk', decimals: 0, big: true },
     { key: 'endurance', k: 'Endurance', unit: 'h/wk', decimals: 1 },
@@ -1442,7 +1523,7 @@ function objectiveSectionHtml(activities) {
   return `
       <h2 class="section-title">Objective Prep</h2>
       <div class="chip-row" id="objectiveChips">
-        ${OBJECTIVES.map((o) => `<div class="chip ${o.id === obj.id ? 'active' : ''}" data-obj="${o.id}">${o.icon} ${o.label}</div>`).join('')}
+        ${OBJECTIVES.map((o) => `<div class="chip ${o.id === obj.id ? 'active' : ''}" data-obj="${o.id}">${icon(o.icon, { size: 15 })} ${o.label}</div>`).join('')}
       </div>
       ${scorePanelHtml(sc, {
         label: `Readiness — ${obj.label}`,
@@ -1475,10 +1556,10 @@ async function renderPlan() {
       <h2 class="section-title">Today's Plan</h2>
       <div class="card">
         <div class="plan-preview" style="margin-bottom:10px">
-          <div class="glyph">${plan.icon}</div>
+          <div class="glyph">${icon(ICON_FOR_DISCIPLINE[plan.discipline] || 'target', { size: 22 })}</div>
           <div>
             <div class="title">${plan.title}</div>
-            <div class="sub">${plan.disciplineLabel} · <span style="color:${INTENSITY_COLOR[plan.intensity]}">${plan.intensity}</span></div>
+            <div class="sub">${plan.disciplineLabel} · <span style="color:${intensityColor(plan.intensity)}">${plan.intensity}</span></div>
           </div>
         </div>
         <p style="margin:0 0 8px;font-size:14px;line-height:1.5">${plan.detail}</p>
@@ -1505,7 +1586,7 @@ async function renderPlan() {
           .map(
             (d) => `
           <div class="activity-item">
-            <div class="glyph" style="background:${INTENSITY_COLOR[d.intensity]}22;color:${INTENSITY_COLOR[d.intensity]}">${d.intensity === 'recovery' ? '💤' : d.intensity === 'hard' ? '🔥' : '🟡'}</div>
+            <div class="glyph" style="background:${intensityColor(d.intensity)}22;color:${intensityColor(d.intensity)}">${icon(ICON_FOR_INTENSITY[d.intensity] || 'activity', { size: 19 })}</div>
             <div>
               <div class="name">${d.label}</div>
               <div class="meta">${d.intensity} · ${d.discipline}</div>
@@ -1573,7 +1654,7 @@ async function handleChatSubmit(e) {
   }
 }
 
-const NOTE_CATEGORY_ICON = { objective: '🎯', equipment: '🏠', schedule: '📅', other: '💡' };
+const NOTE_CATEGORY_ICON = { objective: 'target', equipment: 'home', schedule: 'calendar', other: 'circle-dot' };
 
 function renderRememberedNotes() {
   const box = $('#rememberedNotes');
@@ -1591,7 +1672,7 @@ function renderRememberedNotes() {
         .map(
           (n) => `
         <div class="chip note-chip" data-id="${n.id}" title="${n.note.replace(/"/g, '&quot;')}">
-          ${NOTE_CATEGORY_ICON[n.category] || '💡'} ${n.note.length > 40 ? n.note.slice(0, 40) + '…' : n.note}
+          ${icon(NOTE_CATEGORY_ICON[n.category] || 'circle-dot', { size: 13 })} ${n.note.length > 40 ? n.note.slice(0, 40) + '…' : n.note}
           <span class="note-remove" data-id="${n.id}">×</span>
         </div>`
         )
@@ -1653,12 +1734,52 @@ async function initCoachUI() {
 function openSheet(sheet, backdrop) {
   backdrop.classList.add('open');
   requestAnimationFrame(() => sheet.classList.add('open'));
+  wireSheetDrag(sheet);
+  if (navigator.vibrate) navigator.vibrate(8);
 }
 function closeSheets() {
   $$('.sheet').forEach((s) => s.classList.remove('open'));
   $('#backdrop').classList.remove('open');
 }
 $('#backdrop').addEventListener('click', closeSheets);
+
+// Real drag-to-dismiss from the handle (not just a backdrop tap): follows
+// the pointer 1:1 while dragging, then either springs back open or
+// finishes closing using the sheet's own transform/transition (--dur-sheet
+// / --ease-sheet) -- no animation library, just the Pointer Events API and
+// the CSS this app already had for the open/close transform.
+function wireSheetDrag(sheet) {
+  const handle = sheet.querySelector('.sheet-handle');
+  if (!handle || handle.dataset.dragWired) return;
+  handle.dataset.dragWired = '1';
+  let startY = 0;
+  let dy = 0;
+  let dragging = false;
+
+  function onMove(e) {
+    if (!dragging) return;
+    dy = Math.max(0, e.clientY - startY);
+    sheet.style.transform = `translateY(${dy}px)`;
+  }
+  function onUp() {
+    if (!dragging) return;
+    dragging = false;
+    sheet.classList.remove('dragging');
+    sheet.style.transform = '';
+    const threshold = sheet.getBoundingClientRect().height * 0.28;
+    if (dy > threshold) closeSheets();
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+  }
+  handle.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    startY = e.clientY;
+    dy = 0;
+    sheet.classList.add('dragging');
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  });
+}
 
 function invalidateAllCaches() {
   state.activities = null;
@@ -1687,6 +1808,13 @@ async function openSettings() {
     <div class="sheet-handle"></div>
     <h3>Settings</h3>
     <div class="status-line">Garmin session: <b>${status.authenticated ? 'connected' : 'not connected'}</b></div>
+
+    <h2 class="section-title">Appearance</h2>
+    <div class="radio-row" id="themeRadios">
+      ${['system', 'light', 'dark']
+        .map((t) => `<label><input type="radio" name="theme" value="${t}" ${getThemePref() === t ? 'checked' : ''}/><span>${t}</span></label>`)
+        .join('')}
+    </div>
 
     <h2 class="section-title">Data source</h2>
     <div class="radio-row" id="modeRadios">
@@ -1730,6 +1858,14 @@ async function openSettings() {
       <b>Android:</b> open in Chrome → menu (⋮) → "Add to Home screen" / "Install app".
     </div>
   `;
+
+  $$('#themeRadios input').forEach((r) =>
+    r.addEventListener('change', () => {
+      setThemePref(r.value);
+      render(state.tab);
+      toast(`Appearance set to ${r.value}`);
+    })
+  );
 
   $$('#modeRadios input').forEach((r) =>
     r.addEventListener('change', async () => {
@@ -1900,7 +2036,18 @@ async function restoreContextIfNeeded() {
   }
 }
 
+// Fills every static `<span class="ic" data-icon="name">` in index.html
+// (header logo, settings gear, tab bar) -- the one-time counterpart to the
+// icon() calls app.js's render functions make for content it builds itself.
+function initStaticIcons() {
+  $$('[data-icon]').forEach((el) => {
+    const size = Number(el.dataset.iconSize) || 18;
+    el.innerHTML = icon(el.dataset.icon, { size });
+  });
+}
+
 (async function init() {
+  initStaticIcons();
   const status = await refreshStatus();
   await restoreImportIfNeeded(status);
   await restoreContextIfNeeded();

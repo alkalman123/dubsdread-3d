@@ -5,38 +5,49 @@
 // hairline recessive gridlines, and a styled dark tooltip that carries the
 // series swatch (never color-only identity).
 
-const GRID = 'rgba(255,255,255,0.07)';
-const TICK = '#8590a0';
-const SURFACE = '#171c23';
+// Colors read live from the CSS custom properties (see :root/[data-theme]
+// in style.css) rather than hardcoded per-theme literals -- Chart.js can't
+// resolve var(--x) itself, so this is the theme-follows-the-page bridge.
+// Called fresh inside each chart-builder function below (never cached at
+// module load), so switching theme and re-rendering the current tab is
+// enough to repaint every chart in the new palette.
+function cssVar(name, fallback) {
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || fallback;
+}
+function gridColor() { return cssVar('--rule', 'rgba(128,128,128,0.1)'); }
+function tickColor() { return cssVar('--muted', '#8590a0'); }
+function surfaceColor() { return cssVar('--card', '#171c23'); }
+function tooltipStyle() {
+  return {
+    backgroundColor: cssVar('--card2', 'rgba(29,35,44,0.97)'),
+    titleColor: cssVar('--ink', '#eef2f5'),
+    bodyColor: cssVar('--ink', '#eef2f5'),
+    borderColor: cssVar('--rule', 'rgba(255,255,255,0.12)'),
+    borderWidth: 1,
+    padding: 10,
+    cornerRadius: 8,
+    displayColors: true,
+    boxWidth: 8,
+    boxHeight: 8,
+    boxPadding: 4,
+    usePointStyle: true,
+  };
+}
 
 Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 Chart.defaults.font.size = 11;
-Chart.defaults.color = TICK;
 
 const registry = new Map();
 
 function makeChart(canvas, config) {
   const key = canvas.id;
   if (registry.has(key)) registry.get(key).destroy();
+  Chart.defaults.color = tickColor();
   const chart = new Chart(canvas, config);
   registry.set(key, chart);
   return chart;
 }
-
-const TOOLTIP_STYLE = {
-  backgroundColor: 'rgba(29,35,44,0.97)',
-  titleColor: '#eef2f5',
-  bodyColor: '#eef2f5',
-  borderColor: 'rgba(255,255,255,0.12)',
-  borderWidth: 1,
-  padding: 10,
-  cornerRadius: 8,
-  displayColors: true,
-  boxWidth: 8,
-  boxHeight: 8,
-  boxPadding: 4,
-  usePointStyle: true,
-};
 
 // End-anchored marker: the line itself stays clean (no per-point clutter),
 // but the last real value gets a >=8px dot with a surface ring so each
@@ -61,7 +72,7 @@ export function lineChart(canvas, { labels, series, yLabel, fill = false }) {
         pointRadius: endMarkerRadii(s.data),
         pointHoverRadius: 5,
         pointBackgroundColor: s.color,
-        pointBorderColor: SURFACE,
+        pointBorderColor: surfaceColor(),
         pointBorderWidth: 2,
         pointHoverBorderWidth: 2,
         borderWidth: 2,
@@ -78,18 +89,18 @@ export function lineChart(canvas, { labels, series, yLabel, fill = false }) {
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: series.length > 1, labels: { boxWidth: 8, boxHeight: 8, padding: 12, usePointStyle: true } },
-        tooltip: TOOLTIP_STYLE,
+        tooltip: tooltipStyle(),
       },
       scales: {
         x: { grid: { display: false }, ticks: { maxTicksLimit: 6 } },
-        y: { grid: { color: GRID }, border: { display: false }, title: yLabel ? { display: true, text: yLabel, color: TICK } : undefined },
+        y: { grid: { color: gridColor() }, border: { display: false }, title: yLabel ? { display: true, text: yLabel, color: tickColor() } : undefined },
       },
     },
   });
 }
 
 export function barChart(canvas, { labels, data, colors, horizontal = false, valueLabel }) {
-  const valueAxis = { grid: { color: GRID }, border: { display: false }, title: valueLabel ? { display: true, text: valueLabel, color: TICK } : undefined };
+  const valueAxis = { grid: { color: gridColor() }, border: { display: false }, title: valueLabel ? { display: true, text: valueLabel, color: tickColor() } : undefined };
   const categoryAxis = { grid: { display: false }, border: { display: false } };
   // "4px rounded data-end, square at the baseline" -- for a horizontal bar
   // growing rightward from the y-axis, the data-end is the right edge; for
@@ -104,7 +115,7 @@ export function barChart(canvas, { labels, data, colors, horizontal = false, val
       indexAxis: horizontal ? 'y' : 'x',
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: TOOLTIP_STYLE },
+      plugins: { legend: { display: false }, tooltip: tooltipStyle() },
       scales: horizontal ? { x: valueAxis, y: categoryAxis } : { x: categoryAxis, y: valueAxis },
     },
   });
@@ -117,7 +128,7 @@ export function gaugeArc(canvas, value, max, color) {
       datasets: [
         {
           data: [value, Math.max(0, max - value)],
-          backgroundColor: [color, 'rgba(255,255,255,0.08)'],
+          backgroundColor: [color, gridColor()],
           borderWidth: 0,
         },
       ],
@@ -191,7 +202,7 @@ export function sleepConsistencyChart(canvas, { labels, ranges, color }) {
       plugins: {
         legend: { display: false },
         tooltip: {
-          ...TOOLTIP_STYLE,
+          ...tooltipStyle(),
           callbacks: {
             label(ctx) {
               const [start, end] = ctx.raw || [];
@@ -213,7 +224,7 @@ export function sleepConsistencyChart(canvas, { labels, ranges, color }) {
           reverse: false,
           min: 0,
           max: 18,
-          grid: { color: GRID },
+          grid: { color: gridColor() },
           border: { display: false },
           ticks: { stepSize: 3, callback: (v) => CLOCK_TICKS[v] ?? '' },
         },
@@ -233,7 +244,7 @@ export function stackedBarChart(canvas, { labels, series, horizontal = true, sho
         label: s.label,
         data: s.data,
         backgroundColor: s.color,
-        borderColor: SURFACE,
+        borderColor: surfaceColor(),
         borderWidth: horizontal ? { top: 0, bottom: 0, left: 2, right: 2 } : { top: 2, bottom: 2, left: 0, right: 0 },
         maxBarThickness: 28,
       })),
@@ -244,11 +255,11 @@ export function stackedBarChart(canvas, { labels, series, horizontal = true, sho
       maintainAspectRatio: false,
       plugins: {
         legend: { display: showLegend, position: 'bottom', labels: { boxWidth: 8, boxHeight: 8, padding: 12, usePointStyle: true } },
-        tooltip: TOOLTIP_STYLE,
+        tooltip: tooltipStyle(),
       },
       scales: {
-        x: { stacked: true, grid: { display: !horizontal, color: GRID }, border: { display: false } },
-        y: { stacked: true, grid: { display: horizontal, color: GRID }, border: { display: false } },
+        x: { stacked: true, grid: { display: !horizontal, color: gridColor() }, border: { display: false } },
+        y: { stacked: true, grid: { display: horizontal, color: gridColor() }, border: { display: false } },
       },
     },
   });
