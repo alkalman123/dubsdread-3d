@@ -24,3 +24,25 @@ services:
         sync: false
       - key: SYNC_CRON
         value: "0 */2 * * *"
+
+  - type: web
+    name: alpine-log-garmin-backend
+    runtime: python
+    rootDir: garmin-backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/status
+    envVars:
+      # Secret you make up yourself (e.g. `openssl rand -hex 32`) that the
+      # mobile app / frontend must send as "Authorization: Bearer <this>".
+      - key: BACKEND_API_TOKEN
+        sync: false
+      # Output of `python cli_login.py`, run once from your own PC. See
+      # garmin-backend/README.md.
+      - key: GARMIN_TOKENSTORE_JSON
+        sync: false
+      - key: SYNC_INTERVAL_MINUTES
+        value: "30"
+      - key: BACKFILL_DAYS
+        value: "365"
