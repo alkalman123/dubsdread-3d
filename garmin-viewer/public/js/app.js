@@ -260,6 +260,45 @@ function revealCards(container) {
   });
 }
 
+// Count-up: any element rendered with data-target="<number>" (and optional
+// data-decimals) starts at 0 and animates up to its real value on an
+// ease-out curve -- used for headline numbers (readiness, training score,
+// ACWR ratio) so a changed number registers as a change, not just a swap.
+// Generic and declarative (mark the element, don't wire each one by hand)
+// so future hero numbers pick it up for free.
+function animateCountUp(el, target, { decimals = 0, duration = 700 } = {}) {
+  if (!el || Number.isNaN(target)) return;
+  if (prefersReducedMotion()) {
+    el.textContent = target.toFixed(decimals);
+    return;
+  }
+  const startTime = performance.now();
+  function tick(now) {
+    const p = Math.min(1, (now - startTime) / duration);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = (target * eased).toFixed(decimals);
+    if (p < 1) requestAnimationFrame(tick);
+    else el.textContent = target.toFixed(decimals);
+  }
+  requestAnimationFrame(tick);
+}
+
+function animateCountUps(container) {
+  if (!container) return;
+  container.querySelectorAll('[data-target]').forEach((el) => {
+    const target = Number(el.dataset.target);
+    if (Number.isNaN(target)) return;
+    animateCountUp(el, target, { decimals: Number(el.dataset.decimals) || 0 });
+  });
+}
+
+// The one call every render*() function makes once its innerHTML has
+// landed: stagger the cards in, and count up any headline numbers.
+function afterRender(view) {
+  revealCards(view);
+  animateCountUps(view);
+}
+
 // ---------------------------------------------------------------- tabs ----
 
 function prefersReducedMotion() {
@@ -333,7 +372,7 @@ function scorePanelHtml(sc, { label = 'Training Score', desc = 'A transparent av
   return `
     <div class="score-panel">
       <div class="lbl">${label}</div>
-      <div class="bigscore"><span class="v num">${sc.score}</span><span class="o">/ 100</span></div>
+      <div class="bigscore"><span class="v num" data-target="${sc.score}">0</span><span class="o">/ 100</span></div>
       <div class="desc">${desc}</div>
       ${sc.comp
         .map(
@@ -395,7 +434,7 @@ async function renderToday() {
           <div class="hero-ring-canvas-wrap">
             <canvas id="heroReadinessRing"></canvas>
             <div class="hero-ring-center">
-              <div class="v num">${r?.score ?? '–'}</div>
+              <div class="v num"${r?.score != null ? ` data-target="${r.score}"` : ''}>${r?.score != null ? '0' : '–'}</div>
               <div class="o">/ 100</div>
             </div>
           </div>
@@ -445,7 +484,7 @@ async function renderToday() {
     sparkline($('#sleepSpark'), wellnessRes.wellness.map((d) => d.sleepHours), cssVar('--blue'));
     sparkline($('#stepsSpark'), wellnessRes.wellness.map((d) => d.steps), cssVar('--moss'));
     await initCoachUI();
-    revealCards(view);
+    afterRender(view);
   } catch (err) {
     view.innerHTML = errorCard(err);
   }
@@ -504,7 +543,7 @@ async function renderActivities() {
     $('#logActivityBtn').addEventListener('click', openLogActivitySheet);
     const filtered = state.activityFilter === 'all' ? state.activities : state.activities.filter((a) => a.discipline === state.activityFilter);
     renderActivityListInto($('#activityList'), filtered);
-    revealCards(view);
+    afterRender(view);
   } catch (err) {
     view.innerHTML = `<h2 class="section-title">Activities</h2>${errorCard(err)}`;
   }
@@ -953,7 +992,7 @@ async function renderTrends() {
         <div class="chart-title" style="text-align:left">Acute:Chronic Workload Ratio (ACWR)</div>
         <div class="chart-wrap" style="height:130px;margin-top:4px"><canvas id="acwrGauge"></canvas></div>
         <div class="gauge-scale"><span>0</span><span>2.0×</span></div>
-        <div style="margin-top:-38px;font-size:26px;font-weight:800;">${acwr.ratio}×</div>
+        <div style="margin-top:-38px;font-size:26px;font-weight:800;"><span class="num" data-target="${acwr.ratio}" data-decimals="2">0.00</span>×</div>
         <div class="readiness-badge" style="margin-top:8px"><span class="dot" style="background:${acwrColor}"></span>${acwr.status.replace('-', ' ')}</div>
         <div class="hint">Ratio of your acute (7-day avg) to chronic (28-day avg) training load — ${acwr.acute7d ? Math.round(acwr.acute7d / 7) : 0} vs ${acwr.chronic28dAvgDaily} load-points/day. Under 0.8 = undertrained, 0.8-1.3 = sweet spot, over 1.5 = injury-risk territory.</div>
       </div>
@@ -1079,7 +1118,7 @@ async function renderTrends() {
       fill: true,
       yLabel: 'Hours',
     });
-    revealCards(view);
+    afterRender(view);
   } catch (err) {
     view.innerHTML = `<h2 class="section-title">Training Load</h2>${errorCard(err)}`;
   }
@@ -1189,7 +1228,7 @@ async function renderSleep() {
       fill: true,
       yLabel: 'Hours',
     });
-    revealCards(view);
+    afterRender(view);
   } catch (err) {
     view.innerHTML = `<h2 class="section-title">Sleep</h2>${errorCard(err)}`;
   }
@@ -1423,7 +1462,7 @@ async function renderBody() {
       });
     }
     wireFigureTilt($('.figureWrap'));
-    revealCards(view);
+    afterRender(view);
   } catch (err) {
     view.innerHTML = `<h2 class="section-title">Body Composition</h2>${errorCard(err)}`;
   }
@@ -1608,7 +1647,7 @@ async function renderPlan() {
         renderPlan();
       })
     );
-    revealCards(view);
+    afterRender(view);
   } catch (err) {
     view.innerHTML = `<h2 class="section-title">Today's Plan</h2>${errorCard(err)}`;
   }
