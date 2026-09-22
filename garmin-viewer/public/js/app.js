@@ -247,6 +247,7 @@ const LOGGABLE_TYPES = [
   { typeKey: 'strength_training', label: 'Strength' },
   { typeKey: 'hiking', label: 'Hiking' },
   { typeKey: 'walking', label: 'Walking' },
+  { typeKey: 'slacklining', label: 'Slacklining' },
 ];
 
 function openLogActivitySheet() {

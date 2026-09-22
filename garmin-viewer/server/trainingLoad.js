@@ -108,9 +108,14 @@ function daysSinceLastByDiscipline(activities, disciplines) {
 
 const TEMPLATES = {
   climbing: {
-    recovery: { title: 'Easy movement day', detail: 'Top-rope or auto-belay well below your limit, 40-50min at the gym. Footwork drills, no redpoint burns.' },
-    moderate: { title: 'Volume / ARC training', detail: '4x4 boulder pyramid or ARC (aerobic capacity) laps at the gym, 60-90min at moderate intensity, full rest between hard sets.' },
-    hard: { title: 'Projecting session', detail: '4-6 focused burns on your project boulder or route with full rest (3-5min) between attempts, then hangboard repeaters if fresh.' },
+    // Peak season rewards finger strength banked well in advance, not
+    // scrambled together once it arrives — so hangboard work is a
+    // standing part of the rotation now, not an afterthought tacked onto
+    // hard days. Recovery days stay hangboard-free on purpose: fresh
+    // fingers need actual rest, not more loading.
+    recovery: { title: 'Easy movement day + finger rest', detail: 'Top-rope or auto-belay well below your limit, 40-50min at the gym. Footwork drills, no redpoint burns, no hangboard — let the fingers actually recover so the next hangboard session hits harder.' },
+    moderate: { title: 'Volume + hangboard finger strength', detail: '4x4 boulder pyramid or ARC laps at the gym, 60-90min at moderate intensity, then 15-20min structured hangboard (7/3 repeaters, 3-4 sets per grip type) — this is the building block for peak-season finger strength, best done consistently now rather than crammed in later.' },
+    hard: { title: 'Projecting + max hangboard', detail: '4-6 focused burns on your project boulder or route with full rest (3-5min) between attempts, then max-hang hangboard (5-10s hangs, long rest, 4-6 sets) while fully warmed up — pair hard climbing days with hard finger days so easy days can stay genuinely easy.' },
   },
   biking: {
     recovery: { title: 'Recovery spin', detail: 'Zone 1, 30-45min. Easy out-and-back on the 606 right from your door, or trainer, conversational pace.' },
@@ -142,13 +147,21 @@ const TEMPLATES = {
     moderate: { title: 'Strength maintenance', detail: 'Full-body session: squat/deadlift pattern, pull-ups, core, 45-60min moderate load.' },
     hard: { title: 'Heavy strength session', detail: 'Lower-rep, higher-load lifting session focused on legs and pulling strength for climbing/mountaineering.' },
   },
+  slacklining: {
+    recovery: { title: 'Easy balance session', detail: '15-20min low, short line — clean walks focused on relaxed posture and smooth line control, not tricks. Good active-recovery complement to climbing (shared finger/core demands, low overall fatigue).' },
+    moderate: { title: 'Line time + tricklining basics', detail: '30-45min: warm up with clean walks and turns, then work a specific skill (turns, sitting/standing transitions, or your next trick progression) in short focused attempts with rest between falls.' },
+    hard: { title: 'Longline / highline-prep session', detail: '45-60min on your longest or most challenging line — extended focused sends, working through the fatigue that shows up past the first few steps. Pair with a rest day after; balance-under-fatigue work adds up.' },
+  },
 };
 
 // The daily recommendation rotates only through the sports this athlete
 // actually trains for; other disciplines (hiking, mountaineering, ski —
 // still classified and shown in Activities/Trends if they ever show up in
-// imported history) are excluded from the "what's next" pool.
-const DISCIPLINE_PRIORITY = ['climbing', 'biking', 'running', 'strength'];
+// imported history) are excluded from the "what's next" pool. Slacklining
+// joins once it's actually been logged in the last 45 days (same
+// "seen recently" gate every other discipline here goes through) so a
+// sport with zero history doesn't dominate the rotation by default.
+const DISCIPLINE_PRIORITY = ['climbing', 'biking', 'running', 'strength', 'slacklining'];
 
 function recommendWorkout(activities, wellnessDays) {
   const acwr = computeACWR(activities);
