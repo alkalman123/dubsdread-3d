@@ -448,8 +448,22 @@ h3, .h3 { font-size: clamp(1.2rem, 1.6vw, 1.5rem); font-weight: 750; letter-spac
 .pdp-gallery .main-frame {
   border-radius: var(--radius-lg); overflow: hidden; background: var(--paper-dim);
   aspect-ratio: 1/1; margin-bottom: 14px; border: 1px solid var(--line);
+  position: relative;
 }
 .pdp-gallery .main-frame img { width: 100%; height: 100%; object-fit: cover; }
+.pdp-gallery .main-frame canvas { display: block; touch-action: none; cursor: grab; }
+.pdp-gallery .main-frame canvas:active { cursor: grabbing; }
+.gallery-tabs { margin-bottom: 12px; }
+.viewer-hint {
+  position: absolute; left: 14px; bottom: 14px; z-index: 2;
+  background: rgba(21,25,28,.55); color: #fff; font-size: 11px; font-weight: 650;
+  padding: 5px 11px; border-radius: 999px; pointer-events: none;
+  backdrop-filter: blur(4px);
+}
+.viewer-loading {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 12.5px; color: var(--muted); font-weight: 650;
+}
 .pdp-thumbs { display: flex; gap: 10px; }
 .pdp-thumbs button {
   width: 74px; height: 74px; border-radius: 12px; overflow: hidden; border: 2px solid transparent; background: var(--paper-dim); padding: 0;

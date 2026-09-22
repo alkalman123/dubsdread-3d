@@ -9,6 +9,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="img/favicon-192.png">
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <link rel="stylesheet" href="css/style.css">
+<script type="importmap">{"imports": {"three": "./js/vendor/three.module.min.js"}}</script>
 </head>
 <body>
 <a class="visually-hidden" href="#main">Skip to content</a>
@@ -86,8 +87,16 @@
 
     <div class="pdp">
       <div class="pdp-gallery">
-        <div class="main-frame">
+        <div class="filter-row gallery-tabs" role="group" aria-label="Gallery view">
+          <button type="button" class="filter-chip active" data-gallery-tab="photos">Photos</button>
+          <button type="button" class="filter-chip" data-gallery-tab="3d">3D View</button>
+        </div>
+        <div class="main-frame" id="galleryPhotoFrame">
           <img id="pdpMainImg" src="img/bigbiner-rock-hero.jpg" alt="The Big Biner wall rack">
+        </div>
+        <div class="main-frame" id="gallery3DFrame" style="display:none;">
+          <div id="viewer3D" style="width:100%;height:100%;"></div>
+          <span class="viewer-hint">Drag to rotate · Scroll to zoom</span>
         </div>
         <div class="pdp-thumbs">
           <button type="button" data-angle="hero" class="active"><img src="img/bigbiner-rock-hero.jpg" alt="Angle view"></button>
@@ -259,6 +268,10 @@
 <script src="js/store-data.js"></script>
 <script src="js/cart.js"></script>
 <script src="js/ui.js"></script>
+<script type="module">
+  import { mountModelViewer } from './js/model-viewer.js';
+  window.mountModelViewer = mountModelViewer;
+</script>
 <script>
 (function () {
   const params = new URLSearchParams(location.search);
@@ -271,11 +284,43 @@
   const swatchBtns = document.querySelectorAll('.swatch-btn');
   const colorLabel = document.getElementById('selectedColorName');
 
+  let viewer = null;
+  const tabBtns = document.querySelectorAll('[data-gallery-tab]');
+  const photoFrame = document.getElementById('galleryPhotoFrame');
+  const frame3D = document.getElementById('gallery3DFrame');
+  const viewerContainer = document.getElementById('viewer3D');
+
+  function ensureViewer() {
+    if (viewer || !window.mountModelViewer) return;
+    const loading = document.createElement('div');
+    loading.className = 'viewer-loading';
+    loading.textContent = 'Loading 3D model…';
+    viewerContainer.appendChild(loading);
+    viewer = window.mountModelViewer(viewerContainer, {
+      stlUrl: 'models/big-biner.stl',
+      color: colorway(selected).hex,
+      onReady: () => loading.remove(),
+      onError: () => { loading.textContent = 'Could not load the 3D model.'; },
+    });
+  }
+
+  tabBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      tabBtns.forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      const is3D = btn.getAttribute('data-gallery-tab') === '3d';
+      photoFrame.style.display = is3D ? 'none' : '';
+      frame3D.style.display = is3D ? '' : 'none';
+      if (is3D) ensureViewer();
+    });
+  });
+
   function render() {
     const set = bigBinerImages(selected);
     const c = colorway(selected);
     mainImg.src = set[activeAngle];
     mainImg.alt = `The Big Biner in ${c.name}, ${activeAngle} view`;
+    if (viewer) viewer.setColor(c.hex);
     thumbBtns.forEach((b) => {
       const angle = b.getAttribute('data-angle');
       b.querySelector('img').src = set[angle];
