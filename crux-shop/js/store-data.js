@@ -5,10 +5,15 @@
    LAUNCH CHECKLIST — replace before taking real orders:
    1. SHOP.email   → a real inbox you check (currently a safe RFC 2606 .example
                       placeholder that cannot deliver mail).
-   2. SHOP.payment.paymentLinkUrl → a real Stripe Payment Link / PayPal.me /
-                      Snipcart checkout URL once you have a payment processor
-                      connected. Until then, checkout collects orders and the
-                      shop follows up by email to take payment manually.
+   2. SHOP.payment.productLinks → paste a Stripe Payment Link URL per product
+                      (see business/PAYMENTS-SETUP.md) once you have a Stripe
+                      account, and every "Buy now" button on that product
+                      instantly starts taking real cards — no other code
+                      changes needed. Left blank, "Buy now" falls back to the
+                      built-in cart + email-invoice checkout, which needs no
+                      account at all. Multi-item carts ("Add to cart") always
+                      use the built-in checkout, since one Payment Link can't
+                      represent an arbitrary mixed cart without a backend.
    3. Swap SHOP.social if/when real social accounts exist (none are linked yet).
    ========================================================================== */
 
@@ -29,9 +34,19 @@ const SHOP = {
     'FIRSTSEND10': { percentOff: 10, label: '10% off your first send' },
   },
   payment: {
-    // Drop a real Stripe Payment Link / PayPal.me URL here to accept live
-    // card payments at checkout. Left blank on purpose — see checklist above.
-    paymentLinkUrl: '',
+    // One Stripe Payment Link per product (optional). When a product's
+    // link is set, its "Buy now" button skips the internal checkout and
+    // sends the customer straight to Stripe's own hosted, card-accepting
+    // checkout page for that item. Leave a value blank/'' to keep using
+    // the built-in email-invoice checkout for that product. See
+    // business/PAYMENTS-SETUP.md for exactly how to create these.
+    productLinks: {
+      'rock-ring': '',
+      'big-biner': '',
+      'bottle-adapter': '',
+      'gift-duo': '',
+      'felt-pads': '',
+    },
   },
   social: {
     instagram: '',
@@ -57,6 +72,21 @@ function rockRingImages(colorKey) {
     front: `img/rockring-${colorKey}-front.jpg`,
     profile: `img/rockring-${colorKey}-profile.jpg`,
     detail: `img/rockring-${colorKey}-detail.jpg`,
+  };
+}
+
+function bigBinerImages(colorKey) {
+  return {
+    hero: `img/bigbiner-${colorKey}-hero.jpg`,
+    front: `img/bigbiner-${colorKey}-front.jpg`,
+    detail: `img/bigbiner-${colorKey}-detail.jpg`,
+  };
+}
+
+function bottleAdapterImages(colorKey) {
+  return {
+    hero: `img/bottleadapter-${colorKey}-hero.jpg`,
+    top: `img/bottleadapter-${colorKey}-top.jpg`,
   };
 }
 
@@ -95,9 +125,31 @@ const PRODUCTS = {
     image: rockRingImages('sand').profile,
     short: 'Four self-adhesive felt pads sized for the Rock Ring’s base, so it sits quietly on a desk, shelf or van console without scuffing the finish.',
   },
+  'big-biner': {
+    id: 'big-biner',
+    name: 'The Big Biner',
+    tagline: 'Wall-mount gear rack — V2.2',
+    price: 29.0,
+    slug: 'product-big-biner.html',
+    badge: 'New',
+    hasColor: true,
+    defaultColor: 'rock',
+    short: 'An oversized carabiner-shaped wall rack with more than a dozen holes to hang gear from — and "NOT FOR CLIMBING" printed right into the plastic, because it is genuinely not a carabiner.',
+  },
+  'bottle-adapter': {
+    id: 'bottle-adapter',
+    name: 'Hydro Flask ↔ Nalgene Adapter',
+    tagline: 'Split-ring bottle cap adapter',
+    price: 14.0,
+    slug: 'product-bottle-adapter.html',
+    badge: 'New',
+    hasColor: true,
+    defaultColor: 'ink',
+    short: 'A split-ring collar that lets a Hydro Flask-style cap thread onto a Nalgene-style wide-mouth bottle, cinched tight with a small screw across the gap.',
+  },
 };
 
-const CATALOG_ORDER = ['rock-ring', 'gift-duo', 'felt-pads'];
+const CATALOG_ORDER = ['rock-ring', 'big-biner', 'bottle-adapter', 'gift-duo', 'felt-pads'];
 
 const COMING_SOON = [
   { name: 'Crimp Tray', note: 'A shallow dish for rings, coins and hold-shaped clutter.' },

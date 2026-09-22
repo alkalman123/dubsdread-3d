@@ -159,6 +159,8 @@
         <h4>Shop</h4>
         <ul>
           <li><a href="product-rock-ring.html">The Rock Ring</a></li>
+          <li><a href="product-big-biner.html">The Big Biner</a></li>
+          <li><a href="product-bottle-adapter.html">Bottle Adapter</a></li>
           <li><a href="product-gift-duo.html">Gift Duo</a></li>
           <li><a href="product-felt-pads.html">Felt Base Pads</a></li>
           <li><a href="shop.html">All products</a></li>
@@ -218,6 +220,8 @@
   }
   document.getElementById('addToCartBtn').addEventListener('click', () => addToCartAndNotify(currentItem()));
   document.getElementById('buyNowBtn').addEventListener('click', () => {
+    const stripeLink = getStripeLink('felt-pads');
+    if (stripeLink) { window.location.href = stripeLink; return; }
     cartAdd(currentItem());
     window.location.href = 'checkout.html';
   });

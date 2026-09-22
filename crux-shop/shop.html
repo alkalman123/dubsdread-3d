@@ -89,7 +89,7 @@
 <section class="section">
   <div class="container">
     <div class="shop-toolbar">
-      <span class="shop-count">3 products available now</span>
+      <span class="shop-count">5 products available now</span>
       <div class="filter-row" id="colorFilterRow" role="group" aria-label="Preview a colorway">
         <button class="filter-chip active" data-color="rock"><span class="dot" style="background:#63707c;"></span>Rock</button>
         <button class="filter-chip" data-color="moss"><span class="dot" style="background:#55805a;"></span>Moss</button>
@@ -114,6 +114,41 @@
             <span class="swatch-dot" style="background:#55805a;"></span>
             <span class="swatch-dot" style="background:#4a90c2;"></span>
             <span class="swatch-dot" style="background:#c9a86a;"></span>
+            <span class="swatch-dot" style="background:#202326;"></span>
+            <span class="swatch-dot" style="background:#d85c2a;"></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="product-big-biner.html" class="product-card" id="bigBinerCard">
+        <div class="thumb">
+          <div class="badges"><span class="badge badge-ember">New</span></div>
+          <img id="bigBinerCardImg" src="img/bigbiner-rock-hero.jpg" alt="The Big Biner wall rack">
+        </div>
+        <div class="body">
+          <div class="title-row"><h3>The Big Biner</h3><span class="price">$29.00</span></div>
+          <p class="desc">Oversized carabiner-shaped wall rack. "NOT FOR CLIMBING," it says so right on it.</p>
+          <div class="swatches">
+            <span class="swatch-dot" style="background:#63707c;"></span>
+            <span class="swatch-dot" style="background:#55805a;"></span>
+            <span class="swatch-dot" style="background:#4a90c2;"></span>
+            <span class="swatch-dot" style="background:#c9a86a;"></span>
+            <span class="swatch-dot" style="background:#202326;"></span>
+            <span class="swatch-dot" style="background:#d85c2a;"></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="product-bottle-adapter.html" class="product-card">
+        <div class="thumb">
+          <div class="badges"><span class="badge badge-ember">New</span></div>
+          <img src="img/bottleadapter-ink-hero.jpg" alt="Hydro Flask to Nalgene bottle adapter">
+        </div>
+        <div class="body">
+          <div class="title-row"><h3>Bottle Adapter</h3><span class="price">$14.00</span></div>
+          <p class="desc">Hydro Flask cap, Nalgene bottle. Split-ring, screw-tightened.</p>
+          <div class="swatches">
+            <span class="swatch-dot" style="background:#63707c;"></span>
             <span class="swatch-dot" style="background:#202326;"></span>
             <span class="swatch-dot" style="background:#d85c2a;"></span>
           </div>
@@ -201,6 +236,8 @@
         <h4>Shop</h4>
         <ul>
           <li><a href="product-rock-ring.html">The Rock Ring</a></li>
+          <li><a href="product-big-biner.html">The Big Biner</a></li>
+          <li><a href="product-bottle-adapter.html">Bottle Adapter</a></li>
           <li><a href="product-gift-duo.html">Gift Duo</a></li>
           <li><a href="product-felt-pads.html">Felt Base Pads</a></li>
           <li><a href="shop.html">All products</a></li>
@@ -246,6 +283,8 @@
     const key = btn.getAttribute('data-color');
     document.getElementById('rockRingCardImg').src = `img/rockring-${key}-hero.jpg`;
     document.getElementById('rockRingCard').setAttribute('href', `product-rock-ring.html?color=${key}`);
+    document.getElementById('bigBinerCardImg').src = `img/bigbiner-${key}-hero.jpg`;
+    document.getElementById('bigBinerCard').setAttribute('href', `product-big-biner.html?color=${key}`);
   });
 </script>
 </body>

@@ -66,6 +66,14 @@ function fmtMoney(n) {
   return SHOP.currency + n.toFixed(2);
 }
 
+/* ---- optional per-product Stripe Payment Link (see store-data.js) --------*/
+
+function getStripeLink(productId) {
+  const links = (SHOP.payment && SHOP.payment.productLinks) || {};
+  const url = links[productId];
+  return url && url.trim() ? url.trim() : null;
+}
+
 /* ---- rendering ---------------------------------------------------------- */
 
 function iconSvg(name) {
