@@ -3,21 +3,28 @@
 // cycling / fitness equipment / ...) buries climbing and mountaineering
 // under generic buckets.
 
-// Colors match the palette of the source health-data pipeline (paper/ink/
-// orange editorial system) so imported history reads consistently with
-// wherever else this athlete looks at the same data.
+// The 8 disciplines this athlete actually trains/logs regularly share one
+// chart together (Trends' "hours by discipline" bar, the activity list) --
+// their colors are the validated-CVD-safe categorical order (see the
+// dataviz skill: run `scripts/validate_palette.js` on any change to these
+// 8 hexes before shipping). The old ad hoc set failed that check outright
+// (hiking and strength read as near-gray; hiking vs running was
+// indistinguishable for protan colorblindness). The remaining rare/
+// low-priority disciplines (ski, water, walking, other) don't realistically
+// co-occur with these in one chart, so they keep simple muted colors
+// without needing a slot in the validated 8.
 const DISCIPLINES = {
-  climbing: { label: 'Climbing', icon: '🧗', color: '#e8622c' },
-  biking: { label: 'Biking', icon: '🚴', color: '#4a90c2' },
-  running: { label: 'Running', icon: '🏃', color: '#d4614f' },
-  mountaineering: { label: 'Mountaineering', icon: '⛰️', color: '#8b5e83' },
-  hiking: { label: 'Hiking', icon: '🥾', color: '#5b8c5a' },
+  biking: { label: 'Biking', icon: '🚴', color: '#2a78d6' },
+  climbing: { label: 'Climbing', icon: '🧗', color: '#eb6834' },
+  cardio: { label: 'Cardio', icon: '❤️', color: '#1baf7a' },
+  strength: { label: 'Strength', icon: '🏋️', color: '#eda100' },
+  slacklining: { label: 'Slacklining', icon: '🤸', color: '#e87ba4' },
+  hiking: { label: 'Hiking', icon: '🥾', color: '#008300' },
+  mountaineering: { label: 'Mountaineering', icon: '⛰️', color: '#4a3aa7' },
+  running: { label: 'Running', icon: '🏃', color: '#e34948' },
   ski: { label: 'Ski Touring', icon: '⛷️', color: '#9adfff' },
-  slacklining: { label: 'Slacklining', icon: '🤸', color: '#c25b9e' },
   water: { label: 'Water', icon: '🏊', color: '#5aa9d6' },
-  strength: { label: 'Strength', icon: '🏋️', color: '#c9a86a' },
   walking: { label: 'Walking', icon: '🚶', color: '#a8b2ba' },
-  cardio: { label: 'Cardio', icon: '❤️', color: '#6aa89b' },
   other: { label: 'Other', icon: '📍', color: '#a0a6b0' },
 };
 

@@ -341,10 +341,25 @@ h2.section-title:first-child { margin-top: 6px; }
 .weightRow .wu { font-size: 12px; color: #7fa3b2; }
 
 .figureWrap { display: flex; flex-direction: column; align-items: center; margin-top: 10px; }
-.bodyFigure { width: 128px; height: 192px; filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4)); }
+.bodyFigure {
+  width: 150px;
+  height: 273px;
+  display: block;
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.4));
+  transform: perspective(900px) rotateY(-7deg);
+}
 .figureLegend { display: flex; gap: 16px; margin-top: 6px; }
 .figureLegend span { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #7fa3b2; font-weight: 650; }
 .figureLegend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+.stage-legend-detail {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px 12px;
+  margin-top: 10px;
+}
+.stage-legend-detail div { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink); font-weight: 600; }
+.stage-legend-detail i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; flex-shrink: 0; }
 
 /* ---- coach chat --------------------------------------------------------- */
 .chat-card {
@@ -357,6 +372,14 @@ h2.section-title:first-child { margin-top: 6px; }
   height: calc(100dvh - 260px);
   min-height: 320px;
   overflow: hidden;
+}
+/* Embedded at the bottom of the Today tab (a normally-scrolling page),
+   rather than filling its own dedicated view -- a near-full-viewport chat
+   card here would bury its own input off-screen beneath everything above
+   it, so it gets a fixed, modest height instead. */
+.chat-card.embedded {
+  height: 360px;
+  min-height: 0;
 }
 .chat-messages {
   flex: 1;

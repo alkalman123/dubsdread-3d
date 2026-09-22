@@ -36,6 +36,22 @@ function normalizeWellnessDay(date, raw) {
   const stressAvg = get(raw, ['stress', 'avgStressLevel']) ?? get(raw, ['stress', 'overallStressLevel']) ?? null;
   const steps = typeof raw.steps === 'number' ? raw.steps : null;
 
+  // Sleep detail for the Sleep tab. Only live/imported-from-Garmin days
+  // carry stage/timing detail (the older flat health-import format only
+  // ever had total hours) -- these all come back null for those days,
+  // which the Sleep tab treats as "not available" rather than zero.
+  const toMin = (sec) => (sec != null ? Math.round(sec / 60) : null);
+  const sleepStages = {
+    deepMin: toMin(get(sleepDto, ['deepSleepSeconds'])),
+    lightMin: toMin(get(sleepDto, ['lightSleepSeconds'])),
+    remMin: toMin(get(sleepDto, ['remSleepSeconds'])),
+    awakeMin: toMin(get(sleepDto, ['awakeSleepSeconds'])),
+  };
+  const sleepStartMs = get(sleepDto, ['sleepStartTimestampLocal']) ?? get(sleepDto, ['sleepStartTimestampGMT']);
+  const sleepEndMs = get(sleepDto, ['sleepEndTimestampLocal']) ?? get(sleepDto, ['sleepEndTimestampGMT']);
+  const avgRespiration = get(sleepDto, ['averageRespirationValue']);
+  const restlessCount = get(raw, ['sleep', 'restlessMomentsCount']);
+
   return {
     date,
     steps,
@@ -47,6 +63,11 @@ function normalizeWellnessDay(date, raw) {
     hrvStatus,
     hrvMs,
     stressAvg,
+    sleepStages,
+    sleepStartMs,
+    sleepEndMs,
+    avgRespiration,
+    restlessCount,
   };
 }
 

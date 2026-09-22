@@ -1,5 +1,5 @@
 import { api } from './api.js';
-import { lineChart, barChart, gaugeArc } from './charts.js';
+import { lineChart, barChart, gaugeArc, stackedBarChart, sleepConsistencyChart } from './charts.js';
 import { importStore } from './importStore.js';
 import { contextStore } from './contextStore.js';
 
@@ -20,6 +20,121 @@ const state = {
 // "all" asks for a decade, which the server caps to whatever's actually
 // on record — it's just a "give me everything you've got" signal.
 const TRENDS_RANGES = { '30': 30, '90': 90, '365': 365, all: 3650 };
+
+// ------------------------------------------------- daily micro-programs ----
+// Progressive home hangboard (finger strength) and Gibbon-board slackline
+// routines, meant for the short sessions you can fit between meetings on
+// WFH days / every day respectively. Each is a fixed week-by-week plan
+// (so it genuinely builds on the previous week instead of repeating the
+// same tip forever) selected purely by calendar week since PROGRAM_START —
+// no server state to lose on a redeploy, everyone always sees the same
+// phase on the same week.
+//
+// Hangboard weeks 1-4 follow the "Abrahangs" protocol (Emil Abrahamsson /
+// popularized by Lattice Training & thehangboard.com): short, frequent,
+// sub-maximal hangs with feet on the ground, done 2x/day 6+ hours apart --
+// deliberately the low-fatigue, high-frequency style suited to sneaking in
+// between calls, not a single hard session. After week 4 it holds at a
+// maintenance version of that same protocol rather than progressing into
+// heavier max-hang work, which belongs in an actual gym session (see the
+// climbing entries in trainingLoad.js's TEMPLATES) — not something to do
+// solo at a desk.
+const PROGRAM_START = new Date('2026-09-22T00:00:00');
+
+function programWeekIndex(maxIndex) {
+  const weeks = Math.floor((Date.now() - PROGRAM_START.getTime()) / (7 * 86400000));
+  return Math.max(0, Math.min(maxIndex, weeks));
+}
+
+const HANGBOARD_WEEKS = [
+  {
+    title: 'Week 1: Open-hand Abrahangs',
+    detail:
+      '2x/day, 6+ hours apart: 10 sets of 10s hangs on a jug or large edge (20mm+), open-hand grip only, ~50s rest between sets. Feet stay on the ground the whole time — this should feel like 40% effort, never close to failure. ~2min of hang time per session.',
+  },
+  {
+    title: 'Week 2: Add half-crimp',
+    detail:
+      '2x/day, 6+ hours apart: 10 sets of 10s hangs, alternating open-hand and half-crimp each set, same edge as week 1. Still feet-on-ground, still sub-maximal — the goal is frequency and tendon adaptation, not fatigue.',
+  },
+  {
+    title: 'Week 3: Smaller edge',
+    detail:
+      '2x/day, 6+ hours apart: 10 sets of 10s hangs on a smaller edge (~14-18mm), half of the sets open-hand and half half-crimp. If your gear only has one small edge, that\'s fine — consistency matters more than variety here.',
+  },
+  {
+    title: 'Week 4: Full protocol',
+    detail:
+      '2x/day, 6+ hours apart: 10 sets of 10s hangs on your week-3 edge, split evenly between open-hand and half-crimp, ~50s rest between sets. This is the complete Abrahangs session — Emil Abrahamsson\'s original numbers (roughly 1-2 minutes of total hang time per session, every day) are what drove his real strength gains.',
+  },
+  {
+    title: 'Maintenance: keep the habit',
+    detail:
+      '2x/day on WFH days, 6+ hours apart: 10 sets of 10s hangs (open-hand + half-crimp) on whatever edge still feels like ~40% effort. If it starts feeling easy, drop to a smaller edge — but this stays a low-fatigue habit, not a max-effort session. Save real max-hang work for gym days (see your climbing plan).',
+  },
+];
+
+const SLACKLINE_WEEKS = [
+  {
+    title: 'Week 1: Mount & stillness',
+    detail:
+      '5min: practice stepping onto the line and finding a stable, still stance — both feet, soft knees, gaze fixed on something ahead (not your feet). Count your longest still hold each attempt and try to beat it.',
+  },
+  {
+    title: 'Week 2: Single-leg balance + first steps',
+    detail:
+      "5min: hold single-leg balance on each side (aim for 10-20s per side), then try 2-3 steps forward before stepping off. It's normal to fall a lot here — that's how balance calibrates.",
+  },
+  {
+    title: 'Week 3: Full-length walk + turnaround',
+    detail:
+      '5min: walk the full length of the line, and practice turning around at the far end without stepping off (pivot on the balls of both feet, low and slow).',
+  },
+  {
+    title: 'Week 4: Walk backward + bounce control',
+    detail:
+      '5min: add walking backward the full length, then practice small controlled bounces in place without losing your line. Bounce control is the base for surfing and jump tricks later.',
+  },
+  {
+    title: 'Week 5: First sit',
+    detail:
+      "5min: from standing, practice dropping to a seated \"Buddha sit\" on the line and standing back up — this is the standard entry into every seated/lying trick. Expect a lot of falls; that's normal at this stage.",
+  },
+  {
+    title: 'Week 6+: Pick one trick, rotate weekly',
+    detail:
+      'You have the fundamentals (mount, walk both directions, turn around, bounce, sit). Spend 5min/day on ONE intermediate trick this week — surfing (forward or sideways rocking), cross-legged knee drop, or jumping turns — then swap to a different one next week.',
+  },
+];
+
+function dailyMicroPrograms() {
+  return {
+    hangboard: HANGBOARD_WEEKS[programWeekIndex(HANGBOARD_WEEKS.length - 1)],
+    slackline: SLACKLINE_WEEKS[programWeekIndex(SLACKLINE_WEEKS.length - 1)],
+  };
+}
+
+function microHabitsCardHtml() {
+  const { hangboard, slackline } = dailyMicroPrograms();
+  return `
+      <h2 class="section-title">Today's Micro-Habits</h2>
+      <div class="card" style="padding:4px 12px">
+        <div class="activity-item">
+          <div class="glyph" style="background:#c25b9e22;color:#c25b9e">🤸</div>
+          <div>
+            <div class="name">${slackline.title}</div>
+            <div class="meta">${slackline.detail}</div>
+          </div>
+        </div>
+        <div class="activity-item">
+          <div class="glyph" style="background:#e8622c22;color:#e8622c">🖐️</div>
+          <div>
+            <div class="name">${hangboard.title}</div>
+            <div class="meta">${hangboard.detail}</div>
+          </div>
+        </div>
+      </div>`;
+}
 
 function toast(msg) {
   const t = $('#toast');
@@ -59,9 +174,9 @@ function render(tab) {
   if (tab === 'today') renderToday();
   else if (tab === 'activities') renderActivities();
   else if (tab === 'trends') renderTrends();
+  else if (tab === 'sleep') renderSleep();
   else if (tab === 'body') renderBody();
   else if (tab === 'plan') renderPlan();
-  else if (tab === 'coach') renderCoach();
 }
 
 // -------------------------------------------------------------- status ----
@@ -172,6 +287,10 @@ async function renderToday() {
 
       <h2 class="section-title">Recent Activity</h2>
       <div class="card" id="recentList" style="padding:4px 12px;"></div>
+
+      ${microHabitsCardHtml()}
+
+      ${coachSectionHtml()}
     `;
     $('#planPreviewCard').addEventListener('click', () => switchTab('plan'));
     renderActivityListInto($('#recentList'), acts, { compact: true });
@@ -179,6 +298,7 @@ async function renderToday() {
     // --teal/--blue from style.css as literal values rather than var(...).
     gaugeArc($('#bbRing'), today.bodyBatteryHigh ?? 0, 100, '#00b0b9');
     gaugeArc($('#sleepRing'), Math.min(((today.sleepHours ?? 0) / 9) * 100, 100), 100, '#0e7cf0');
+    await initCoachUI();
   } catch (err) {
     view.innerHTML = errorCard(err);
   }
@@ -552,29 +672,149 @@ async function renderTrends() {
   }
 }
 
+// ---------------------------------------------------------------- Sleep ----
+
+// A "clock" offset anchored at 6pm, so a bedtime/waketime pair spanning
+// midnight is one contiguous [start,end] range instead of wrapping around a
+// 0-24 axis -- matches sleepConsistencyChart's expected input in charts.js.
+function hoursSince6pm(ms) {
+  if (ms == null) return null;
+  const d = new Date(ms);
+  const h = d.getHours() + d.getMinutes() / 60;
+  const offset = h - 18;
+  return offset < 0 ? offset + 24 : offset;
+}
+
+function fmtMin(min) {
+  if (min == null) return '–';
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+async function renderSleep() {
+  const view = $('#view-sleep');
+  view.innerHTML = `<h2 class="section-title">Sleep</h2>${skeletonCards(3)}`;
+  try {
+    const wellnessRes = await api.wellness(30);
+    const nights = wellnessRes.wellness;
+    const last = [...nights].reverse().find((d) => d.sleepHours != null) || {};
+    const stages = last.sleepStages || {};
+    const hasStages = stages.deepMin != null || stages.lightMin != null || stages.remMin != null;
+    const recent = nights.slice(-14);
+
+    view.innerHTML = `
+      <h2 class="section-title">Last Night</h2>
+      <div class="card">
+        <div class="stat-row">
+          <div class="stat-tile"><div class="val">${last.sleepHours ?? '–'}<span class="ru">h</span></div><div class="lbl">Total sleep</div></div>
+          <div class="stat-tile"><div class="val">${last.sleepScore ?? '–'}</div><div class="lbl">Sleep score</div></div>
+          <div class="stat-tile"><div class="val">${last.avgRespiration ?? '–'}</div><div class="lbl">Avg. breaths/min</div></div>
+          <div class="stat-tile"><div class="val">${last.restlessCount ?? '–'}</div><div class="lbl">Restless moments</div></div>
+        </div>
+      </div>
+
+      ${
+        hasStages
+          ? `
+      <h2 class="section-title">Sleep Stages</h2>
+      <div class="card">
+        <div class="chart-subtitle">Most recent night with stage-level detail.</div>
+        <div class="chart-wrap" style="height:56px;margin-top:14px"><canvas id="stagesChart"></canvas></div>
+        <div class="stage-legend-detail">
+          <div><i style="background:#4a3aa7"></i>Deep — ${fmtMin(stages.deepMin)}</div>
+          <div><i style="background:#2a78d6"></i>Light — ${fmtMin(stages.lightMin)}</div>
+          <div><i style="background:#1baf7a"></i>REM — ${fmtMin(stages.remMin)}</div>
+          <div><i style="background:#a8b2ba"></i>Awake — ${fmtMin(stages.awakeMin)}</div>
+        </div>
+      </div>`
+          : `
+      <h2 class="section-title">Sleep Stages</h2>
+      <div class="card"><div class="empty">Stage-level detail isn't available for last night (older imported data only tracks total hours).</div></div>`
+      }
+
+      <h2 class="section-title">Bedtime &amp; Wake Consistency</h2>
+      <div class="card">
+        <div class="chart-subtitle">Last 14 nights. A tighter, more consistent band here is one of the best levers you have for recovery.</div>
+        <div class="chart-wrap"><canvas id="consistencyChart"></canvas></div>
+      </div>
+
+      <h2 class="section-title">Sleep Duration Trend</h2>
+      <div class="card">
+        <div class="chart-subtitle">Last 30 nights.</div>
+        <div class="chart-wrap"><canvas id="sleepDurationChart"></canvas></div>
+      </div>
+    `;
+
+    if (hasStages) {
+      stackedBarChart($('#stagesChart'), {
+        horizontal: true,
+        showLegend: false,
+        labels: [''],
+        series: [
+          { label: 'Deep', data: [stages.deepMin ?? 0], color: '#4a3aa7' },
+          { label: 'Light', data: [stages.lightMin ?? 0], color: '#2a78d6' },
+          { label: 'REM', data: [stages.remMin ?? 0], color: '#1baf7a' },
+          { label: 'Awake', data: [stages.awakeMin ?? 0], color: '#a8b2ba' },
+        ],
+      });
+    }
+
+    sleepConsistencyChart($('#consistencyChart'), {
+      labels: recent.map((d) => d.date.slice(5)),
+      ranges: recent.map((d) => {
+        const start = hoursSince6pm(d.sleepStartMs);
+        const end = hoursSince6pm(d.sleepEndMs);
+        return start != null && end != null ? [start, end] : null;
+      }),
+      color: '#8b5e83',
+    });
+
+    lineChart($('#sleepDurationChart'), {
+      labels: nights.map((d) => d.date.slice(5)),
+      series: [{ label: 'Sleep', data: nights.map((d) => d.sleepHours), color: '#8b5e83' }],
+      fill: true,
+      yLabel: 'Hours',
+    });
+  } catch (err) {
+    view.innerHTML = `<h2 class="section-title">Sleep</h2>${errorCard(err)}`;
+  }
+}
+
 // ----------------------------------------------------------------- Body ----
 
 function bandClass(band) {
   return String(band || '').toLowerCase().replace(/\s+/g, '-');
 }
 
-// Teal (lean) -> orange (higher body fat), scaled across a typical
-// athletic-to-average range so the figure actually shows contrast between
-// segments instead of everything landing in one narrow color band.
-function fatColor(pct) {
-  if (pct == null) return '#2c4a52';
+// Teal -> amber -> orange (all three already used elsewhere in the app's
+// validated discipline palette), scaled across a typical athletic-to-average
+// body-fat% range. Piecewise through amber rather than a direct teal->orange
+// lerp, which crosses a muddy gray-brown band right around the midpoint.
+function fatColorRgb(pct) {
+  if (pct == null) return [58, 91, 100];
   const t = Math.max(0, Math.min(1, (pct - 6) / (28 - 6)));
-  const lo = [0, 176, 185]; // teal
-  const hi = [232, 98, 44]; // orange
-  const mix = lo.map((c, i) => Math.round(c + (hi[i] - c) * t));
-  return `rgb(${mix.join(',')})`;
+  const stops = [
+    [0, 176, 185], // teal (lean)
+    [237, 161, 0], // amber (mid)
+    [235, 104, 52], // orange (higher fat%)
+  ];
+  const i = t < 0.5 ? 0 : 1;
+  const localT = t < 0.5 ? t / 0.5 : (t - 0.5) / 0.5;
+  return stops[i].map((c, k) => Math.round(c + (stops[i + 1][k] - c) * localT));
 }
+function shadeRgb([r, g, b], amt) {
+  const mix = (c, target) => Math.round(c + (target - c) * Math.abs(amt));
+  return amt >= 0 ? `rgb(${mix(r, 255)},${mix(g, 255)},${mix(b, 255)})` : `rgb(${mix(r, 0)},${mix(g, 0)},${mix(b, 0)})`;
+}
+const rgbStr = ([r, g, b]) => `rgb(${r},${g},${b})`;
 
-// A small stylized front-view figure, shaded per-segment by fat% and
-// depth-shaded with gradients/highlights for a subtle 3D feel — not a true
-// 3D model (no WebGL dependency for a five-region body scan), but reads as
-// dimensional rather than flat. Hover/long-press each region for its exact
-// numbers via the native <title> tooltip.
+// A stylized front-view figure with real limb tapering (not rectangles),
+// per-segment radial gradients (light source upper-left) for a volumetric,
+// almost-figurine look, plus a specular highlight ellipse and cast shadow
+// on each region, an ellipse ground shadow, and a slight CSS 3D tilt on the
+// wrapper (see .figureWrap) — not a true 3D model, but reads as dimensional
+// rather than flat. Hover/long-press each region for exact numbers.
 function bodyFigureSvg(seg) {
   const region = (key) => seg[key] || {};
   const label = (key, name) => {
@@ -583,41 +823,79 @@ function bodyFigureSvg(seg) {
   };
   // Anatomical right/left as if the figure is facing you (its right arm
   // renders on your left), matching how body-scan UIs usually present this.
-  const c = {
-    trunk: fatColor(region('trunk').fat_pct),
-    rArm: fatColor(region('right_arm').fat_pct),
-    lArm: fatColor(region('left_arm').fat_pct),
-    rLeg: fatColor(region('right_leg').fat_pct),
-    lLeg: fatColor(region('left_leg').fat_pct),
+  const rgb = {
+    trunk: fatColorRgb(region('trunk').fat_pct),
+    rArm: fatColorRgb(region('right_arm').fat_pct),
+    lArm: fatColorRgb(region('left_arm').fat_pct),
+    rLeg: fatColorRgb(region('right_leg').fat_pct),
+    lLeg: fatColorRgb(region('left_leg').fat_pct),
   };
+  const grad = (key, c) => `
+        <radialGradient id="bf-${key}" cx="28%" cy="16%" r="95%">
+          <stop offset="0%" stop-color="${shadeRgb(c, 0.55)}"/>
+          <stop offset="40%" stop-color="${rgbStr(c)}"/>
+          <stop offset="100%" stop-color="${shadeRgb(c, -0.42)}"/>
+        </radialGradient>`;
   return `
-    <svg class="bodyFigure" viewBox="0 0 200 300" role="img" aria-label="Body composition by segment">
+    <svg class="bodyFigure" viewBox="0 0 220 400" role="img" aria-label="Body composition by segment">
       <defs>
-        <radialGradient id="bfHead" cx="35%" cy="30%" r="75%">
-          <stop offset="0%" stop-color="#4a6672"/><stop offset="100%" stop-color="#1c2e36"/>
+        <radialGradient id="bfHead" cx="30%" cy="20%" r="85%">
+          <stop offset="0%" stop-color="#5d7c88"/>
+          <stop offset="55%" stop-color="#33505a"/>
+          <stop offset="100%" stop-color="#182931"/>
         </radialGradient>
-        ${Object.entries(c)
-          .map(
-            ([key, color]) => `
-          <linearGradient id="bf-${key}" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="${color}" stop-opacity="0.95"/>
-            <stop offset="55%" stop-color="${color}"/>
-            <stop offset="100%" stop-color="${color}" stop-opacity="0.55"/>
-          </linearGradient>`
-          )
-          .join('')}
+        ${Object.entries(rgb).map(([key, c]) => grad(key, c)).join('')}
+        <radialGradient id="bfShadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="rgba(0,0,0,0.35)"/>
+          <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+        </radialGradient>
+        <radialGradient id="bfShine" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="rgba(255,255,255,0.6)"/>
+          <stop offset="60%" stop-color="rgba(255,255,255,0.15)"/>
+          <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+        </radialGradient>
       </defs>
-      <circle cx="100" cy="28" r="20" fill="url(#bfHead)"><title>Head</title></circle>
-      <rect x="90" y="46" width="20" height="14" rx="6" fill="#2c4a52"/>
-      <rect x="62" y="56" width="76" height="92" rx="24" fill="url(#bf-trunk)"><title>${label('trunk', 'Trunk')}</title></rect>
-      <rect x="30" y="60" width="28" height="88" rx="14" fill="url(#bf-rArm)"><title>${label('right_arm', 'Right arm')}</title></rect>
-      <rect x="142" y="60" width="28" height="88" rx="14" fill="url(#bf-lArm)"><title>${label('left_arm', 'Left arm')}</title></rect>
-      <rect x="66" y="144" width="32" height="112" rx="15" fill="url(#bf-rLeg)"><title>${label('right_leg', 'Right leg')}</title></rect>
-      <rect x="102" y="144" width="32" height="112" rx="15" fill="url(#bf-lLeg)"><title>${label('left_leg', 'Left leg')}</title></rect>
+
+      <ellipse cx="110" cy="390" rx="54" ry="8" fill="url(#bfShadow)"/>
+
+      <!-- legs (drawn first so the trunk's hip overlaps their tops) -->
+      <path d="M78,182 C70,214 65,246 63,278 C61,304 61,328 64,352 C65,360 76,363 84,359 C85,334 86,306 88,278 C90,248 92,216 96,186 Z"
+        fill="url(#bf-rLeg)"><title>${label('right_leg', 'Right leg')}</title></path>
+      <ellipse cx="76" cy="230" rx="8" ry="30" fill="url(#bfShine)" opacity="0.45"/>
+
+      <path d="M124,186 C128,216 130,248 132,278 C134,306 135,334 136,359 C144,363 155,360 156,352 C159,328 159,304 157,278 C155,246 150,214 142,182 Z"
+        fill="url(#bf-lLeg)"><title>${label('left_leg', 'Left leg')}</title></path>
+      <ellipse cx="145" cy="230" rx="8" ry="30" fill="url(#bfShine)" opacity="0.28"/>
+
+      <!-- arms (drawn before trunk + shoulder caps so the seam tucks under) -->
+      <path d="M100,80 C78,90 58,106 47,130 C39,150 34,171 32,192 C31,204 31,214 33,224 C39,229 49,228 54,221 C54,204 56,186 60,168 C65,146 75,122 106,96 Z"
+        fill="url(#bf-rArm)"><title>${label('right_arm', 'Right arm')}</title></path>
+      <ellipse cx="48" cy="150" rx="7.5" ry="30" fill="url(#bfShine)" opacity="0.5"/>
+
+      <path d="M120,80 C142,90 162,106 173,130 C181,150 186,171 188,192 C189,204 189,214 187,224 C181,229 171,228 166,221 C166,204 164,186 160,168 C155,146 145,122 114,96 Z"
+        fill="url(#bf-lArm)"><title>${label('left_arm', 'Left arm')}</title></path>
+      <ellipse cx="172" cy="150" rx="7.5" ry="30" fill="url(#bfShine)" opacity="0.3"/>
+
+      <!-- shoulder caps: round off the arm/trunk seam without a visible notch -->
+      <circle cx="80" cy="90" r="17" fill="url(#bf-trunk)"/>
+      <circle cx="140" cy="90" r="17" fill="url(#bf-trunk)"/>
+
+      <!-- trunk -->
+      <path d="M64,88 C62,76 82,70 110,70 C138,70 158,76 156,88 C162,106 160,128 152,146 C158,164 156,180 148,192 L72,192 C64,180 62,164 68,146 C60,128 58,106 64,88 Z"
+        fill="url(#bf-trunk)"><title>${label('trunk', 'Trunk')}</title></path>
+      <ellipse cx="88" cy="100" rx="18" ry="28" fill="url(#bfShine)" opacity="0.4"/>
+
+      <!-- neck -->
+      <path d="M96,58 L124,58 L131,82 L89,82 Z" fill="#233942"/>
+      <path d="M96,58 L124,58 L127,68 L93,68 Z" fill="#3a5560"/>
+
+      <!-- head -->
+      <circle cx="110" cy="38" r="25" fill="url(#bfHead)"><title>Head</title></circle>
+      <ellipse cx="100" cy="29" rx="9.5" ry="12.5" fill="url(#bfShine)" opacity="0.5"/>
     </svg>
     <div class="figureLegend">
-      <span><i style="background:${fatColor(6)}"></i>Leaner</span>
-      <span><i style="background:${fatColor(28)}"></i>Higher fat%</span>
+      <span><i style="background:${rgbStr(fatColorRgb(6))}"></i>Leaner</span>
+      <span><i style="background:${rgbStr(fatColorRgb(28))}"></i>Higher fat%</span>
     </div>
   `;
 }
@@ -761,23 +1039,7 @@ async function renderPlan() {
         <div class="hint">${plan.reason}</div>
       </div>
 
-      <h2 class="section-title">Daily Micro-Habits</h2>
-      <div class="card" style="padding:4px 12px">
-        <div class="activity-item">
-          <div class="glyph" style="background:#c25b9e22;color:#c25b9e">🤸</div>
-          <div>
-            <div class="name">5min on the Gibbon board</div>
-            <div class="meta">Every day, no exceptions — a little daily balance time beats occasional long sessions for actually getting better.</div>
-          </div>
-        </div>
-        <div class="activity-item">
-          <div class="glyph" style="background:#e8622c22;color:#e8622c">🖐️</div>
-          <div>
-            <div class="name">Hangboard power reps on WFH days</div>
-            <div class="meta">A few short max-hang sets between meetings, 2-3x/week — little and often builds finger strength ahead of peak season without eating into a real session.</div>
-          </div>
-        </div>
-      </div>
+      ${microHabitsCardHtml()}
 
       <h2 class="section-title">Readiness — ${r.score}/100</h2>
       <div class="card">
@@ -888,12 +1150,11 @@ function renderRememberedNotes() {
   );
 }
 
-async function renderCoach() {
-  const view = $('#view-coach');
-  view.innerHTML = `
+function coachSectionHtml() {
+  return `
     <h2 class="section-title">Coach</h2>
     <div id="rememberedNotes"></div>
-    <div class="chat-card">
+    <div class="chat-card embedded">
       <div class="chat-messages" id="chatMessages"></div>
       <form class="chat-input-row" id="chatForm">
         <input type="text" id="chatInput" placeholder="Ask about your training, sleep, recovery…" autocomplete="off" />
@@ -902,6 +1163,9 @@ async function renderCoach() {
     </div>
     <div class="hint">Grounded in your real recent training and health data — not generic advice. Not a substitute for a doctor. Tell it about upcoming trips, objectives, or equipment (e.g. "I have a hangboard at home") and it'll remember for next time.</div>
   `;
+}
+
+async function initCoachUI() {
   try {
     const { notes } = await api.context();
     state.contextNotes = notes;

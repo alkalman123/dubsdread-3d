@@ -169,6 +169,21 @@ function buildWellness(days = 45) {
     const bodyBatteryLow = Math.round(Math.max(5, bodyBatteryHigh - between(35, 70)));
     const restingHR = Math.round(46 + (100 - sleepScore) * 0.08 + between(-2, 2));
     const hrvStatus = sleepScore > 70 && load < 70 ? 'BALANCED' : sleepScore < 50 || load > 80 ? 'UNBALANCED' : 'LOW';
+
+    // Synthetic sleep-stage breakdown so the Sleep tab has something to
+    // show in demo mode too, roughly proportioned like a real night
+    // (deep ~15-20%, REM ~20-25%, light makes up the rest, small awake %).
+    const totalMin = Math.round(sleepHours * 60);
+    const deepMin = Math.round(totalMin * between(0.14, 0.2));
+    const remMin = Math.round(totalMin * between(0.19, 0.25));
+    const awakeMin = Math.round(between(3, 18));
+    const lightMin = Math.max(0, totalMin - deepMin - remMin - awakeMin);
+    const bedHour = between(21.5, 23.8); // local hour the night before
+    const sleepStart = new Date(date);
+    sleepStart.setDate(sleepStart.getDate() - 1);
+    sleepStart.setHours(Math.floor(bedHour), Math.round((bedHour % 1) * 60), 0, 0);
+    const sleepEnd = new Date(sleepStart.getTime() + totalMin * 60000);
+
     out.push({
       date: ds,
       steps: Math.round(between(2500, 15000)),
@@ -181,6 +196,11 @@ function buildWellness(days = 45) {
       hrvMs: Math.round(between(28, 78)),
       stressAvg: Math.round(Math.max(10, Math.min(70, 100 - bodyBatteryHigh + between(-10, 10)))),
       trainingLoad: Math.round(load),
+      sleepStages: { deepMin, lightMin, remMin, awakeMin },
+      sleepStartMs: sleepStart.getTime(),
+      sleepEndMs: sleepEnd.getTime(),
+      avgRespiration: Number(between(13, 17).toFixed(1)),
+      restlessCount: Math.round(between(8, 38)),
     });
   }
   return out;
