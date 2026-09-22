@@ -1,26 +1,46 @@
-# Alpine Log — a mountain-athlete Garmin viewer
+# Alpine Log — a bike/run/climb training viewer
 
-A phone-friendly (installable PWA) dashboard for your Garmin Connect data,
-built around how climbers, mountain bikers, trail runners, mountaineers,
-and ski tourers actually think about training — not Garmin's generic
-running/cycling split.
+A phone-friendly (installable PWA) training dashboard built around how a
+Chicago athlete who bikes, runs, and climbs actually thinks about
+training — not Garmin's generic activity split, and not a mountain-athlete
+framing that doesn't fit a flat city with an indoor gym for climbing.
 
-It connects to **your own Garmin Connect account** (live sync, not a file
-upload), and adds three things Garmin Connect doesn't have:
+It pulls from two places, either or both:
 
-- **Discipline view.** Every activity is classified into Climbing, Biking,
-  Trail Running, Mountaineering, Hiking, or Ski Touring, with vertical gain,
-  vertical ascent rate, and time-in-discipline tracked separately.
-- **A daily workout recommendation**, based on an acute:chronic training-load
-  ratio (like TrainingPeaks/Strava, but weighting vertical gain as heavily as
-  heart rate — important for climbers/mountaineers, whose hardest days are
-  often low-HR) plus a recovery score from sleep, Body Battery, HRV, and
-  resting heart rate.
-- **Morning and evening briefings** — a short readiness summary and plan when
-  you open the app in the morning, and a wrap-up summary in the evening.
+- **Your own Garmin Connect account** (live sync — see below).
+- **An imported health-data export** — a `data.json` or self-contained
+  `Health-Dashboard.html` from an external multi-year, multi-source pipeline
+  (Apple Health + Garmin + a smart scale, say). See **Importing your own
+  data** below. This is what makes the "same data, more detail" experience
+  possible: years of history, body composition, and pre-written insights
+  that a fresh Garmin Connect API connection alone can't give you.
 
-It ships with a full **demo mode** (30-45 days of synthetic mountain-athlete
-data) so you can explore everything before connecting a real account.
+On top of whichever data you feed it, it adds:
+
+- **Discipline view**, weighted toward Climbing, Biking, and Running (with
+  Strength, Hiking, Walking, and anything else your history contains still
+  tracked and shown, just not central to the daily recommendation).
+- **A daily workout recommendation** for climbing (gym-focused: bouldering,
+  ARC training, projecting, hangboard), biking (Lakefront Trail / indoor
+  trainer), and running (Lakefront Path intervals/tempo) — based on an
+  acute:chronic training-load ratio (like TrainingPeaks/Strava) plus a
+  recovery score from sleep, Body Battery, HRV, and resting heart rate.
+- **A training scorecard and verdict** — four transparent components
+  (aerobic base, climbing volume, consistency, recovery) averaged into one
+  number, plus a plain-language verdict that names whichever component is
+  weakest rather than letting a high average hide a real problem.
+- **Body composition** (Body tab) — segmental lean mass, composition bands,
+  weight trend — when your import or Garmin data includes it.
+- **Morning and evening briefings** — a short readiness summary and plan
+  when you open the app in the morning, a wrap-up in the evening.
+- **Manually-logged activities** (Activities → "+ Log") for sessions your
+  watch missed, so the planner isn't limited to what got auto-synced.
+
+It ships with a full **demo mode** (45 days of synthetic sample data,
+including a demo body-composition scan) so you can explore everything
+before connecting a real account or importing anything. Demo mode always
+shows the synthetic data, even after you've imported your own — Auto and
+Live are what use your real data.
 
 ## Running it
 
@@ -61,6 +81,36 @@ matters here: the app re-logs-in automatically every time it wakes up,
 instead of you having to. If the wake-up delay bothers you, switch the
 service's plan to **Starter** ($7/mo) in the Render dashboard — same
 deploy, just always-on.
+
+### Importing your own data
+
+If you have (or build) a pipeline that exports a `window.__HEALTH_DATA__`
+JSON blob — daily wellness rows (`days[]`) and workouts (`workouts[]`), plus
+optionally `body` (composition) and `insights` (pre-written text) — you can
+feed it straight in: **Settings → Import health data → choose file**. It
+accepts either the raw `data.json` or a full self-contained HTML page with
+that blob embedded in a `<script>` tag (i.e. you can literally upload the
+dashboard file your pipeline generates).
+
+Once imported, that dataset becomes your activity/wellness history up
+through its own last recorded day; a live Garmin connection (or demo data,
+if you're in Auto/Live with no Garmin connected) only fills in what's
+happened *since* that day. Re-importing an updated export — after your
+pipeline's next daily sync, say — is how the covered history grows over
+time. Nothing about this import is automatic or scheduled: this app doesn't
+reach out to wherever that pipeline runs, so re-importing is a manual step.
+
+The expected shape per day/workout (all fields optional except `d`):
+
+```
+days[]:     { d, steps, rhr, hrv, sleep, sleepScore, bbHigh, bbLow, stress, ready }
+workouts[]: { d, t (activity type key), start, min, km, kcal, hr, maxHr, up (elevation gain m), name }
+body:       { source, date, segmental: {...}, composition: {...}, weight_lbs, history: [...] }
+insights:   [{ severity: warn|good|info, title, body, metric }]
+```
+
+Unrecognized/extra fields are ignored, so this works fine with a partial
+export too — missing fields just show as `–` rather than a guess.
 
 ### Connecting your real Garmin account
 
@@ -110,15 +160,20 @@ opens instantly. Change it in `.env` (standard cron syntax, UTC).
 
 ## What's in each screen
 
-- **Today** — a morning briefing (before 3pm) or evening wrap-up (after),
-  today's key wellness numbers, today's recommended workout, and your most
-  recent activity.
-- **Activities** — every activity, filterable by discipline. Tap one for a
-  route map, elevation/HR charts, and discipline-specific stats (vertical
-  ascent rate for climbing/mountaineering/hiking/ski).
-- **Trends** — your acute:chronic training-load ratio, volume by discipline
-  over the last 28 days, a daily training-load chart, and 30-day recovery
-  trends (Body Battery, resting HR).
+- **Today** — insight cards (from your import, or generated from recent
+  wellness if you don't have one), a morning briefing (before 3pm) or
+  evening wrap-up (after), today's key wellness numbers, today's recommended
+  workout, and your most recent activity.
+- **Activities** — every activity, filterable by discipline, plus **+ Log**
+  to manually add a session. Tap one for a route map (when GPS data exists),
+  elevation/HR charts, and discipline-specific stats.
+- **Trends** — your training scorecard (four components + verdict), the
+  acute:chronic training-load ratio, volume by discipline, a daily
+  training-load chart, and recovery trends (Body Battery, resting HR).
+- **Body** — segmental lean mass, composition bands (body fat, lean mass,
+  visceral fat, water, BMR, metabolic age), and a body-fat trend, when your
+  import or Garmin data includes body composition. Empty until you import
+  data with a `body` section (or in demo mode).
 - **Plan** — today's recommendation in full, your readiness breakdown, and
   an illustrative 7-day look-ahead that re-rotates each time you open it
   based on your current recovery and which disciplines you haven't done
@@ -130,36 +185,50 @@ No black-box ML — the logic is in `server/trainingLoad.js` and is meant to
 be readable:
 
 1. **Training load** per activity = time in estimated heart-rate intensity,
-   plus a vertical-gain term (so a 1200m mountaineering day counts as hard
-   even if your HR stayed low).
+   plus a small vertical-gain term (mostly a no-op on flat Chicago
+   rides/runs and indoor climbing, but harmless if you ever log something
+   with real elevation).
 2. **ACWR** (acute:chronic workload ratio) = your last 7 days' average daily
    load ÷ your last 28 days' average daily load. Above ~1.5 is flagged
    high-risk; below ~0.8, undertrained.
-3. **Readiness** (0-100) compares today's sleep score, Body Battery, resting
-   HR, and HRV status against *your own* trailing 2-week baseline, not a
-   fixed threshold.
-4. Combine both, then pick whichever discipline you haven't done in the
-   longest time, and hand back one of the hand-written workout templates in
-   `TEMPLATES` for that discipline at that intensity (recovery / moderate /
-   hard).
+3. **Readiness** (0-100) uses Garmin's own device-computed Training
+   Readiness score when your data has one (imported or live), else compares
+   today's sleep score, Body Battery, resting HR, and HRV status against
+   *your own* trailing 2-week baseline rather than a fixed threshold.
+4. Combine both, then pick whichever of **climbing / biking / running /
+   strength** you haven't done in the longest time, and hand back one of the
+   hand-written workout templates in `TEMPLATES` for that discipline at that
+   intensity (recovery / moderate / hard).
 
-Tune `TEMPLATES`, the discipline list in `server/classify.js`, or the
-ACWR thresholds directly — it's all plain, commented-enough JS.
+The **training scorecard** (`server/scorecard.js`) is a separate, simpler
+transparency tool: four components (aerobic base, climbing volume,
+consistency, recovery), each capped at 100 and averaged, with an ACWR
+penalty if load is spiking. The **verdict** text always names the weakest
+component rather than letting a high average hide a real gap.
+
+Tune `TEMPLATES`/`DISCIPLINE_PRIORITY` in `trainingLoad.js`, the weekly
+targets in `scorecard.js`, or the discipline list in `classify.js` directly
+— it's all plain, commented-enough JS.
 
 ## Architecture
 
 ```
 server/
-  garminClient.js   Garmin Connect login/session + raw wellness endpoints
-  demoData.js       synthetic 45-day mountain-athlete dataset
-  classify.js       activity type -> discipline, aggregation
-  normalize.js      defensive parsing of Garmin's undocumented payloads
-  trainingLoad.js   training load, ACWR, readiness, workout recommendation
-  briefing.js       morning/evening briefing text (template + optional Claude)
-  dataCache.js      TTL cache with stale-on-error fallback (protects your
-                    Garmin account from being hammered)
-  routes.js         the whole REST API
-  index.js          Express app + startup + cron
+  garminClient.js     Garmin Connect login/session + raw wellness endpoints
+  healthImport.js     parses/stores an imported data.json or dashboard HTML
+  importAdapter.js    maps imported days[]/workouts[] to this app's shapes
+  manualActivities.js manually-logged activities ("+ Log" in Activities)
+  demoData.js         synthetic 45-day sample dataset + demo body scan
+  classify.js         activity type -> discipline, aggregation
+  normalize.js        defensive parsing of Garmin's undocumented payloads
+  trainingLoad.js     training load, ACWR, readiness, workout recommendation
+  scorecard.js        4-component training score + verdict text
+  insightsFallback.js generates insight cards when there's no import
+  briefing.js         morning/evening briefing text (template + optional Claude)
+  dataCache.js        TTL cache with stale-on-error fallback (protects your
+                      Garmin account from being hammered)
+  routes.js           the whole REST API
+  index.js            Express app + startup + cron
 public/
   index.html, css/, js/    the PWA frontend (vanilla JS, no build step)
   vendor/                  Leaflet + Chart.js, vendored (not CDN) so the

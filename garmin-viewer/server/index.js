@@ -10,7 +10,17 @@ const { createRouter } = require('./routes');
 const app = express();
 const PORT = process.env.PORT || 8123;
 
-app.use(express.json());
+// Health-data imports can be tens of MB (years of daily records plus a
+// full dashboard HTML export) — well past express.json()'s 100kb default.
+// The import upload itself is sent as raw text (see public/js/api.js), so
+// express.text() is what actually needs the generous limit; express.json()
+// stays smaller since every other route's payloads are small.
+app.use(express.json({ limit: '2mb' }));
+// Import uploads are always sent as text/plain regardless of whether the
+// underlying content is JSON or HTML (server/healthImport.js sniffs the
+// actual content, not the header) — that keeps this middleware from ever
+// competing with express.json() over an application/json content-type.
+app.use(express.text({ limit: '150mb', type: ['text/plain', 'text/html'] }));
 
 // Render (and most PaaS hosts) poll this to know the service is alive.
 app.get('/healthz', (req, res) => res.status(200).send('ok'));

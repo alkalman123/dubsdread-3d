@@ -20,4 +20,14 @@ export const api = {
   planToday: () => req('/plan/today'),
   briefingMorning: () => req('/briefing/morning'),
   briefingEvening: () => req('/briefing/evening'),
+  body: () => req('/body'),
+  insights: () => req('/insights'),
+  scorecard: () => req('/scorecard'),
+  importStatus: () => req('/import/health'),
+  // Sent as raw text/plain, not JSON-wrapped — imports can be tens of MB
+  // (years of daily records), and JSON-escaping a blob that size just to
+  // unwrap it server-side would waste memory and bandwidth for nothing.
+  importHealth: (raw) => req('/import/health', { method: 'POST', headers: { 'content-type': 'text/plain' }, body: raw }),
+  clearImport: () => req('/import/health', { method: 'DELETE' }),
+  addManualActivity: (entry) => req('/activities/manual', { method: 'POST', body: JSON.stringify(entry) }),
 };

@@ -17,9 +17,8 @@ function morningTemplate({ readiness, acwr, plan, yesterday }) {
       (yesterday ? `, after ${fmtHours(yesterday.durationMin)} of ${yesterday.disciplineLabel.toLowerCase()} yesterday.` : '.')
   );
   if (readiness.factors.sleepScore != null) {
-    lines.push(
-      `Sleep score ${readiness.factors.sleepScore}, resting HR ${readiness.factors.restingHR}, HRV status ${readiness.factors.hrvStatus.toLowerCase()}.`
-    );
+    const hrvBit = readiness.factors.hrvStatus ? `, HRV status ${readiness.factors.hrvStatus.toLowerCase()}` : '';
+    lines.push(`Sleep score ${readiness.factors.sleepScore}, resting HR ${readiness.factors.restingHR}${hrvBit}.`);
   }
   lines.push(`7-day training load is ${acwr.status.replace('-', ' ')} (ACWR ${acwr.ratio}).`);
   lines.push(`Today's suggestion: ${plan.title} (${plan.disciplineLabel}) — ${plan.detail}`);

@@ -1,7 +1,7 @@
 /* global Chart */
 
-const GRID = 'rgba(255,255,255,0.06)';
-const TICK = '#6b7482';
+const GRID = 'rgba(20,24,27,0.10)';
+const TICK = '#7d8790';
 
 Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 Chart.defaults.font.size = 11;
@@ -71,7 +71,7 @@ export function gaugeArc(canvas, value, max, color) {
       datasets: [
         {
           data: [value, Math.max(0, max - value)],
-          backgroundColor: [color, 'rgba(255,255,255,0.08)'],
+          backgroundColor: [color, 'rgba(20,24,27,0.08)'],
           borderWidth: 0,
         },
       ],

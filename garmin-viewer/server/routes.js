@@ -6,6 +6,18 @@ const { normalizeActivity, summarizeByDiscipline, disciplineMeta } = require('./
 const { normalizeWellnessDay, extractStreams, extractTrack } = require('./normalize');
 const { computeACWR, computeReadiness, recommendWorkout, activityLoad } = require('./trainingLoad');
 const { buildMorningBriefing, buildEveningBriefing } = require('./briefing');
+const healthImport = require('./healthImport');
+const { importedActivities, importedWellnessDays } = require('./importAdapter');
+const manualActivities = require('./manualActivities');
+const { computeScorecard, computeVerdict } = require('./scorecard');
+const { generateInsights } = require('./insightsFallback');
+
+const MANUAL_ID_MIN = 800000000;
+const IMPORT_ID_MIN = 900000000;
+
+function emptyStreams() {
+  return { timeSec: [], hr: [], elevation: [], speedKmh: [], distanceKm: [] };
+}
 
 function createRouter(garminClient) {
   const router = express.Router();
@@ -17,52 +29,119 @@ function createRouter(garminClient) {
     return garminClient.authenticated ? 'live' : 'demo';
   }
 
+  // An explicit "demo" choice means "show me the synthetic showcase data",
+  // full stop — a real import shouldn't leak through just because it
+  // happens to be cached. Import data only feeds Auto/Live (including
+  // Auto's fallback-to-demo when there's no live Garmin session).
+  function currentImportData() {
+    return modePreference === 'demo' ? null : healthImport.loadImport();
+  }
+
+  // Imported history supplies everything up through its own last day;
+  // live/demo sync only fills the gap since then, so re-importing an
+  // updated export is how the dataset's coverage grows over time.
   async function loadActivities() {
     const mode = effectiveMode();
+    const importData = currentImportData();
+    const importCutoff = importData?.meta?.last ? new Date(`${importData.meta.last}T23:59:59`).getTime() : null;
+
     let raw;
     if (mode === 'demo') {
-      raw = demoData.ACTIVITIES;
+      // Fictional demo activities have nothing to do with a real import —
+      // never let them pose as "what's happened since the last import".
+      raw = importData ? [] : demoData.ACTIVITIES;
     } else {
       await garminClient.ensureAuth();
       raw = await cache.remember('activities:live', 15 * 60 * 1000, () => garminClient.getActivities(80));
     }
-    return { mode, activities: raw.map(normalizeActivity) };
+    const freshRaw = importCutoff ? raw.filter((a) => new Date(a.startTimeLocal).getTime() > importCutoff) : raw;
+
+    const combined = [...manualActivities.listManualActivities(), ...freshRaw, ...importedActivities(importData)];
+    const activities = combined
+      .map(normalizeActivity)
+      .sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+
+    return { mode, activities, hasImport: Boolean(importData) };
   }
 
   async function loadWellness(days) {
     const mode = effectiveMode();
+    const importData = currentImportData();
+    const importCutoff = importData?.meta?.last || null;
+
+    let liveOrDemo;
     if (mode === 'demo') {
-      return { mode, wellness: demoData.WELLNESS.slice(-days) };
+      liveOrDemo = importData ? [] : demoData.WELLNESS.slice(-days);
+    } else {
+      await garminClient.ensureAuth();
+      const capped = Math.min(days, 30);
+      const dates = Array.from({ length: capped }, (_, i) => new Date(Date.now() - (capped - 1 - i) * 86400000));
+      const today = toDateString(new Date());
+      const results = await Promise.all(
+        dates.map((d) => {
+          const ds = toDateString(d);
+          const ttl = ds === today ? 15 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
+          return cache.remember(`wellness:${ds}`, ttl, () => garminClient.getDailyWellness(d));
+        })
+      );
+      liveOrDemo = results.map((r, i) => normalizeWellnessDay(toDateString(dates[i]), r));
     }
-    await garminClient.ensureAuth();
-    const capped = Math.min(days, 30);
-    const dates = Array.from({ length: capped }, (_, i) => new Date(Date.now() - (capped - 1 - i) * 86400000));
-    const today = toDateString(new Date());
-    const results = await Promise.all(
-      dates.map((d) => {
-        const ds = toDateString(d);
-        const ttl = ds === today ? 15 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
-        return cache.remember(`wellness:${ds}`, ttl, () => garminClient.getDailyWellness(d));
-      })
-    );
-    return { mode, wellness: results.map((r, i) => normalizeWellnessDay(toDateString(dates[i]), r)) };
+
+    let wellness;
+    if (importData) {
+      const importedDays = importedWellnessDays(importData).filter((d) => !importCutoff || d.date <= importCutoff);
+      const freshLiveOrDemo = liveOrDemo.filter((d) => !importCutoff || d.date > importCutoff);
+      wellness = [...importedDays, ...freshLiveOrDemo].slice(-days);
+    } else {
+      wellness = liveOrDemo;
+    }
+    return { mode, wellness, hasImport: Boolean(importData) };
   }
 
-  async function buildPlanContext() {
+  function loadBody(mode, importData) {
+    if (importData?.body) return importData.body;
+    if (mode === 'demo') return demoData.BODY;
+    return null;
+  }
+
+  function loadInsights(importData, wellness) {
+    if (importData?.insights?.length) return importData.insights;
+    return generateInsights(wellness);
+  }
+
+  // Shared context for every "how am I doing" screen: activities, a wide
+  // wellness window, the plan, the scorecard/verdict, and insights — built
+  // once per request so they're all consistent with each other.
+  async function loadDashboardContext() {
     const { mode, activities } = await loadActivities();
-    const { wellness } = await loadWellness(30);
+    const { wellness } = await loadWellness(90);
+    const importData = currentImportData();
     const plan = recommendWorkout(activities, wellness);
     const meta = disciplineMeta(plan.discipline);
-    return { mode, activities, wellness, plan: { ...plan, disciplineLabel: meta.label, icon: meta.icon, color: meta.color } };
+    const insights = loadInsights(importData, wellness);
+    const scorecard = computeScorecard(activities, wellness, plan.acwr.ratio, 90);
+    const verdict = computeVerdict(scorecard, insights);
+    return {
+      mode,
+      activities,
+      wellness,
+      importData,
+      insights,
+      scorecard,
+      verdict,
+      plan: { ...plan, disciplineLabel: meta.label, icon: meta.icon, color: meta.color },
+    };
   }
 
   router.get('/status', async (req, res) => {
     await garminClient.ensureAuth().catch(() => {});
+    const importData = healthImport.loadImport();
     res.json({
       mode: effectiveMode(),
       modePreference,
       authenticated: garminClient.authenticated,
       hasSavedSession: garminClient.hasSavedSession(),
+      import: healthImport.importSummary(importData),
     });
   });
 
@@ -92,9 +171,58 @@ function createRouter(garminClient) {
     res.json({ ok: true, mode: effectiveMode() });
   });
 
+  // ---- health data import --------------------------------------------
+
+  router.get('/import/health', (req, res) => {
+    res.json({ import: healthImport.importSummary(healthImport.loadImport()) });
+  });
+
+  router.post('/import/health', (req, res) => {
+    const raw = typeof req.body === 'string' ? req.body : req.body?.raw;
+    if (!raw) return res.status(400).json({ ok: false, error: 'No file content received' });
+    try {
+      const data = healthImport.parseImportPayload(raw);
+      healthImport.saveImport(data);
+      cache.invalidate('activities');
+      cache.invalidate('wellness');
+      res.json({ ok: true, import: healthImport.importSummary(data) });
+    } catch (err) {
+      res.status(400).json({ ok: false, error: String(err.message || err) });
+    }
+  });
+
+  router.delete('/import/health', (req, res) => {
+    healthImport.clearImport();
+    cache.invalidate('activities');
+    cache.invalidate('wellness');
+    res.json({ ok: true });
+  });
+
+  // ---- manually-logged activities --------------------------------------
+
+  router.get('/activities/manual', (req, res) => {
+    res.json({ activities: manualActivities.listManualActivities().map(normalizeActivity) });
+  });
+
+  router.post('/activities/manual', (req, res) => {
+    try {
+      const raw = manualActivities.addManualActivity(req.body || {});
+      res.json({ ok: true, activity: normalizeActivity(raw) });
+    } catch (err) {
+      res.status(400).json({ ok: false, error: String(err.message || err) });
+    }
+  });
+
+  router.delete('/activities/manual/:id', (req, res) => {
+    manualActivities.removeManualActivity(req.params.id);
+    res.json({ ok: true });
+  });
+
+  // ---- activities -------------------------------------------------------
+
   router.get('/activities', async (req, res) => {
     try {
-      const limit = Math.min(Number(req.query.limit) || 40, 200);
+      const limit = Math.min(Number(req.query.limit) || 40, 500);
       const { mode, activities } = await loadActivities();
       const list = activities.slice(0, limit).map(({ _demo, ...rest }) => rest);
       res.json({ mode, activities: list });
@@ -107,6 +235,16 @@ function createRouter(garminClient) {
     const id = Number(req.params.id);
     const mode = effectiveMode();
     try {
+      if (id >= MANUAL_ID_MIN && id < IMPORT_ID_MIN) {
+        const raw = manualActivities.listManualActivities().find((a) => a.activityId === id);
+        if (!raw) return res.status(404).json({ error: 'not found' });
+        return res.json({ mode, activity: normalizeActivity(raw), track: [], streams: emptyStreams(), splits: null });
+      }
+      if (id >= IMPORT_ID_MIN) {
+        const raw = importedActivities(currentImportData()).find((a) => a.activityId === id);
+        if (!raw) return res.status(404).json({ error: 'not found' });
+        return res.json({ mode, activity: normalizeActivity(raw), track: [], streams: emptyStreams(), splits: null });
+      }
       if (mode === 'demo') {
         const raw = demoData.ACTIVITIES.find((a) => a.activityId === id);
         if (!raw) return res.status(404).json({ error: 'not found' });
@@ -134,11 +272,40 @@ function createRouter(garminClient) {
 
   router.get('/wellness', async (req, res) => {
     try {
-      const days = Math.min(Number(req.query.days) || 30, 45);
+      const days = Math.min(Number(req.query.days) || 30, 3650);
       const { mode, wellness } = await loadWellness(days);
       res.json({ mode, wellness });
     } catch (err) {
       res.status(502).json({ error: 'Could not load wellness data', detail: String(err.message || err) });
+    }
+  });
+
+  router.get('/body', async (req, res) => {
+    try {
+      const mode = effectiveMode();
+      const importData = currentImportData();
+      res.json({ mode, body: loadBody(mode, importData) });
+    } catch (err) {
+      res.status(502).json({ error: 'Could not load body composition', detail: String(err.message || err) });
+    }
+  });
+
+  router.get('/insights', async (req, res) => {
+    try {
+      const { mode, wellness } = await loadWellness(30);
+      const importData = currentImportData();
+      res.json({ mode, insights: loadInsights(importData, wellness) });
+    } catch (err) {
+      res.status(502).json({ error: 'Could not build insights', detail: String(err.message || err) });
+    }
+  });
+
+  router.get('/scorecard', async (req, res) => {
+    try {
+      const { mode, scorecard, verdict } = await loadDashboardContext();
+      res.json({ mode, scorecard, verdict });
+    } catch (err) {
+      res.status(502).json({ error: 'Could not build scorecard', detail: String(err.message || err) });
     }
   });
 
@@ -150,7 +317,7 @@ function createRouter(garminClient) {
         byDiscipline7: summarizeByDiscipline(activities, 7),
         byDiscipline28: summarizeByDiscipline(activities, 28),
         acwr: computeACWR(activities),
-        recentLoad: activities.slice(0, 30).map((a) => ({
+        recentLoad: activities.slice(0, 60).map((a) => ({
           date: a.startTime,
           discipline: a.discipline,
           load: activityLoad(a),
@@ -163,7 +330,7 @@ function createRouter(garminClient) {
 
   router.get('/plan/today', async (req, res) => {
     try {
-      const { mode, plan } = await buildPlanContext();
+      const { mode, plan } = await loadDashboardContext();
       res.json({ mode, plan });
     } catch (err) {
       res.status(502).json({ error: 'Could not build a plan', detail: String(err.message || err) });
@@ -172,7 +339,7 @@ function createRouter(garminClient) {
 
   router.get('/briefing/morning', async (req, res) => {
     try {
-      const { mode, activities, wellness, plan } = await buildPlanContext();
+      const { mode, activities, wellness, plan } = await loadDashboardContext();
       const readiness = computeReadiness(wellness);
       const yesterdayCutoff = Date.now() - 36 * 3600 * 1000;
       const yesterday = activities.find((a) => new Date(a.startTime).getTime() >= yesterdayCutoff);
@@ -185,7 +352,7 @@ function createRouter(garminClient) {
 
   router.get('/briefing/evening', async (req, res) => {
     try {
-      const { mode, activities, wellness } = await buildPlanContext();
+      const { mode, activities, wellness } = await loadDashboardContext();
       const today = toDateString(new Date());
       const todayActivities = activities.filter((a) => toDateString(new Date(a.startTime)) === today);
       const totalLoad = todayActivities.reduce((s, a) => s + activityLoad(a), 0);
