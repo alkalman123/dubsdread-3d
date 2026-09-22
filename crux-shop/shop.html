@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop — Crux</title>
+<meta name="description" content="Shop the Rock Ring gear valet in six colorways, the Gift Duo bundle, and the wall-mount hardware kit.">
+<link rel="icon" type="image/png" sizes="512x512" href="img/favicon-512.png">
+<link rel="icon" type="image/png" sizes="192x192" href="img/favicon-192.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<a class="visually-hidden" href="#main">Skip to content</a>
+<div class="announce">Free standard shipping over $60 · Made to order — ships in 2–4 business days</div>
+
+<header class="site-header">
+  <div class="container">
+    <a href="index.html" class="logo">
+      <span class="mark"><svg viewBox="0 0 20 22" fill="none"><path d="M2 20.5V10C2 5 5.6 1.5 10 1.5S18 5 18 10v10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="5.5" y="8.6" width="9" height="3.1" rx="1.55" fill="currentColor"/><rect x="5.5" y="13.6" width="9" height="3.1" rx="1.55" fill="currentColor"/></svg></span>
+      CRUX
+    </a>
+    <nav class="nav-links">
+      <a href="shop.html" class="active">Shop</a>
+      <a href="about.html">About</a>
+      <a href="faq.html">FAQ</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <div class="header-actions">
+      <a href="shop.html" class="btn btn-outline btn-sm hide-mobile">Shop now</a>
+      <button class="btn-icon" id="menuToggle" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <button class="btn-icon" data-cart-open aria-label="Open cart">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l1 13H5L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+        <span class="icon-badge" data-cart-count style="display:none;">0</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="mobile-nav" id="mobileNav" aria-hidden="true">
+  <div class="backdrop"></div>
+  <div class="panel">
+    <div class="panel-top">
+      <span class="logo"><span class="mark"><svg viewBox="0 0 20 22" fill="none"><path d="M2 20.5V10C2 5 5.6 1.5 10 1.5S18 5 18 10v10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="5.5" y="8.6" width="9" height="3.1" rx="1.55" fill="currentColor"/><rect x="5.5" y="13.6" width="9" height="3.1" rx="1.55" fill="currentColor"/></svg></span>CRUX</span>
+      <button class="btn-icon" id="mobileNavClose" aria-label="Close menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <a href="shop.html">Shop</a>
+    <a href="about.html">About</a>
+    <a href="faq.html">FAQ</a>
+    <a href="shipping-returns.html">Shipping &amp; Returns</a>
+    <a href="contact.html">Contact</a>
+  </div>
+</div>
+
+<div class="cart-drawer-root" id="cartDrawerRoot" aria-hidden="true">
+  <div class="backdrop"></div>
+  <div class="cart-drawer">
+    <div class="cart-drawer-head">
+      <h3>Your cart</h3>
+      <button class="btn-icon" id="cartDrawerClose" aria-label="Close cart">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="cart-drawer-items" id="cartDrawerItems"></div>
+    <div class="cart-drawer-foot" id="cartDrawerFoot" style="display:none;">
+      <div class="cart-subtotal-row"><span>Subtotal</span><span class="num" id="cartDrawerSubtotal">$0.00</span></div>
+      <div class="cart-ship-note" id="cartShipNote"></div>
+      <a href="checkout.html" class="btn btn-primary btn-block">Checkout</a>
+      <a href="cart.html" class="btn btn-ghost btn-block" style="justify-content:center;margin-top:10px;">View full cart</a>
+    </div>
+  </div>
+</div>
+
+<main id="main">
+
+<section class="page-hero">
+  <div class="container">
+    <div class="breadcrumbs"><a href="index.html">Home</a><span class="sep">/</span><span class="current">Shop</span></div>
+    <span class="eyebrow">Shop</span>
+    <h1>All products</h1>
+    <p>One design, six colorways, and the small extras that go with it. New gear-storage shapes join the queue as they're printed and tested.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="shop-toolbar">
+      <span class="shop-count">3 products available now</span>
+      <div class="filter-row" id="colorFilterRow" role="group" aria-label="Preview a colorway">
+        <button class="filter-chip active" data-color="rock"><span class="dot" style="background:#63707c;"></span>Rock</button>
+        <button class="filter-chip" data-color="moss"><span class="dot" style="background:#55805a;"></span>Moss</button>
+        <button class="filter-chip" data-color="ice"><span class="dot" style="background:#4a90c2;"></span>Ice</button>
+        <button class="filter-chip" data-color="sand"><span class="dot" style="background:#c9a86a;"></span>Sand</button>
+        <button class="filter-chip" data-color="ink"><span class="dot" style="background:#202326;"></span>Ink</button>
+        <button class="filter-chip" data-color="ember"><span class="dot" style="background:#d85c2a;"></span>Ember</button>
+      </div>
+    </div>
+
+    <div class="grid grid-3">
+      <a href="product-rock-ring.html" class="product-card" id="rockRingCard">
+        <div class="thumb">
+          <div class="badges"><span class="badge badge-ember">Best seller</span></div>
+          <img id="rockRingCardImg" src="img/rockring-rock-hero.jpg" alt="The Rock Ring gear valet">
+        </div>
+        <div class="body">
+          <div class="title-row"><h3>The Rock Ring</h3><span class="price">$34.00</span></div>
+          <p class="desc">Freestanding gear valet with two open ports. V1 release.</p>
+          <div class="swatches">
+            <span class="swatch-dot" style="background:#63707c;"></span>
+            <span class="swatch-dot" style="background:#55805a;"></span>
+            <span class="swatch-dot" style="background:#4a90c2;"></span>
+            <span class="swatch-dot" style="background:#c9a86a;"></span>
+            <span class="swatch-dot" style="background:#202326;"></span>
+            <span class="swatch-dot" style="background:#d85c2a;"></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="product-gift-duo.html" class="product-card">
+        <div class="thumb">
+          <div class="badges"><span class="badge badge-dark">Bundle</span></div>
+          <img src="img/rockring-ember-hero.jpg" alt="Rock Ring Gift Duo bundle">
+        </div>
+        <div class="body">
+          <div class="title-row"><h3>Rock Ring — Gift Duo</h3><span class="price"><span class="was">$68</span>$62.00</span></div>
+          <p class="desc">Two full-size Rock Rings, any two colorways, boxed together.</p>
+          <div class="swatches">
+            <span class="swatch-dot" style="background:#d85c2a;"></span>
+            <span class="swatch-dot" style="background:#63707c;"></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="product-felt-pads.html" class="product-card">
+        <div class="thumb">
+          <div class="badges"><span class="badge">Add-on</span></div>
+          <img src="img/rockring-sand-profile.jpg" alt="Felt base pad set">
+        </div>
+        <div class="body">
+          <div class="title-row"><h3>Felt Base Pad Set</h3><span class="price">$5.00</span></div>
+          <p class="desc">Four self-adhesive pads sized for the base. Pairs with any Rock Ring.</p>
+        </div>
+      </a>
+
+      <div class="product-card disabled" aria-disabled="true">
+        <div class="thumb">
+          <div class="badges"><span class="badge badge-soft">Coming soon</span></div>
+          <img src="img/rockring-sand-front.jpg" alt="Crimp Tray, a future Crux product, coming soon">
+        </div>
+        <div class="body">
+          <div class="title-row"><h3>Crimp Tray</h3></div>
+          <p class="desc">A shallow dish for rings, coins and hold-shaped clutter. In the print queue.</p>
+        </div>
+      </div>
+
+      <div class="product-card disabled" aria-disabled="true">
+        <div class="thumb">
+          <div class="badges"><span class="badge badge-soft">Coming soon</span></div>
+          <img src="img/rockring-moss-front.jpg" alt="Chalk Bucket Base, a future Crux product, coming soon">
+        </div>
+        <div class="body">
+          <div class="title-row"><h3>Chalk Bucket Base</h3></div>
+          <p class="desc">A weighted foot so your bucket stops tipping at the boulders. In the print queue.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section-tight">
+  <div class="container">
+    <div class="cta-band">
+      <h2>Not sure which color?</h2>
+      <p>Every colorway ships the same week — swap chips above to preview, or read the full spec sheet.</p>
+      <a href="product-rock-ring.html" class="btn btn-primary btn-lg">View full details</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="logo"><span class="mark"><svg viewBox="0 0 20 22" fill="none"><path d="M2 20.5V10C2 5 5.6 1.5 10 1.5S18 5 18 10v10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="5.5" y="8.6" width="9" height="3.1" rx="1.55" fill="currentColor"/><rect x="5.5" y="13.6" width="9" height="3.1" rx="1.55" fill="currentColor"/></svg></span>CRUX</a>
+        <p>Small-batch 3D-printed gear storage for climbers, designed and printed to order in Chicago.</p>
+        <div class="footer-newsletter">
+          <form data-mailto-form data-mailto-subject="Add me to the Crux list">
+            <input type="email" name="email" placeholder="you@email.com" required aria-label="Email address">
+            <button class="btn btn-ember btn-sm" type="submit">Join</button>
+          </form>
+          <p class="muted" data-form-note style="display:none;font-size:12px;margin-top:8px;"></p>
+        </div>
+      </div>
+      <div>
+        <h4>Shop</h4>
+        <ul>
+          <li><a href="product-rock-ring.html">The Rock Ring</a></li>
+          <li><a href="product-gift-duo.html">Gift Duo</a></li>
+          <li><a href="product-felt-pads.html">Felt Base Pads</a></li>
+          <li><a href="shop.html">All products</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Help</h4>
+        <ul>
+          <li><a href="faq.html">FAQ</a></li>
+          <li><a href="shipping-returns.html">Shipping &amp; returns</a></li>
+          <li><a href="contact.html">Contact us</a></li>
+          <li><a href="cart.html">Your cart</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Studio</h4>
+        <ul>
+          <li><a href="about.html">Our story</a></li>
+          <li><a href="mailto:hello@cruxsupply.example">hello@cruxsupply.example</a></li>
+          <li><span>Chicago, IL</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© <span data-year></span> Crux Supply Co. Not affiliated with any climbing-gear manufacturer or safety-equipment standard.</span>
+      <div class="legal-links">
+        <a href="shipping-returns.html">Returns</a>
+        <a href="faq.html">FAQ</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="js/store-data.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/ui.js"></script>
+<script>
+  document.getElementById('colorFilterRow').addEventListener('click', (e) => {
+    const btn = e.target.closest('.filter-chip');
+    if (!btn) return;
+    document.querySelectorAll('#colorFilterRow .filter-chip').forEach((c) => c.classList.remove('active'));
+    btn.classList.add('active');
+    const key = btn.getAttribute('data-color');
+    document.getElementById('rockRingCardImg').src = `img/rockring-${key}-hero.jpg`;
+    document.getElementById('rockRingCard').setAttribute('href', `product-rock-ring.html?color=${key}`);
+  });
+</script>
+</body>
+</html>

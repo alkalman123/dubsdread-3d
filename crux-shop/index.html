@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crux — 3D-Printed Gear Storage for Climbers</title>
+<meta name="description" content="The Rock Ring is a freestanding, 3D-printed gear valet for climbers — two open ports for chalk, keys and sunglasses, printed to order in six colorways.">
+<link rel="icon" type="image/png" sizes="512x512" href="img/favicon-512.png">
+<link rel="icon" type="image/png" sizes="192x192" href="img/favicon-192.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<a class="visually-hidden" href="#main">Skip to content</a>
+<div class="announce">Free standard shipping over $60 · Made to order — ships in 2–4 business days</div>
+
+<header class="site-header">
+  <div class="container">
+    <a href="index.html" class="logo">
+      <span class="mark"><svg viewBox="0 0 20 22" fill="none"><path d="M2 20.5V10C2 5 5.6 1.5 10 1.5S18 5 18 10v10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="5.5" y="8.6" width="9" height="3.1" rx="1.55" fill="currentColor"/><rect x="5.5" y="13.6" width="9" height="3.1" rx="1.55" fill="currentColor"/></svg></span>
+      CRUX
+    </a>
+    <nav class="nav-links">
+      <a href="shop.html">Shop</a>
+      <a href="about.html">About</a>
+      <a href="faq.html">FAQ</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <div class="header-actions">
+      <a href="shop.html" class="btn btn-outline btn-sm hide-mobile">Shop now</a>
+      <button class="btn-icon" id="menuToggle" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <button class="btn-icon" data-cart-open aria-label="Open cart">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l1 13H5L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+        <span class="icon-badge" data-cart-count style="display:none;">0</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="mobile-nav" id="mobileNav" aria-hidden="true">
+  <div class="backdrop"></div>
+  <div class="panel">
+    <div class="panel-top">
+      <span class="logo"><span class="mark"><svg viewBox="0 0 20 22" fill="none"><path d="M2 20.5V10C2 5 5.6 1.5 10 1.5S18 5 18 10v10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="5.5" y="8.6" width="9" height="3.1" rx="1.55" fill="currentColor"/><rect x="5.5" y="13.6" width="9" height="3.1" rx="1.55" fill="currentColor"/></svg></span>CRUX</span>
+      <button class="btn-icon" id="mobileNavClose" aria-label="Close menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <a href="shop.html">Shop</a>
+    <a href="about.html">About</a>
+    <a href="faq.html">FAQ</a>
+    <a href="shipping-returns.html">Shipping &amp; Returns</a>
+    <a href="contact.html">Contact</a>
+  </div>
+</div>
+
+<div class="cart-drawer-root" id="cartDrawerRoot" aria-hidden="true">
+  <div class="backdrop"></div>
+  <div class="cart-drawer">
+    <div class="cart-drawer-head">
+      <h3>Your cart</h3>
+      <button class="btn-icon" id="cartDrawerClose" aria-label="Close cart">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="cart-drawer-items" id="cartDrawerItems"></div>
+    <div class="cart-drawer-foot" id="cartDrawerFoot" style="display:none;">
+      <div class="cart-subtotal-row"><span>Subtotal</span><span class="num" id="cartDrawerSubtotal">$0.00</span></div>
+      <div class="cart-ship-note" id="cartShipNote"></div>
+      <a href="checkout.html" class="btn btn-primary btn-block">Checkout</a>
+      <a href="cart.html" class="btn btn-ghost btn-block" style="justify-content:center;margin-top:10px;">View full cart</a>
+    </div>
+  </div>
+</div>
+
+<main id="main">
+
+<section class="hero-dark">
+  <div class="container">
+    <div>
+      <span class="eyebrow">New · V1 release</span>
+      <h1>A boulder<br>for your clutter.</h1>
+      <p class="lede">The Rock Ring is a freestanding, 3D-printed gear valet — two open ports run straight through the block so a chalk bag, keys, sunglasses or a watch have somewhere to live that isn't the bottom of your crash pad.</p>
+      <div class="hero-actions">
+        <a href="product-rock-ring.html" class="btn btn-ember btn-lg">Shop the Rock Ring — $34</a>
+        <a href="#specs" class="btn btn-outline btn-lg" style="color:var(--midnight-text);border-color:var(--midnight-line);">See specs</a>
+      </div>
+      <div class="hero-stats">
+        <div><b>127×114×64</b><span>mm, H×W×D</span></div>
+        <div><b>~180g</b><span>PLA+ per piece</span></div>
+        <div><b>6</b><span>colorways</span></div>
+        <div><b>V1</b><span>current release</span></div>
+      </div>
+    </div>
+    <div class="hero-media">
+      <img src="img/rockring-hero-dark.jpg" alt="The Rock Ring, a two-port 3D-printed gear valet, in the Rock colorway" width="1200" height="840">
+    </div>
+  </div>
+</section>
+
+<section class="trust-bar">
+  <ul>
+    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/></svg>Made to order, ships in 2–4 days</li>
+    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>Small-batch, printed one at a time</li>
+    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>Six colorways, always in stock</li>
+    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v10H3zM14 10h4l3 3v4h-7z"/><circle cx="7.5" cy="18.5" r="1.5"/><circle cx="17.5" cy="18.5" r="1.5"/></svg>Free shipping over $60</li>
+  </ul>
+</section>
+
+<section class="section" id="featured">
+  <div class="container">
+    <div class="grid grid-2" style="align-items:center; gap:60px;">
+      <div class="reveal">
+        <img src="img/rockring-rock-hero.jpg" alt="The Rock Ring in the Rock colorway, front three-quarter view" style="border-radius:var(--radius-lg); border:1px solid var(--line);">
+      </div>
+      <div class="reveal reveal-1">
+        <span class="eyebrow">The flagship</span>
+        <h2 style="margin-top:10px;">Meet the Rock Ring.</h2>
+        <p class="lede" style="margin-top:16px;">One solid block, two open channels. Thread a drawstring, a keyring or a folded pair of sunglasses through and it stops sliding off the bench, the dashboard or the top of the crash pad. No wall, no hardware, no drilling — it just sits.</p>
+        <ul style="margin-top:22px; display:flex; flex-direction:column; gap:10px;">
+          <li style="display:flex;gap:10px;font-size:14.5px;color:var(--ink-2);"><svg style="width:18px;height:18px;color:var(--success);flex-shrink:0;margin-top:2px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Two open ports: a wide lower channel, a narrower upper one</li>
+          <li style="display:flex;gap:10px;font-size:14.5px;color:var(--ink-2);"><svg style="width:18px;height:18px;color:var(--success);flex-shrink:0;margin-top:2px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Freestanding — flat base, no mounting required</li>
+          <li style="display:flex;gap:10px;font-size:14.5px;color:var(--ink-2);"><svg style="width:18px;height:18px;color:var(--success);flex-shrink:0;margin-top:2px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Printed in durable PLA+, six colorways</li>
+        </ul>
+        <div class="swatch-picker" style="margin-top:24px;" aria-hidden="true">
+          <span style="width:26px;height:26px;border-radius:50%;background:#63707c;box-shadow:0 0 0 1px rgba(0,0,0,.12) inset;"></span>
+          <span style="width:26px;height:26px;border-radius:50%;background:#55805a;box-shadow:0 0 0 1px rgba(0,0,0,.12) inset;"></span>
+          <span style="width:26px;height:26px;border-radius:50%;background:#4a90c2;box-shadow:0 0 0 1px rgba(0,0,0,.12) inset;"></span>
+          <span style="width:26px;height:26px;border-radius:50%;background:#c9a86a;box-shadow:0 0 0 1px rgba(0,0,0,.12) inset;"></span>
+          <span style="width:26px;height:26px;border-radius:50%;background:#202326;box-shadow:0 0 0 1px rgba(0,0,0,.12) inset;"></span>
+          <span style="width:26px;height:26px;border-radius:50%;background:#d85c2a;box-shadow:0 0 0 1px rgba(0,0,0,.12) inset;"></span>
+        </div>
+        <div class="buy-row" style="margin-top:10px;">
+          <a href="product-rock-ring.html" class="btn btn-primary btn-lg">View the Rock Ring — $34</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section-tight" style="background:var(--paper-dim);">
+  <div class="container">
+    <div class="section-head center reveal">
+      <span class="eyebrow">Why it stays on the bench</span>
+      <h2>Built for gear, not for a drawer.</h2>
+    </div>
+    <div class="grid grid-4">
+      <div class="feature-card reveal reveal-1">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="2"/><rect x="3" y="15" width="18" height="4" rx="2"/></svg></div>
+        <h3>Two open ports</h3>
+        <p>A wide lower channel and a narrower upper one — size a drawstring, a keyring or a folded strap to whichever fits.</p>
+      </div>
+      <div class="feature-card reveal reveal-2">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10l8-6 8 6v10"/><path d="M4 20h16"/></svg></div>
+        <h3>Freestanding</h3>
+        <p>A flat, weighted base means it sits on a desk, a van console or a gym cubby shelf. No wall, no anchors, no drilling.</p>
+      </div>
+      <div class="feature-card reveal reveal-3">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18 4.5 4.5 0 0 0 0-9 2.5 2.5 0 0 1 0-5 9 9 0 0 0 0-4z"/></svg></div>
+        <h3>Six colorways</h3>
+        <p>Rock, Moss, Ice, Sand, Ink and Ember — named after the terrain, printed in solid PLA+.</p>
+      </div>
+      <div class="feature-card reveal reveal-4">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="9"/></svg></div>
+        <h3>Small-batch</h3>
+        <p>Every unit is printed to order, not pulled from a warehouse pallet. V1 of an evolving lineup.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="colorways">
+  <div class="container">
+    <div class="section-head center reveal">
+      <span class="eyebrow">Colorways</span>
+      <h2>Pick one, or all six.</h2>
+      <p>Same design, six solid PLA+ colors — swap it right on the product page.</p>
+    </div>
+    <div class="grid grid-4" style="gap:18px;">
+      <a href="product-rock-ring.html?color=rock" class="reveal reveal-1" style="text-decoration:none;">
+        <img src="img/rockring-rock-hero.jpg" alt="Rock Ring in Rock colorway" style="border-radius:var(--radius); border:1px solid var(--line); aspect-ratio:1/1; object-fit:cover;">
+        <p style="text-align:center;margin-top:10px;font-weight:700;font-size:14px;">Rock</p>
+      </a>
+      <a href="product-rock-ring.html?color=moss" class="reveal reveal-2" style="text-decoration:none;">
+        <img src="img/rockring-moss-hero.jpg" alt="Rock Ring in Moss colorway" style="border-radius:var(--radius); border:1px solid var(--line); aspect-ratio:1/1; object-fit:cover;">
+        <p style="text-align:center;margin-top:10px;font-weight:700;font-size:14px;">Moss</p>
+      </a>
+      <a href="product-rock-ring.html?color=ice" class="reveal reveal-3" style="text-decoration:none;">
+        <img src="img/rockring-ice-hero.jpg" alt="Rock Ring in Ice colorway" style="border-radius:var(--radius); border:1px solid var(--line); aspect-ratio:1/1; object-fit:cover;">
+        <p style="text-align:center;margin-top:10px;font-weight:700;font-size:14px;">Ice</p>
+      </a>
+      <a href="product-rock-ring.html?color=sand" class="reveal reveal-4" style="text-decoration:none;">
+        <img src="img/rockring-sand-hero.jpg" alt="Rock Ring in Sand colorway" style="border-radius:var(--radius); border:1px solid var(--line); aspect-ratio:1/1; object-fit:cover;">
+        <p style="text-align:center;margin-top:10px;font-weight:700;font-size:14px;">Sand</p>
+      </a>
+      <a href="product-rock-ring.html?color=ink" class="reveal reveal-1" style="text-decoration:none;">
+        <img src="img/rockring-ink-hero.jpg" alt="Rock Ring in Ink colorway" style="border-radius:var(--radius); border:1px solid var(--line); aspect-ratio:1/1; object-fit:cover;">
+        <p style="text-align:center;margin-top:10px;font-weight:700;font-size:14px;">Ink</p>
+      </a>
+      <a href="product-rock-ring.html?color=ember" class="reveal reveal-2" style="text-decoration:none;">
+        <img src="img/rockring-ember-hero.jpg" alt="Rock Ring in Ember colorway" style="border-radius:var(--radius); border:1px solid var(--line); aspect-ratio:1/1; object-fit:cover;">
+        <p style="text-align:center;margin-top:10px;font-weight:700;font-size:14px;">Ember</p>
+      </a>
+      <a href="product-gift-duo.html" class="reveal reveal-3" style="text-decoration:none;">
+        <div style="border-radius:var(--radius); border:1px solid var(--line); aspect-ratio:1/1; background:var(--paper-dim); display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px; text-align:center; padding:16px;">
+          <span class="badge badge-ember">Bundle</span>
+          <span style="font-weight:750;font-size:14px;">Gift Duo — any 2</span>
+        </div>
+      </a>
+      <a href="shop.html" class="reveal reveal-4" style="text-decoration:none;">
+        <div style="border-radius:var(--radius); border:1px dashed var(--line-strong); aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px; text-align:center; padding:16px; color:var(--muted);">
+          <span style="font-weight:750;font-size:14px;">See the full shop →</span>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="specs" style="background:var(--paper-dim);">
+  <div class="container">
+    <div class="grid grid-2" style="align-items:center; gap:56px;">
+      <div class="reveal">
+        <span class="eyebrow">Material &amp; specs</span>
+        <h2 style="margin-top:10px;">Printed, not molded.</h2>
+        <p class="lede" style="margin-top:16px;">Every Rock Ring is FDM-printed in premium PLA+ — a durable, plant-based bioplastic with a soft matte finish. Layer lines are part of the look, not a defect: it's a 3D-printed object and we'd rather you know that going in.</p>
+        <table class="spec-table" style="margin-top:24px;">
+          <tr><th>Dimensions</th><td>127 × 114 × 64 mm (5.0 × 4.5 × 2.5 in), H×W×D</td></tr>
+          <tr><th>Weight</th><td>Approx. 180 g (0.4 lb), varies slightly by color/infill</td></tr>
+          <tr><th>Material</th><td>PLA+, matte finish</td></tr>
+          <tr><th>Ports</th><td>Lower ~90×27 mm · Upper ~60×24 mm, open through the full depth</td></tr>
+          <tr><th>Use</th><td>Indoor, freestanding — desk, shelf, van console, gym cubby</td></tr>
+        </table>
+        <a href="product-rock-ring.html#details" class="btn btn-outline" style="margin-top:24px;">Full spec sheet</a>
+      </div>
+      <div class="reveal reveal-1">
+        <img src="img/rockring-dimensions.jpg" alt="Dimension diagram of the Rock Ring: 127mm tall, 114.3mm wide, 63.5mm deep" style="border-radius:var(--radius-lg); border:1px solid var(--line);">
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section-tight">
+  <div class="container">
+    <div class="story-block reveal">
+      <div>
+        <span class="eyebrow">The studio</span>
+        <h2 style="margin-top:10px;">Printed by hand, one bed at a time.</h2>
+        <p class="lede" style="margin-top:16px;">Crux is a small-batch operation, not a warehouse — every Rock Ring is sliced, printed and packed to order. V1 is the first shape off the plate; more gear-storage pieces are already in the print queue.</p>
+        <a href="about.html" class="btn btn-outline" style="margin-top:22px;">Read our story</a>
+      </div>
+      <img src="img/rockring-ink-hero.jpg" alt="The Rock Ring in the Ink colorway">
+    </div>
+  </div>
+</section>
+
+<section class="section-tight">
+  <div class="container">
+    <div class="cta-band reveal">
+      <h2>Ready to clean up the bench?</h2>
+      <p>Six colorways, printed to order, shipped in 2–4 business days.</p>
+      <a href="product-rock-ring.html" class="btn btn-primary btn-lg">Shop the Rock Ring — $34</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="logo"><span class="mark"><svg viewBox="0 0 20 22" fill="none"><path d="M2 20.5V10C2 5 5.6 1.5 10 1.5S18 5 18 10v10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="5.5" y="8.6" width="9" height="3.1" rx="1.55" fill="currentColor"/><rect x="5.5" y="13.6" width="9" height="3.1" rx="1.55" fill="currentColor"/></svg></span>CRUX</a>
+        <p>Small-batch 3D-printed gear storage for climbers, designed and printed to order in Chicago.</p>
+        <div class="footer-newsletter">
+          <form data-mailto-form data-mailto-subject="Add me to the Crux list">
+            <input type="email" name="email" placeholder="you@email.com" required aria-label="Email address">
+            <button class="btn btn-ember btn-sm" type="submit">Join</button>
+          </form>
+          <p class="muted" data-form-note style="display:none;font-size:12px;margin-top:8px;"></p>
+        </div>
+      </div>
+      <div>
+        <h4>Shop</h4>
+        <ul>
+          <li><a href="product-rock-ring.html">The Rock Ring</a></li>
+          <li><a href="product-gift-duo.html">Gift Duo</a></li>
+          <li><a href="product-felt-pads.html">Felt Base Pads</a></li>
+          <li><a href="shop.html">All products</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Help</h4>
+        <ul>
+          <li><a href="faq.html">FAQ</a></li>
+          <li><a href="shipping-returns.html">Shipping &amp; returns</a></li>
+          <li><a href="contact.html">Contact us</a></li>
+          <li><a href="cart.html">Your cart</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Studio</h4>
+        <ul>
+          <li><a href="about.html">Our story</a></li>
+          <li><a href="mailto:hello@cruxsupply.example">hello@cruxsupply.example</a></li>
+          <li><span>Chicago, IL</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© <span data-year></span> Crux Supply Co. Not affiliated with any climbing-gear manufacturer or safety-equipment standard.</span>
+      <div class="legal-links">
+        <a href="shipping-returns.html">Returns</a>
+        <a href="faq.html">FAQ</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="js/store-data.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
