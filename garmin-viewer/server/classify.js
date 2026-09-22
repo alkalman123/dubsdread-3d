@@ -3,17 +3,26 @@
 // cycling / fitness equipment / ...) buries climbing and mountaineering
 // under generic buckets.
 
+// Colors match the palette of the source health-data pipeline (paper/ink/
+// orange editorial system) so imported history reads consistently with
+// wherever else this athlete looks at the same data.
 const DISCIPLINES = {
-  climbing: { label: 'Climbing', icon: '🧗', color: '#e8734a' },
-  biking: { label: 'Biking', icon: '🚵', color: '#4ab0e8' },
-  running: { label: 'Trail Running', icon: '🏃', color: '#7ee88a' },
-  mountaineering: { label: 'Mountaineering', icon: '⛰️', color: '#c9a3ff' },
-  hiking: { label: 'Hiking', icon: '🥾', color: '#e8d24a' },
+  climbing: { label: 'Climbing', icon: '🧗', color: '#e8622c' },
+  biking: { label: 'Biking', icon: '🚴', color: '#4a90c2' },
+  running: { label: 'Running', icon: '🏃', color: '#d4614f' },
+  mountaineering: { label: 'Mountaineering', icon: '⛰️', color: '#8b5e83' },
+  hiking: { label: 'Hiking', icon: '🥾', color: '#5b8c5a' },
   ski: { label: 'Ski Touring', icon: '⛷️', color: '#9adfff' },
-  water: { label: 'Water', icon: '🚣', color: '#5adbc0' },
-  strength: { label: 'Strength / Training', icon: '🏋️', color: '#f08fb0' },
+  water: { label: 'Water', icon: '🏊', color: '#5aa9d6' },
+  strength: { label: 'Strength', icon: '🏋️', color: '#c9a86a' },
+  walking: { label: 'Walking', icon: '🚶', color: '#a8b2ba' },
+  cardio: { label: 'Cardio', icon: '❤️', color: '#6aa89b' },
   other: { label: 'Other', icon: '📍', color: '#a0a6b0' },
 };
+
+// Activity types that aren't real training sessions and should never reach
+// the app (Apple Watch fall/crash "workouts" from incident detection, etc.).
+const IGNORED_TYPE_KEYS = /^incident_detected$/;
 
 const RULES = [
   [/boulder|rock_climbing|via_ferrata|indoor_climbing|climbing/, 'climbing'],
@@ -24,7 +33,9 @@ const RULES = [
   [/run/, 'running'],
   [/backcountry_ski|ski_touring|skate_ski|cross_country_ski|resort_skiing|snowboard/, 'ski'],
   [/hik/, 'hiking'],
+  [/^walk/, 'walking'],
   [/kayak|canoe|row|paddle|swim|surf/, 'water'],
+  [/^cardio$/, 'cardio'],
   [/strength|fitness_equipment|indoor_cardio|yoga|pilates|hangboard/, 'strength'],
 ];
 
@@ -107,4 +118,4 @@ function summarizeByDiscipline(activities, windowDays) {
     .sort((a, b) => b.durationMin - a.durationMin);
 }
 
-module.exports = { classify, disciplineMeta, normalizeActivity, summarizeByDiscipline, DISCIPLINES };
+module.exports = { classify, disciplineMeta, normalizeActivity, summarizeByDiscipline, DISCIPLINES, IGNORED_TYPE_KEYS };

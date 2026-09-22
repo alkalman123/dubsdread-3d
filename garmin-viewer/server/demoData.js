@@ -188,4 +188,36 @@ function buildWellness(days = 45) {
 
 const WELLNESS = buildWellness(45);
 
-module.exports = { ACTIVITIES, WELLNESS };
+// Same shape as a real smart-scale export, so the Body tab is fully
+// explorable in demo mode.
+const BODY = {
+  source: 'Demo Scale',
+  date: WELLNESS[WELLNESS.length - 1].date,
+  segmental: {
+    right_arm: { lean_lbs: 7.8, fat_pct: 12.1 },
+    left_arm: { lean_lbs: 7.4, fat_pct: 13.8 },
+    trunk: { lean_lbs: 63.9, fat_pct: 12.4 },
+    right_leg: { lean_lbs: 24.1, fat_pct: 8.1 },
+    left_leg: { lean_lbs: 23.0, fat_pct: 8.0 },
+  },
+  composition: {
+    body_fat_pct: { value: 13.1, unit: '%', band: 'Low' },
+    body_fat_mass_lbs: { value: 20.6, unit: 'lbs', band: 'Low' },
+    lean_mass_lbs: { value: 128.4, unit: 'lbs', band: 'Standard' },
+    lean_mass_pct: { value: 80.9, unit: '%', band: 'Standard' },
+    skeletal_muscle_mass_lbs: { value: 79.6, unit: 'lbs', band: 'Standard' },
+    visceral_fat_index: { value: 5, unit: '', band: 'Low' },
+    body_water_pct: { value: 63.4, unit: '%', band: 'High' },
+    bmr_cal: { value: 1820, unit: 'cal', band: 'Standard' },
+    metabolic_age_yrs: { value: 25, unit: 'yrs', band: 'Standard' },
+  },
+  weight_lbs: 149.0,
+  segmental_lean_total_lbs: 126.2,
+  history: WELLNESS.filter((_, i) => i % 7 === 0).map((w, i) => ({
+    date: w.date,
+    body_fat_pct: Number((13.1 + Math.sin(i / 3) * 0.6).toFixed(1)),
+    lean_mass_lbs: Number((128.4 + Math.cos(i / 4) * 0.8).toFixed(1)),
+  })),
+};
+
+module.exports = { ACTIVITIES, WELLNESS, BODY };

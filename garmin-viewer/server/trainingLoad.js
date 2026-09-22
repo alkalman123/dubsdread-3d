@@ -1,8 +1,10 @@
 // Rule-based training-load and recovery engine. No external ML/AI here —
 // just the same acute:chronic workload ratio (ACWR) and readiness
 // heuristics that training-load tools like TrainingPeaks/Strava use,
-// adapted so vertical gain counts for as much as heart rate (a common gap
-// for climbers/mountaineers, whose hardest days are often low-HR).
+// tuned for a Chicago athlete whose three sports are biking, running, and
+// gym climbing (the vertical-gain term below matters far less here than it
+// would for a mountain athlete, but is harmless — it's simply ~0 on flat
+// lakefront rides/runs and indoor climbing).
 
 const MAX_HR_ESTIMATE = 187;
 
@@ -42,20 +44,41 @@ function computeACWR(activities) {
   };
 }
 
+function mean(xs) {
+  const v = xs.filter((x) => x !== null && x !== undefined && !Number.isNaN(x));
+  return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+}
+
 // 0-100 readiness score from the most recent wellness day, relative to the
 // trailing baseline (so "low sleep for you" matters more than an absolute
-// threshold that ignores your normal sleep needs).
+// threshold that ignores your normal sleep needs). When the source already
+// carries a device-computed readiness score (Garmin's own Training
+// Readiness, passed through on imported/live wellness days), that's used
+// directly rather than re-deriving a weaker estimate from its inputs.
 function computeReadiness(wellnessDays) {
   if (!wellnessDays.length) return { score: 60, factors: {} };
   const today = wellnessDays[wellnessDays.length - 1];
   const baseline = wellnessDays.slice(-15, -1);
-  const avg = (key) =>
-    baseline.length ? baseline.reduce((s, d) => s + (d[key] || 0), 0) / baseline.length : today[key] || 0;
+  const avg = (key) => (baseline.length ? mean(baseline.map((d) => d[key])) : today[key]) ?? 0;
 
-  const sleepDelta = today.sleepScore - avg('sleepScore');
-  const batteryDelta = today.bodyBatteryHigh - avg('bodyBatteryHigh');
-  const rhrDelta = avg('restingHR') - today.restingHR; // lower RHR than usual = good
-  const hrvBonus = today.hrvStatus === 'BALANCED' ? 8 : today.hrvStatus === 'UNBALANCED' ? -12 : -3;
+  if (today.readinessScore != null) {
+    return {
+      score: Math.round(clamp(today.readinessScore, 5, 100)),
+      factors: {
+        sleepScore: today.sleepScore,
+        bodyBatteryHigh: today.bodyBatteryHigh,
+        restingHR: today.restingHR,
+        hrvStatus: today.hrvStatus,
+        source: 'device',
+      },
+    };
+  }
+
+  const sleepDelta = (today.sleepScore ?? avg('sleepScore')) - avg('sleepScore');
+  const batteryDelta = (today.bodyBatteryHigh ?? avg('bodyBatteryHigh')) - avg('bodyBatteryHigh');
+  const rhrDelta = avg('restingHR') - (today.restingHR ?? avg('restingHR')); // lower RHR than usual = good
+  const hrvBonus =
+    today.hrvStatus === 'BALANCED' ? 8 : today.hrvStatus === 'UNBALANCED' ? -12 : today.hrvStatus === 'LOW' ? -3 : 0;
 
   let score = 60 + sleepDelta * 0.6 + batteryDelta * 0.5 + rhrDelta * 1.5 + hrvBonus;
   score = Math.round(clamp(score, 5, 100));
@@ -85,19 +108,19 @@ function daysSinceLastByDiscipline(activities, disciplines) {
 
 const TEMPLATES = {
   climbing: {
-    recovery: { title: 'Easy movement day', detail: 'Top-rope or gym volume well below your limit, 40-50min. Footwork drills, no redpoint burns.' },
-    moderate: { title: 'Volume / ARC training', detail: '4x4 pyramid or ARC (aerobic capacity) circuits, 60-90min at moderate intensity, full rest between hard sets.' },
-    hard: { title: 'Projecting session', detail: '4-6 focused attempts on your project grade with full rest (3-5min) between burns, then fingerboard repeaters if fresh.' },
+    recovery: { title: 'Easy movement day', detail: 'Top-rope or auto-belay well below your limit, 40-50min at the gym. Footwork drills, no redpoint burns.' },
+    moderate: { title: 'Volume / ARC training', detail: '4x4 boulder pyramid or ARC (aerobic capacity) laps at the gym, 60-90min at moderate intensity, full rest between hard sets.' },
+    hard: { title: 'Projecting session', detail: '4-6 focused burns on your project boulder or route with full rest (3-5min) between attempts, then hangboard repeaters if fresh.' },
   },
   biking: {
-    recovery: { title: 'Recovery spin', detail: 'Zone 1, flat, 30-45min. Conversational pace, no climbs.' },
-    moderate: { title: 'Zone 2 endurance ride', detail: '60-100min rolling terrain, steady aerobic pace, stay out of the red.' },
-    hard: { title: 'Threshold / vert intervals', detail: '4-6x8min at threshold, or repeat your local climb 3-4x at a hard, sustainable pace.' },
+    recovery: { title: 'Recovery spin', detail: 'Zone 1, 30-45min. Easy Lakefront Trail spin or trainer, conversational pace.' },
+    moderate: { title: 'Zone 2 endurance ride', detail: '60-100min steady aerobic pace on the Lakefront Trail (or Zwift/trainer when it’s not rideable outside).' },
+    hard: { title: 'Threshold intervals', detail: '4-6x8min at threshold on the trainer (structured Zwift workout), or hard sustained efforts on the Lakefront Trail’s open stretches.' },
   },
   running: {
-    recovery: { title: 'Easy shakeout', detail: 'Flat, easy jog or brisk hike, 25-40min, Zone 1-2.' },
-    moderate: { title: 'Zone 2 trail run', detail: '45-75min rolling singletrack, steady effort, practice fueling for longer days.' },
-    hard: { title: 'Hill repeats', detail: '6-10x uphill efforts (2-4min each) at hard effort, easy jog/walk down, or one long vert-heavy run.' },
+    recovery: { title: 'Easy shakeout', detail: 'Flat, easy jog, 25-40min, Zone 1-2 on the Lakefront Path.' },
+    moderate: { title: 'Zone 2 run', detail: '45-75min steady aerobic pace on the Lakefront Path, practice fueling for longer efforts.' },
+    hard: { title: 'Interval session', detail: '6-8x3min at hard effort (track or Lakefront Path), full recovery jog between reps, or one tempo-paced longer run.' },
   },
   mountaineering: {
     recovery: { title: 'Rest or valley walk', detail: 'Full rest, or a flat, easy walk. Legs need to absorb the last big day.' },
@@ -121,7 +144,11 @@ const TEMPLATES = {
   },
 };
 
-const DISCIPLINE_PRIORITY = ['climbing', 'biking', 'mountaineering', 'running', 'ski', 'hiking', 'strength'];
+// The daily recommendation rotates only through the sports this athlete
+// actually trains for; other disciplines (hiking, mountaineering, ski —
+// still classified and shown in Activities/Trends if they ever show up in
+// imported history) are excluded from the "what's next" pool.
+const DISCIPLINE_PRIORITY = ['climbing', 'biking', 'running', 'strength'];
 
 function recommendWorkout(activities, wellnessDays) {
   const acwr = computeACWR(activities);

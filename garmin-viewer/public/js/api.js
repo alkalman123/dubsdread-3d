@@ -20,4 +20,11 @@ export const api = {
   planToday: () => req('/plan/today'),
   briefingMorning: () => req('/briefing/morning'),
   briefingEvening: () => req('/briefing/evening'),
+  body: () => req('/body'),
+  insights: () => req('/insights'),
+  scorecard: () => req('/scorecard'),
+  importStatus: () => req('/import/health'),
+  importHealth: (raw) => req('/import/health', { method: 'POST', body: JSON.stringify({ raw }) }),
+  clearImport: () => req('/import/health', { method: 'DELETE' }),
+  addManualActivity: (entry) => req('/activities/manual', { method: 'POST', body: JSON.stringify(entry) }),
 };

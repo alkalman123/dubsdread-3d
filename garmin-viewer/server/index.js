@@ -10,7 +10,10 @@ const { createRouter } = require('./routes');
 const app = express();
 const PORT = process.env.PORT || 8123;
 
-app.use(express.json());
+// Health-data imports can be several MB (years of daily records) — well
+// past express.json()'s 100kb default.
+app.use(express.json({ limit: '25mb' }));
+app.use(express.text({ limit: '25mb', type: ['text/plain', 'text/html'] }));
 
 // Render (and most PaaS hosts) poll this to know the service is alive.
 app.get('/healthz', (req, res) => res.status(200).send('ok'));

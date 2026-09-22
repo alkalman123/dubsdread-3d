@@ -49,6 +49,7 @@ function render(tab) {
   if (tab === 'today') renderToday();
   else if (tab === 'activities') renderActivities();
   else if (tab === 'trends') renderTrends();
+  else if (tab === 'body') renderBody();
   else if (tab === 'plan') renderPlan();
 }
 
@@ -59,32 +60,73 @@ async function refreshStatus() {
     const s = await api.status();
     state.mode = s.mode;
     const pill = $('#modePill');
-    pill.textContent = s.mode;
-    pill.className = `mode-pill ${s.mode}`;
+    // "demo" only means synthetic data — once a real import exists, the
+    // athlete is looking at their own history even without a live Garmin
+    // connection, so labeling it "demo" would be actively misleading.
+    const label = s.mode === 'demo' && s.import ? 'imported' : s.mode;
+    pill.textContent = label;
+    pill.className = `mode-pill ${label === 'imported' ? 'live' : s.mode}`;
     return s;
   } catch {
     return { mode: 'demo', authenticated: false };
   }
 }
 
+function insightCardsHtml(insights) {
+  if (!insights || !insights.length) return '';
+  return `<div class="icards">${insights
+    .slice(0, 4)
+    .map(
+      (i) => `
+    <div class="ic ${i.severity}">
+      <div class="t">${i.title}</div>
+      ${i.metric ? `<div class="m num">${i.metric}</div>` : ''}
+      <div class="b">${i.body}</div>
+    </div>`
+    )
+    .join('')}</div>`;
+}
+
+function scorePanelHtml(sc) {
+  return `
+    <div class="score-panel">
+      <div class="lbl">Training Score</div>
+      <div class="bigscore"><span class="v num">${sc.score}</span><span class="o">/ 100</span></div>
+      <div class="desc">A transparent average of four components, each capped at 100. Measures <b>training balance, not health</b> — read it alongside the insights above.</div>
+      ${sc.comp
+        .map(
+          (c) => `
+        <div class="comp-row">
+          <div class="cr-lbl"><span>${c.k}</span><span>${Math.round(c.v)}</span></div>
+          <div class="comp-track"><div class="comp-fill" style="width:${c.v}%;background:${c.color}"></div></div>
+          <div class="cr-detail">${c.detail}</div>
+        </div>`
+        )
+        .join('')}
+    </div>`;
+}
+
 // --------------------------------------------------------------- Today ----
 
 async function renderToday() {
   const view = $('#view-today');
-  view.innerHTML = `<h2 class="section-title">Briefing</h2>${skeletonCards(1)}<h2 class="section-title">Today</h2>${skeletonCards(1)}`;
+  view.innerHTML = skeletonCards(1) + skeletonCards(2);
   try {
     const hour = new Date().getHours();
     const isMorning = hour < 15;
-    const [briefing, wellnessRes, actsRes] = await Promise.all([
+    const [briefing, wellnessRes, actsRes, insightsRes] = await Promise.all([
       isMorning ? api.briefingMorning() : api.briefingEvening(),
       api.wellness(2),
       api.activities(5),
+      api.insights(),
     ]);
     const today = wellnessRes.wellness[wellnessRes.wellness.length - 1] || {};
     const plan = briefing.plan || (await api.planToday()).plan;
     const acts = actsRes.activities;
 
     view.innerHTML = `
+      ${insightCardsHtml(insightsRes.insights)}
+
       <h2 class="section-title">${isMorning ? 'Morning Briefing' : 'Evening Wrap-up'}</h2>
       <div class="card briefing-card">
         <div class="kicker">${isMorning ? '☀️ Good morning' : '🌙 Day complete'}</div>
@@ -115,7 +157,7 @@ async function renderToday() {
     $('#planPreviewCard').addEventListener('click', () => switchTab('plan'));
     renderActivityListInto($('#recentList'), acts, { compact: true });
   } catch (err) {
-    view.innerHTML = `<h2 class="section-title">Briefing</h2>${errorCard(err)}`;
+    view.innerHTML = errorCard(err);
   }
 }
 
@@ -149,7 +191,7 @@ async function renderActivities() {
   view.innerHTML = `<h2 class="section-title">Activities</h2>${skeletonCards(3)}`;
   try {
     if (!state.activities) {
-      const res = await api.activities(60);
+      const res = await api.activities(300);
       state.activities = res.activities;
     }
     const disciplines = Array.from(new Map(state.activities.map((a) => [a.discipline, a])).values());
@@ -157,7 +199,10 @@ async function renderActivities() {
     const labelFor = (d) => (d === 'all' ? 'All' : disciplines.find((x) => x.discipline === d)?.disciplineLabel || d);
 
     view.innerHTML = `
-      <h2 class="section-title">Activities</h2>
+      <div style="display:flex;align-items:baseline;justify-content:space-between">
+        <h2 class="section-title" style="margin-bottom:10px">Activities</h2>
+        <button class="btn secondary" id="logActivityBtn" style="padding:6px 12px;font-size:12.5px;margin-bottom:10px">+ Log</button>
+      </div>
       <div class="chip-row" id="filterChips">
         ${chips.map((d) => `<div class="chip ${d === state.activityFilter ? 'active' : ''}" data-d="${d}">${labelFor(d)}</div>`).join('')}
       </div>
@@ -169,11 +214,64 @@ async function renderActivities() {
         renderActivities();
       })
     );
+    $('#logActivityBtn').addEventListener('click', openLogActivitySheet);
     const filtered = state.activityFilter === 'all' ? state.activities : state.activities.filter((a) => a.discipline === state.activityFilter);
     renderActivityListInto($('#activityList'), filtered);
   } catch (err) {
     view.innerHTML = `<h2 class="section-title">Activities</h2>${errorCard(err)}`;
   }
+}
+
+const LOGGABLE_TYPES = [
+  { typeKey: 'climbing', label: 'Climbing (gym)' },
+  { typeKey: 'cycling', label: 'Biking' },
+  { typeKey: 'running', label: 'Running' },
+  { typeKey: 'strength_training', label: 'Strength' },
+  { typeKey: 'hiking', label: 'Hiking' },
+  { typeKey: 'walking', label: 'Walking' },
+];
+
+function openLogActivitySheet() {
+  const sheet = $('#activitySheet');
+  sheet.innerHTML = `
+    <div class="sheet-handle"></div>
+    <h3>Log an activity</h3>
+    <div class="hint" style="margin-top:2px">For sessions your watch missed, or history from before you had one — this feeds the training-load and plan engine too.</div>
+    <form class="stack-form" id="logForm">
+      <select name="typeKey" required>
+        ${LOGGABLE_TYPES.map((t) => `<option value="${t.typeKey}">${t.label}</option>`).join('')}
+      </select>
+      <input type="text" name="name" placeholder="Name (optional)" />
+      <div class="field-row">
+        <input type="date" name="date" value="${new Date().toISOString().slice(0, 10)}" required />
+        <input type="number" name="durationMin" placeholder="Duration (min)" min="1" required />
+      </div>
+      <div class="field-row">
+        <input type="number" name="distanceKm" placeholder="Distance (km)" step="0.1" min="0" />
+        <input type="number" name="elevationGainM" placeholder="Elevation gain (m)" min="0" />
+      </div>
+      <div class="field-row">
+        <input type="number" name="avgHR" placeholder="Avg HR (optional)" min="0" />
+        <input type="number" name="calories" placeholder="Calories (optional)" min="0" />
+      </div>
+      <button class="btn" type="submit">Save activity</button>
+    </form>
+  `;
+  openSheet(sheet, $('#backdrop'));
+  $('#logForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const entry = Object.fromEntries(fd.entries());
+    try {
+      await api.addManualActivity(entry);
+      toast('Activity logged');
+      state.activities = null;
+      closeSheets();
+      render(state.tab);
+    } catch (err) {
+      toast(err.message || 'Could not save activity');
+    }
+  });
 }
 
 let map;
@@ -183,7 +281,7 @@ async function openActivitySheet(id) {
   sheet.innerHTML = `<div class="sheet-handle"></div>${skeletonCards(2)}`;
   openSheet(sheet, backdrop);
   try {
-    const { activity: a, track, streams, splits } = await api.activity(id);
+    const { activity: a, track, streams } = await api.activity(id);
     const hasTrack = track && track.length > 1;
     sheet.innerHTML = `
       <div class="sheet-handle"></div>
@@ -199,7 +297,7 @@ async function openActivitySheet(id) {
         <div class="stat-tile"><div class="val">${a.calories ?? '–'}</div><div class="lbl">kcal</div></div>
       </div>
       ${
-        ['climbing', 'mountaineering', 'ski', 'hiking'].includes(a.discipline)
+        ['climbing', 'mountaineering', 'ski', 'hiking'].includes(a.discipline) && a.vam
           ? `<div class="hint">Vertical ascent rate: ~${a.vam} m/h</div>`
           : ''
       }
@@ -220,11 +318,11 @@ async function openActivitySheet(id) {
 
     if (streams.hr && streams.hr.length) {
       const labels = (streams.timeSec || []).map((s) => `${Math.round(s / 60)}m`);
-      lineChart($('#hrChart'), { labels, series: [{ label: 'HR', data: streams.hr, color: '#ef5b6b' }] });
+      lineChart($('#hrChart'), { labels, series: [{ label: 'HR', data: streams.hr, color: '#c9392a' }] });
     }
     if (streams.elevation && streams.elevation.length) {
       const labels = (streams.timeSec || []).map((s) => `${Math.round(s / 60)}m`);
-      lineChart($('#eleChart'), { labels, series: [{ label: 'Elevation', data: streams.elevation, color: '#c9a3ff' }], fill: true });
+      lineChart($('#eleChart'), { labels, series: [{ label: 'Elevation', data: streams.elevation, color: '#8b5e83' }], fill: true });
     }
   } catch (err) {
     sheet.innerHTML = `<div class="sheet-handle"></div>${errorCard(err)}`;
@@ -237,15 +335,18 @@ async function renderTrends() {
   const view = $('#view-trends');
   view.innerHTML = `<h2 class="section-title">Training Load</h2>${skeletonCards(3)}`;
   try {
-    const [summary, wellnessRes] = await Promise.all([api.summary(), api.wellness(30)]);
+    const [summary, wellnessRes, scorecardRes] = await Promise.all([api.summary(), api.wellness(60), api.scorecard()]);
     const acwr = summary.acwr;
-    const acwrColor = { 'high-risk': '#ef5b6b', monitor: '#e8d24a', 'sweet-spot': '#7ee88a', undertrained: '#4ab0e8' }[acwr.status] || '#7ee88a';
+    const acwrColor = { 'high-risk': '#c9392a', monitor: '#c9a86a', 'sweet-spot': '#5b8c5a', undertrained: '#4a90c2' }[acwr.status] || '#5b8c5a';
 
     view.innerHTML = `
+      <h2 class="section-title">Training Score</h2>
+      ${scorePanelHtml(scorecardRes.scorecard)}
+
       <h2 class="section-title">Training Load</h2>
       <div class="card" style="text-align:center;">
         <div class="chart-wrap" style="height:130px"><canvas id="acwrGauge"></canvas></div>
-        <div style="margin-top:-46px;font-size:26px;font-weight:700;">${acwr.ratio}</div>
+        <div style="margin-top:-46px;font-size:26px;font-weight:800;">${acwr.ratio}</div>
         <div class="readiness-badge" style="margin-top:8px"><span class="dot" style="background:${acwrColor}"></span>${acwr.status.replace('-', ' ')}</div>
         <div class="hint">Acute (7d avg) ${acwr.acute7d ? Math.round(acwr.acute7d / 7) : 0} vs chronic (28d avg) ${acwr.chronic28dAvgDaily} training load per day.</div>
       </div>
@@ -253,7 +354,7 @@ async function renderTrends() {
       <h2 class="section-title">Last 28 Days by Discipline</h2>
       <div class="card"><div class="chart-wrap tall"><canvas id="disciplineChart"></canvas></div></div>
 
-      <h2 class="section-title">Daily Training Load (30d)</h2>
+      <h2 class="section-title">Daily Training Load</h2>
       <div class="card"><div class="chart-wrap"><canvas id="loadChart"></canvas></div></div>
 
       <h2 class="section-title">Recovery Trend</h2>
@@ -279,7 +380,7 @@ async function renderTrends() {
     const dayKeys = Object.keys(byDay).sort();
     lineChart($('#loadChart'), {
       labels: dayKeys.map((d) => d.slice(5)),
-      series: [{ label: 'Load', data: dayKeys.map((d) => byDay[d]), color: '#e8734a' }],
+      series: [{ label: 'Load', data: dayKeys.map((d) => byDay[d]), color: '#e8622c' }],
       fill: true,
     });
 
@@ -287,16 +388,108 @@ async function renderTrends() {
     lineChart($('#bbChart'), {
       labels: w.map((d) => d.date.slice(5)),
       series: [
-        { label: 'Body Battery High', data: w.map((d) => d.bodyBatteryHigh), color: '#7ee88a' },
-        { label: 'Body Battery Low', data: w.map((d) => d.bodyBatteryLow), color: '#4ab0e8' },
+        { label: 'Body Battery High', data: w.map((d) => d.bodyBatteryHigh), color: '#5b8c5a' },
+        { label: 'Body Battery Low', data: w.map((d) => d.bodyBatteryLow), color: '#4a90c2' },
       ],
     });
     lineChart($('#rhrChart'), {
       labels: w.map((d) => d.date.slice(5)),
-      series: [{ label: 'Resting HR', data: w.map((d) => d.restingHR), color: '#ef5b6b' }],
+      series: [{ label: 'Resting HR', data: w.map((d) => d.restingHR), color: '#c9392a' }],
     });
   } catch (err) {
     view.innerHTML = `<h2 class="section-title">Training Load</h2>${errorCard(err)}`;
+  }
+}
+
+// ----------------------------------------------------------------- Body ----
+
+function bandClass(band) {
+  return String(band || '').toLowerCase().replace(/\s+/g, '-');
+}
+
+async function renderBody() {
+  const view = $('#view-body');
+  view.innerHTML = `<h2 class="section-title">Body Composition</h2>${skeletonCards(1)}`;
+  try {
+    const { body } = await api.body();
+    if (!body) {
+      view.innerHTML = `
+        <h2 class="section-title">Body Composition</h2>
+        <div class="card empty">No body composition data yet. Import your health data (Settings → Import) to see it here.</div>
+      `;
+      return;
+    }
+
+    const seg = body.segmental || {};
+    const segLabels = { right_arm: 'Right arm', left_arm: 'Left arm', trunk: 'Trunk', right_leg: 'Right leg', left_leg: 'Left leg' };
+    const maxLean = Math.max(1, ...Object.values(seg).map((s) => s.lean_lbs || 0));
+
+    const comp = body.composition || {};
+    const compOrder = ['body_fat_pct', 'lean_mass_lbs', 'skeletal_muscle_mass_lbs', 'visceral_fat_index', 'body_water_pct', 'bmr_cal', 'metabolic_age_yrs'];
+    const compLabels = {
+      body_fat_pct: 'Body fat',
+      lean_mass_lbs: 'Lean mass',
+      skeletal_muscle_mass_lbs: 'Skeletal muscle',
+      visceral_fat_index: 'Visceral fat',
+      body_water_pct: 'Body water',
+      bmr_cal: 'BMR',
+      metabolic_age_yrs: 'Metabolic age',
+    };
+
+    view.innerHTML = `
+      <h2 class="section-title">Body Composition</h2>
+      <div class="scanner">
+        <div class="scanTitle">BODY SCAN <span>· ${body.source || 'scale'}</span></div>
+        <div class="scanSub">${body.date ? new Date(body.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : ''}</div>
+
+        <div class="weightRow"><span class="wv num">${body.weight_lbs ?? '–'}</span><span class="wu">lbs</span></div>
+
+        <div class="segGrid" style="margin-top:14px">
+          ${Object.entries(seg)
+            .map(
+              ([k, v]) => `
+            <div class="segCard">
+              <div class="sk">${segLabels[k] || k}</div>
+              <div class="sv num">${v.lean_lbs ?? '–'}<span class="su"> lbs lean</span></div>
+              <div class="su">${v.fat_pct ?? '–'}% fat</div>
+              <div class="sbar"><i style="width:${((v.lean_lbs || 0) / maxLean) * 100}%"></i></div>
+            </div>`
+            )
+            .join('')}
+        </div>
+
+        <div class="compGrid" style="margin-top:14px">
+          ${compOrder
+            .filter((k) => comp[k])
+            .map(
+              (k) => `
+            <div class="compCell">
+              <div class="ck">${compLabels[k]}</div>
+              <div class="cv num">${comp[k].value}<span class="cu"> ${comp[k].unit || ''}</span></div>
+              ${comp[k].band ? `<div class="band ${bandClass(comp[k].band)}">${comp[k].band}</div>` : ''}
+            </div>`
+            )
+            .join('')}
+        </div>
+      </div>
+
+      ${
+        body.history && body.history.length > 1
+          ? `<h2 class="section-title">Trend</h2><div class="card"><div class="chart-wrap" id="bodyTrendWrap"><canvas id="bodyTrendChart"></canvas></div></div>`
+          : ''
+      }
+    `;
+
+    if (body.history && body.history.length > 1) {
+      lineChart($('#bodyTrendChart'), {
+        labels: body.history.map((h) => h.date.slice(5)),
+        series: [
+          { label: 'Body fat %', data: body.history.map((h) => h.body_fat_pct), color: '#e8622c' },
+        ],
+      });
+    }
+  } catch (err) {
+    view.innerHTML = `<h2 class="section-title">Body Composition</h2>${errorCard(err)}`;
   }
 }
 
@@ -321,13 +514,13 @@ function previewWeek(plan) {
     const d = new Date(today);
     d.setDate(d.getDate() + i);
     const intensity = i === 0 ? plan.intensity : seq[i];
-    const discipline = intensity === 'recovery' ? 'hiking' : disciplines[i % disciplines.length];
+    const discipline = intensity === 'recovery' ? 'strength' : disciplines[i % disciplines.length];
     days.push({ label: i === 0 ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'short' }), intensity, discipline });
   }
   return days;
 }
 
-const INTENSITY_COLOR = { recovery: '#4ab0e8', moderate: '#e8d24a', hard: '#e8734a' };
+const INTENSITY_COLOR = { recovery: '#4a90c2', moderate: '#c9a86a', hard: '#e8622c' };
 
 async function renderPlan() {
   const view = $('#view-plan');
@@ -357,7 +550,7 @@ async function renderPlan() {
           <div class="stat-tile"><div class="val">${r.factors.sleepScore ?? '–'}</div><div class="lbl">Sleep score</div></div>
           <div class="stat-tile"><div class="val">${r.factors.bodyBatteryHigh ?? '–'}</div><div class="lbl">Body battery</div></div>
           <div class="stat-tile"><div class="val">${r.factors.restingHR ?? '–'}</div><div class="lbl">Resting HR</div></div>
-          <div class="stat-tile" style="font-size:11px;display:flex;align-items:center;justify-content:center">${(r.factors.hrvStatus || '–').toLowerCase()}</div>
+          <div class="stat-tile" style="font-size:11px;display:flex;align-items:center;justify-content:center">${r.factors.source === 'device' ? 'device score' : (r.factors.hrvStatus || '–').toLowerCase()}</div>
         </div>
       </div>
 
@@ -395,9 +588,14 @@ function closeSheets() {
 }
 $('#backdrop').addEventListener('click', closeSheets);
 
+function invalidateAllCaches() {
+  state.activities = null;
+}
+
 async function openSettings() {
   const sheet = $('#settingsSheet');
   const status = await refreshStatus();
+  const imp = status.import;
   sheet.innerHTML = `
     <div class="sheet-handle"></div>
     <h3>Settings</h3>
@@ -411,7 +609,19 @@ async function openSettings() {
         )
         .join('')}
     </div>
-    <div class="hint">Auto uses your Garmin account once connected below, and falls back to demo data otherwise.</div>
+    <div class="hint">Auto uses your Garmin account (or imported history) once available, falling back to demo data otherwise. Live requires a Garmin connection below. Demo always shows the synthetic sample data, even if you've imported your own.</div>
+
+    <h2 class="section-title">Import health data</h2>
+    ${
+      imp
+        ? `<div class="status-line">Imported: <b>${imp.first} → ${imp.last}</b> (${imp.totalDays} days, ${imp.totalWorkouts} workouts)</div>
+           <div class="btn-row">
+             <button class="btn secondary" id="reimportBtn">Re-import</button>
+             <button class="btn danger" id="clearImportBtn">Clear</button>
+           </div>`
+        : `<input type="file" id="importFile" accept=".json,.html,application/json,text/html" style="display:block;margin-top:6px;font-size:13px" />
+           <div class="hint">Upload your data.json or Health-Dashboard.html export. This becomes your activity/wellness history here — live Garmin sync only fills in what's happened since the export's last day. Nothing is sent anywhere but this server.</div>`
+    }
 
     <h2 class="section-title">${status.authenticated ? 'Garmin account' : 'Connect Garmin'}</h2>
     ${
@@ -437,12 +647,44 @@ async function openSettings() {
   $$('#modeRadios input').forEach((r) =>
     r.addEventListener('change', async () => {
       await api.setMode(r.value);
-      state.activities = null;
+      invalidateAllCaches();
       await refreshStatus();
       render(state.tab);
       toast(`Mode set to ${r.value}`);
     })
   );
+
+  const importFile = $('#importFile', sheet);
+  if (importFile) {
+    importFile.addEventListener('change', async () => {
+      const file = importFile.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const res = await api.importHealth(text);
+        toast(`Imported ${res.import.totalWorkouts} workouts`);
+        invalidateAllCaches();
+        await refreshStatus();
+        openSettings();
+        render(state.tab);
+      } catch (err) {
+        toast(err.message || 'Import failed');
+      }
+    });
+  }
+  const reimportBtn = $('#reimportBtn', sheet);
+  if (reimportBtn) reimportBtn.addEventListener('click', openSettingsWithImportForm);
+  const clearImportBtn = $('#clearImportBtn', sheet);
+  if (clearImportBtn) {
+    clearImportBtn.addEventListener('click', async () => {
+      await api.clearImport();
+      toast('Import cleared');
+      invalidateAllCaches();
+      await refreshStatus();
+      openSettings();
+      render(state.tab);
+    });
+  }
 
   const loginForm = $('#loginForm', sheet);
   if (loginForm) {
@@ -455,7 +697,7 @@ async function openSettings() {
       try {
         await api.login(fd.get('username'), fd.get('password'));
         toast('Connected to Garmin');
-        state.activities = null;
+        invalidateAllCaches();
         closeSheets();
         await refreshStatus();
         render(state.tab);
@@ -470,7 +712,7 @@ async function openSettings() {
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
       await api.logout();
-      state.activities = null;
+      invalidateAllCaches();
       toast('Disconnected');
       await refreshStatus();
       openSettings();
@@ -480,6 +722,42 @@ async function openSettings() {
 
   openSheet(sheet, $('#backdrop'));
 }
+
+// A forced re-import: show the file input even though an import already
+// exists, so a fresh export can replace it in one step.
+function openSettingsWithImportForm() {
+  const sheet = $('#settingsSheet');
+  const importSection = $$('h2.section-title', sheet).find((h) => h.textContent === 'Import health data');
+  if (!importSection) return;
+  let el = importSection.nextElementSibling;
+  while (el && el.tagName !== 'H2') {
+    const next = el.nextElementSibling;
+    el.remove();
+    el = next;
+  }
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.id = 'importFile';
+  input.accept = '.json,.html,application/json,text/html';
+  input.style.cssText = 'display:block;margin-top:6px;font-size:13px';
+  importSection.after(input);
+  input.addEventListener('change', async () => {
+    const file = input.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const res = await api.importHealth(text);
+      toast(`Imported ${res.import.totalWorkouts} workouts`);
+      invalidateAllCaches();
+      await refreshStatus();
+      openSettings();
+      render(state.tab);
+    } catch (err) {
+      toast(err.message || 'Import failed');
+    }
+  });
+}
+
 $('#settingsBtn').addEventListener('click', openSettings);
 
 // ------------------------------------------------------------------ init ----
