@@ -2,3 +2,8 @@ business/
 node_modules/
 garmin-viewer/.env
 garmin-viewer/server/.data/
+garmin-backend/.env
+garmin-backend/.data/
+garmin-backend/.venv/
+garmin-backend/__pycache__/
+garmin-backend/app/__pycache__/
