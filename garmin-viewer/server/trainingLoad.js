@@ -113,14 +113,14 @@ const TEMPLATES = {
     hard: { title: 'Projecting session', detail: '4-6 focused burns on your project boulder or route with full rest (3-5min) between attempts, then hangboard repeaters if fresh.' },
   },
   biking: {
-    recovery: { title: 'Recovery spin', detail: 'Zone 1, 30-45min. Easy Lakefront Trail spin or trainer, conversational pace.' },
-    moderate: { title: 'Zone 2 endurance ride', detail: '60-100min steady aerobic pace on the Lakefront Trail (or Zwift/trainer when it’s not rideable outside).' },
-    hard: { title: 'Threshold intervals', detail: '4-6x8min at threshold on the trainer (structured Zwift workout), or hard sustained efforts on the Lakefront Trail’s open stretches.' },
+    recovery: { title: 'Recovery spin', detail: 'Zone 1, 30-45min. Easy out-and-back on the 606 right from your door, or trainer, conversational pace.' },
+    moderate: { title: 'Zone 2 endurance ride', detail: '60-100min steady aerobic pace — the 606 out to the Lakefront Trail and back is an easy way to string together distance (or Zwift/trainer when it’s not rideable outside).' },
+    hard: { title: 'Threshold intervals', detail: '4-6x8min at threshold on the trainer (structured Zwift workout), or hard sustained efforts on the Lakefront Trail’s open stretches once you’ve connected over from the 606.' },
   },
   running: {
-    recovery: { title: 'Easy shakeout', detail: 'Flat, easy jog, 25-40min, Zone 1-2 on the Lakefront Path.' },
-    moderate: { title: 'Zone 2 run', detail: '45-75min steady aerobic pace on the Lakefront Path, practice fueling for longer efforts.' },
-    hard: { title: 'Interval session', detail: '6-8x3min at hard effort (track or Lakefront Path), full recovery jog between reps, or one tempo-paced longer run.' },
+    recovery: { title: 'Easy shakeout', detail: 'Flat, easy jog, 25-40min, Zone 1-2 right out your door on the 606.' },
+    moderate: { title: 'Zone 2 run', detail: '45-75min steady aerobic pace on the 606 (it’s flat and car-free end to end), practice fueling for longer efforts.' },
+    hard: { title: 'Interval session', detail: '6-8x3min at hard effort using the 606’s mile markers, full recovery jog between reps, or one tempo-paced longer run out toward the Lakefront Trail.' },
   },
   mountaineering: {
     recovery: { title: 'Rest or valley walk', detail: 'Full rest, or a flat, easy walk. Legs need to absorb the last big day.' },
