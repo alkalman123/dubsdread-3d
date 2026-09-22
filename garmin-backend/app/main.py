@@ -26,6 +26,24 @@ def _scheduled_sync() -> None:
         logger.warning("scheduled sync did not complete cleanly: %s", result)
 
 
+def _run_backfill_in_background() -> None:
+    try:
+        result = sync.backfill()
+        if not result.get("ok"):
+            logger.warning("background backfill did not complete cleanly: %s", result)
+        else:
+            logger.info("background backfill complete: %s", result)
+    finally:
+        _backfill_lock.release()
+
+
+def _start_backfill_if_unlocked() -> bool:
+    if not _backfill_lock.acquire(blocking=False):
+        return False
+    threading.Thread(target=_run_backfill_in_background, daemon=True).start()
+    return True
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db.init_db()
@@ -38,6 +56,23 @@ async def lifespan(app: FastAPI):
         sync.sync_recent_days()
     except Exception:  # noqa: BLE001
         logger.exception("initial sync at boot failed")
+
+    # Render's free tier wipes this service's disk -- including the SQLite
+    # database -- on every deploy, exactly like the Node app's import file.
+    # Without this check, that silently drops a full backfill back down to
+    # just the 3-day overlap window on every redeploy, which looks like
+    # "only the last few days of Garmin data" with everything before that
+    # either blank or falling back to whatever's imported. If no backfill
+    # has ever completed against the *current* database, run one now in the
+    # background (non-blocking -- the server still starts immediately).
+    conn = db.get_connection()
+    try:
+        has_backfilled = db.get_state(conn, "last_backfill_at") is not None
+    finally:
+        conn.close()
+    if not has_backfilled and not sync.client.needs_relogin:
+        logger.info("no backfill on record for this database -- starting one automatically")
+        _start_backfill_if_unlocked()
 
     scheduler.add_job(
         _scheduled_sync,
@@ -132,15 +167,6 @@ def get_activities(limit: int = Query(default=50, ge=1, le=200), offset: int = Q
     return {"limit": limit, "offset": offset, "activities": activities}
 
 
-def _run_backfill_in_background() -> None:
-    try:
-        result = sync.backfill()
-        if not result.get("ok"):
-            logger.warning("background backfill did not complete cleanly: %s", result)
-    finally:
-        _backfill_lock.release()
-
-
 @app.post("/api/sync/trigger", dependencies=[Depends(require_bearer_token)])
 def trigger_sync(full_backfill: bool = Query(default=False)):
     if not full_backfill:
@@ -151,9 +177,6 @@ def trigger_sync(full_backfill: bool = Query(default=False)):
     # longer than Render's (or any) HTTP proxy will hold a request open.
     # Kick it off in a background thread and return immediately; the
     # caller polls GET /api/status for backfill_status / backfill_progress.
-    if not _backfill_lock.acquire(blocking=False):
+    if not _start_backfill_if_unlocked():
         raise HTTPException(status_code=409, detail="a backfill is already running -- check /api/status")
-
-    thread = threading.Thread(target=_run_backfill_in_background, daemon=True)
-    thread.start()
     return {"ok": True, "started": True, "message": "backfill running in background -- poll GET /api/status"}
