@@ -827,6 +827,41 @@ nav.tabbar button.active .ic { background: var(--accent-soft); }
 .sheet h3 { margin: 0 0 4px; font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
 
 .detail-map { width: 100%; height: 220px; border-radius: 14px; overflow: hidden; margin: 12px 0; background: var(--card); border: 1px solid var(--rule); }
+
+/* "Now playing"-style hero: the route map bleeds edge-to-edge under the
+   sheet's own side padding (the sheet's rounded top corners stay clear
+   above it, under the handle, so nothing gets clipped), with the activity
+   name/date overlaid on a bottom scrim instead of sitting as plain text
+   underneath. The scrim is fixed dark-on-photo contrast regardless of
+   theme, same reasoning as the Body tab's dark scan card -- text over a
+   map tile can't rely on theme tokens since the tile colors underneath
+   aren't part of this app's palette. */
+.detail-hero { position: relative; margin: -2px -18px 14px; height: 240px; overflow: hidden; background: var(--card2); }
+.detail-hero .detail-map { width: 100%; height: 100%; margin: 0; border: none; border-radius: 0; }
+.detail-hero-scrim {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 40px 18px 14px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  pointer-events: none;
+}
+.detail-hero-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+  backdrop-filter: blur(6px);
+}
+.detail-hero-title { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.2; }
+.detail-hero-date { font-size: 12.5px; color: rgba(255, 255, 255, 0.78); margin-top: 2px; }
 .detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
 .detail-grid .stat-tile .val { font-size: 16px; }
 

@@ -1012,11 +1012,26 @@ async function openActivitySheet(id) {
   try {
     const { activity: a, track, streams } = await api.activity(id);
     const hasTrack = track && track.length > 1;
+    const discIcon = icon(ICON_FOR_DISCIPLINE[a.discipline] || 'circle-dot', { size: 18 });
     sheet.innerHTML = `
       <div class="sheet-handle"></div>
-      <h3 style="display:flex;align-items:center;gap:8px">${icon(ICON_FOR_DISCIPLINE[a.discipline] || 'circle-dot', { size: 20, className: 'sheet-title-icon' })} ${a.name}</h3>
-      <div class="hint">${new Date(a.startTime).toLocaleString()}</div>
-      ${hasTrack ? '<div class="detail-map" id="detailMap"></div>' : ''}
+      ${
+        hasTrack
+          ? `
+      <div class="detail-hero">
+        <div class="detail-map" id="detailMap"></div>
+        <div class="detail-hero-scrim">
+          <div class="detail-hero-icon" style="background:${a.color}55">${discIcon}</div>
+          <div>
+            <div class="detail-hero-title">${a.name}</div>
+            <div class="detail-hero-date">${new Date(a.startTime).toLocaleString()}</div>
+          </div>
+        </div>
+      </div>`
+          : `
+      <h3 style="display:flex;align-items:center;gap:8px">${discIcon} ${a.name}</h3>
+      <div class="hint">${new Date(a.startTime).toLocaleString()}</div>`
+      }
       <div class="detail-grid">
         <div class="stat-tile"><div class="val">${a.distanceKm}</div><div class="lbl">km</div></div>
         <div class="stat-tile"><div class="val">${fmtDuration(a.durationMin)}</div><div class="lbl">time</div></div>
