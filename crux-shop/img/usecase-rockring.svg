@@ -1,0 +1,56 @@
+<svg viewBox="0 0 800 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Illustration of a climber hooking two fingers into the Rock Ring's lower port to do a desk finger-hang">
+  <rect width="800" height="560" rx="20" fill="#efeadf"/>
+
+  <!-- window backdrop -->
+  <rect x="70" y="60" width="230" height="160" rx="10" fill="none" stroke="#15191c" stroke-opacity=".14" stroke-width="3"/>
+  <line x1="185" y1="60" x2="185" y2="220" stroke="#15191c" stroke-opacity=".14" stroke-width="3"/>
+  <line x1="70" y1="140" x2="300" y2="140" stroke="#15191c" stroke-opacity=".14" stroke-width="3"/>
+
+  <!-- desk surface -->
+  <path d="M40 420 H760" stroke="#15191c" stroke-width="4" stroke-linecap="round"/>
+  <path d="M40 420 L40 460 M760 420 L760 460" stroke="#15191c" stroke-opacity=".35" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Rock Ring block -->
+  <g transform="translate(430,255)">
+    <path d="M-95 165
+             V10
+             C-95 -55 -55 -95 0 -95
+             C55 -95 95 -55 95 10
+             V165
+             Z"
+          fill="#d85c2a" stroke="#15191c" stroke-width="5" stroke-linejoin="round"/>
+    <rect x="-58" y="-38" width="116" height="34" rx="16" fill="#efeadf" stroke="#15191c" stroke-width="4"/>
+    <rect x="-70" y="34" width="140" height="40" rx="18" fill="#efeadf" stroke="#15191c" stroke-width="4"/>
+  </g>
+
+  <!-- forearm -->
+  <g stroke="#15191c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M760 470 C 660 452, 560 430, 470 416" fill="none" stroke-width="46" stroke="#f7f4ee"/>
+    <path d="M760 470 C 660 452, 560 430, 470 416" fill="none"/>
+  </g>
+
+  <!-- palm -->
+  <ellipse cx="452" cy="410" rx="34" ry="26" fill="#f7f4ee" stroke="#15191c" stroke-width="5" transform="rotate(-14 452 410)"/>
+
+  <!-- two fingers hooked into the lower port, simple capsule hooks -->
+  <g fill="#f7f4ee" stroke="#15191c" stroke-width="5" stroke-linejoin="round">
+    <path d="M430 392
+             q-4 -34 26 -40
+             q18 -3 22 14
+             q3 15 -12 22
+             q-15 7 -18 22
+             q-2 12 8 20
+             l-14 4
+             q-16 -10 -16 -26
+             q0 -9 4 -16 z"/>
+    <path d="M456 388
+             q-2 -30 24 -36
+             q16 -3 20 12
+             q3 13 -10 19
+             q-13 6 -15 19
+             q-2 11 6 18
+             l-13 4
+             q-14 -9 -14 -23
+             q0 -8 2 -13 z"/>
+  </g>
+</svg>

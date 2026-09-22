@@ -1,5 +1,5 @@
 /* =============================================================================
-   CRUX — store configuration & product catalog
+   RACKHOUSE — store configuration & product catalog
    Single source of truth for pricing, shipping and product data.
 
    LAUNCH CHECKLIST — replace before taking real orders:
@@ -18,10 +18,10 @@
    ========================================================================== */
 
 const SHOP = {
-  name: 'Crux',
-  legalName: 'Crux Supply Co.',
-  tagline: 'Small-batch gear storage for climbers.',
-  email: 'hello@cruxsupply.example',
+  name: 'Rackhouse',
+  legalName: 'Rackhouse Supply Co.',
+  tagline: 'Small-batch 3D-printed gear storage for climbers.',
+  email: 'hello@rackhousesupply.example',
   phone: '',
   address: 'Chicago, IL · ships from a home studio, not a storefront',
   currency: '$',
@@ -41,9 +41,9 @@ const SHOP = {
     // the built-in email-invoice checkout for that product. See
     // business/PAYMENTS-SETUP.md for exactly how to create these.
     productLinks: {
-      'rock-ring': '',
       'big-biner': '',
-      'bottle-adapter': '',
+      'rock-ring': '',
+      'cup-cradle': '',
       'gift-duo': '',
       'felt-pads': '',
     },
@@ -83,24 +83,47 @@ function bigBinerImages(colorKey) {
   };
 }
 
-function bottleAdapterImages(colorKey) {
+function cupCradleImages(colorKey) {
   return {
-    hero: `img/bottleadapter-${colorKey}-hero.jpg`,
-    top: `img/bottleadapter-${colorKey}-top.jpg`,
+    hero: `img/cupcradle-${colorKey}-hero.jpg`,
+    top: `img/cupcradle-${colorKey}-top.jpg`,
+    profile: `img/cupcradle-${colorKey}-profile.jpg`,
   };
 }
 
 const PRODUCTS = {
+  'big-biner': {
+    id: 'big-biner',
+    name: 'The Big Biner',
+    tagline: 'Gear organizer & helmet holder — V2.2',
+    price: 29.0,
+    slug: 'product-big-biner.html',
+    badge: 'Flagship',
+    hasColor: true,
+    defaultColor: 'rock',
+    short: 'An oversized carabiner-shaped rack with more than a dozen holes — hang a full trad rack, your helmet, and everything else that usually ends up loose in the trunk, all off one point. "NOT FOR CLIMBING" is printed right into the plastic, because it is genuinely not a rated carabiner.',
+  },
   'rock-ring': {
     id: 'rock-ring',
     name: 'The Rock Ring',
-    tagline: 'Freestanding gear valet — V1',
+    tagline: 'Desktop mini fingerboard — V1',
     price: 34.0,
     slug: 'product-rock-ring.html',
-    badge: 'Best seller',
+    badge: 'Original',
     hasColor: true,
     defaultColor: 'rock',
-    short: 'A dome-topped block that sits on its own base, with two open ports running straight through it to corral chalk, keys, sunglasses and the rest of your pocket clutter.',
+    short: 'A dome-topped block that sits on its own base, with two open ports sized to hook two or three fingers into — a mini fingerboard for finger curls and isometric holds at your desk. Between sessions, the same two ports corral chalk, keys and sunglasses.',
+  },
+  'cup-cradle': {
+    id: 'cup-cradle',
+    name: 'The Cup Cradle',
+    tagline: 'Nalgene-to-cupholder adapter',
+    price: 16.0,
+    slug: 'product-cup-cradle.html',
+    badge: 'New',
+    hasColor: true,
+    defaultColor: 'ice',
+    short: 'A stem sized for a standard car console cupholder flares up into a wide, scalloped cradle that cups a full-size wide-mouth Nalgene so it rides upright instead of sliding around on the next turn.',
   },
   'gift-duo': {
     id: 'gift-duo',
@@ -125,31 +148,9 @@ const PRODUCTS = {
     image: rockRingImages('sand').profile,
     short: 'Four self-adhesive felt pads sized for the Rock Ring’s base, so it sits quietly on a desk, shelf or van console without scuffing the finish.',
   },
-  'big-biner': {
-    id: 'big-biner',
-    name: 'The Big Biner',
-    tagline: 'Wall-mount gear rack — V2.2',
-    price: 29.0,
-    slug: 'product-big-biner.html',
-    badge: 'New',
-    hasColor: true,
-    defaultColor: 'rock',
-    short: 'An oversized carabiner-shaped wall rack with more than a dozen holes to hang gear from — and "NOT FOR CLIMBING" printed right into the plastic, because it is genuinely not a carabiner.',
-  },
-  'bottle-adapter': {
-    id: 'bottle-adapter',
-    name: 'Hydro Flask ↔ Nalgene Adapter',
-    tagline: 'Split-ring bottle cap adapter',
-    price: 14.0,
-    slug: 'product-bottle-adapter.html',
-    badge: 'New',
-    hasColor: true,
-    defaultColor: 'ink',
-    short: 'A split-ring collar that lets a Hydro Flask-style cap thread onto a Nalgene-style wide-mouth bottle, cinched tight with a small screw across the gap.',
-  },
 };
 
-const CATALOG_ORDER = ['rock-ring', 'big-biner', 'bottle-adapter', 'gift-duo', 'felt-pads'];
+const CATALOG_ORDER = ['big-biner', 'rock-ring', 'cup-cradle', 'gift-duo', 'felt-pads'];
 
 const COMING_SOON = [
   { name: 'Crimp Tray', note: 'A shallow dish for rings, coins and hold-shaped clutter.' },

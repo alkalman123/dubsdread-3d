@@ -1,0 +1,44 @@
+<svg viewBox="0 0 800 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Illustration of the Cup Cradle inserted into a car console cupholder, holding a wide-mouth Nalgene bottle upright">
+  <rect width="800" height="560" rx="20" fill="#efeadf"/>
+
+  <!-- car window / side glass -->
+  <path d="M40 40 H760 V220 C 760 240 745 250 725 250 H115 C 75 250 40 220 40 180 Z"
+        fill="#4a90c2" fill-opacity=".16" stroke="#15191c" stroke-opacity=".18" stroke-width="3"/>
+
+  <!-- distant road line through the window -->
+  <path d="M80 190 H700" stroke="#15191c" stroke-opacity=".18" stroke-width="4" stroke-dasharray="26 22"/>
+
+  <!-- console body -->
+  <path d="M120 300 H680 C 700 300 715 315 715 335 V520 C 715 540 700 555 680 555 H120 C 100 555 85 540 85 520 V335 C 85 315 100 300 120 300 Z"
+        fill="#20232a" stroke="#15191c" stroke-width="5"/>
+  <path d="M120 300 H680" stroke="#15191c" stroke-opacity=".4" stroke-width="4"/>
+
+  <!-- cupholder well -->
+  <ellipse cx="400" cy="345" rx="118" ry="34" fill="#0f1113" stroke="#15191c" stroke-width="5"/>
+  <ellipse cx="400" cy="345" rx="118" ry="34" fill="none" stroke="#15191c" stroke-opacity=".5" stroke-width="2"/>
+
+  <!-- Cup Cradle stem seated in the well -->
+  <path d="M355 345 C 355 375 355 400 365 410 L435 410 C 445 400 445 375 445 345 Z"
+        fill="#4a90c2" stroke="#15191c" stroke-width="5" stroke-linejoin="round"/>
+
+  <!-- Cup Cradle flared basket above the console -->
+  <path d="M330 345
+           C 322 300 322 260 345 232
+           C 300 224 270 214 262 196
+           L 538 196
+           C 530 214 500 224 455 232
+           C 478 260 478 300 470 345 Z"
+        fill="#4a90c2" stroke="#15191c" stroke-width="5" stroke-linejoin="round"/>
+  <!-- scalloped low notch on one side -->
+  <path d="M262 196 C 270 214 300 224 345 232" fill="none" stroke="#15191c" stroke-width="4" opacity=".55"/>
+  <ellipse cx="400" cy="345" rx="70" ry="18" fill="#20232a" stroke="#15191c" stroke-width="4"/>
+
+  <!-- Nalgene bottle sitting in the cradle -->
+  <g>
+    <rect x="352" y="70" width="96" height="230" rx="14" fill="#f7f4ee" stroke="#15191c" stroke-width="5"/>
+    <rect x="368" y="40" width="64" height="36" rx="8" fill="#d85c2a" stroke="#15191c" stroke-width="5"/>
+    <path d="M380 40 C 380 18 420 18 420 40" fill="none" stroke="#15191c" stroke-width="6" stroke-linecap="round"/>
+    <line x1="352" y1="130" x2="448" y2="130" stroke="#15191c" stroke-opacity=".3" stroke-width="3"/>
+    <line x1="352" y1="230" x2="448" y2="230" stroke="#15191c" stroke-opacity=".3" stroke-width="3"/>
+  </g>
+</svg>

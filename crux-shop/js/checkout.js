@@ -1,5 +1,5 @@
 /* =============================================================================
-   CRUX — checkout page: shipping, promo codes, validation, order placement
+   RACKHOUSE — checkout page: shipping, promo codes, validation, order placement
    ========================================================================== */
 
 function getShippingMethod() {
@@ -8,7 +8,7 @@ function getShippingMethod() {
 }
 
 function getAppliedPromo() {
-  const code = sessionStorage.getItem('crux_promo');
+  const code = sessionStorage.getItem('rackhouse_promo');
   return code && SHOP.promoCodes[code] ? code : null;
 }
 
@@ -116,10 +116,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const code = (input.value || '').trim().toUpperCase();
       if (!code) return;
       if (SHOP.promoCodes[code]) {
-        sessionStorage.setItem('crux_promo', code);
+        sessionStorage.setItem('rackhouse_promo', code);
         if (msg) { msg.textContent = `Applied: ${SHOP.promoCodes[code].label}`; msg.style.color = 'var(--success)'; }
       } else {
-        sessionStorage.removeItem('crux_promo');
+        sessionStorage.removeItem('rackhouse_promo');
         if (msg) { msg.textContent = 'That code isn’t valid.'; msg.style.color = 'var(--error)'; }
       }
       onCheckoutSummaryRender(readCart());
@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
       };
       saveOrder(order);
       cartClear();
-      sessionStorage.removeItem('crux_promo');
+      sessionStorage.removeItem('rackhouse_promo');
       window.location.href = `order-confirmation.html?order=${encodeURIComponent(order.id)}`;
     });
   }

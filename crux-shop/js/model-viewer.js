@@ -1,5 +1,5 @@
 /* =============================================================================
-   CRUX — lightweight interactive 3D viewer for product STLs.
+   RACKHOUSE — lightweight interactive 3D viewer for product STLs.
    Vendored Three.js (js/vendor/), no CDN dependency, no build step.
    ========================================================================== */
 import * as THREE from './vendor/three.module.min.js';

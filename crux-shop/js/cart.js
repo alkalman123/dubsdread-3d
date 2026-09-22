@@ -1,8 +1,8 @@
 /* =============================================================================
-   CRUX — cart engine (localStorage-backed, shared across every page)
+   RACKHOUSE — cart engine (localStorage-backed, shared across every page)
    ========================================================================== */
 
-const CART_KEY = 'crux_cart_v1';
+const CART_KEY = 'rackhouse_cart_v1';
 
 function readCart() {
   try {
@@ -218,7 +218,7 @@ window.addEventListener('storage', (e) => { if (e.key === CART_KEY) renderCartUI
 
 /* ---- orders (client-side order history, used by checkout + confirmation) -*/
 
-const ORDERS_KEY = 'crux_orders_v1';
+const ORDERS_KEY = 'rackhouse_orders_v1';
 
 function generateOrderId() {
   const t = Date.now().toString(36).toUpperCase();
