@@ -2,7 +2,7 @@ name: Deploy Crux shop to GitHub Pages
 
 on:
   push:
-    branches: [claude/eager-einstein-wx26nc]
+    branches: [master]
     paths:
       - 'crux-shop/**'
       - '.github/workflows/deploy-crux-pages.yml'
