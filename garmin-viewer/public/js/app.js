@@ -220,8 +220,80 @@ function fmtDuration(min) {
 function skeletonCards(n = 2) {
   return Array.from({ length: n }, () => '<div class="card"><div class="skeleton" style="height:70px"></div></div>').join('');
 }
+
+// Shape-matched skeletons: each mirrors the real component it stands in
+// for (stat tiles, list rows, a chart's title+plot, the hero ring) instead
+// of a generic gray block, so the loading state previews the layout that's
+// about to land rather than just signaling "something's coming".
+function skeletonStatRow(n = 2) {
+  const tiles = Array.from(
+    { length: n },
+    () => `
+    <div class="stat-tile">
+      <div class="skeleton" style="height:11px;width:70%;margin-bottom:8px;border-radius:5px"></div>
+      <div class="skeleton" style="height:22px;width:50%;border-radius:6px"></div>
+    </div>`
+  ).join('');
+  return `<div class="card"><div class="stat-row${n === 3 ? ' three' : ''}">${tiles}</div></div>`;
+}
+
+function skeletonChartCard() {
+  return `
+    <div class="card">
+      <div class="skeleton" style="height:13px;width:55%;margin-bottom:8px;border-radius:6px"></div>
+      <div class="skeleton" style="height:10px;width:80%;margin-bottom:12px;border-radius:5px"></div>
+      <div class="skeleton" style="height:150px;border-radius:12px"></div>
+    </div>`;
+}
+
+function skeletonRing() {
+  return `
+    <div class="card">
+      <div class="skeleton" style="height:11px;width:45%;margin-bottom:14px;border-radius:5px"></div>
+      <div style="display:flex;align-items:center;gap:18px">
+        <div class="skeleton" style="width:104px;height:104px;border-radius:50%;flex-shrink:0"></div>
+        <div style="flex:1">
+          <div class="skeleton" style="height:13px;margin-bottom:10px;border-radius:6px"></div>
+          <div class="skeleton" style="height:13px;margin-bottom:10px;width:80%;border-radius:6px"></div>
+          <div class="skeleton" style="height:13px;width:60%;border-radius:6px"></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function skeletonListRows(n = 4) {
+  const rows = Array.from(
+    { length: n },
+    () => `
+    <div class="activity-item">
+      <div class="skeleton" style="width:38px;height:38px;border-radius:50%;flex-shrink:0"></div>
+      <div style="flex:1">
+        <div class="skeleton" style="height:13px;width:65%;margin-bottom:7px;border-radius:6px"></div>
+        <div class="skeleton" style="height:11px;width:40%;border-radius:5px"></div>
+      </div>
+    </div>`
+  ).join('');
+  return `<div class="card" style="padding:4px 12px">${rows}</div>`;
+}
+
+function skeletonChipRow(n = 4) {
+  const chips = Array.from({ length: n }, (_, i) => `<div class="skeleton" style="height:30px;width:${52 + (i % 3) * 14}px;border-radius:999px;flex-shrink:0"></div>`).join('');
+  return `<div style="display:flex;gap:8px;margin-bottom:14px">${chips}</div>`;
+}
 function errorCard(err) {
   return `<div class="card"><b style="color:var(--red)">Couldn't load this.</b><div class="hint">${err.message || err}</div></div>`;
+}
+
+// Icon + a warmer, specific line beats plain gray "no data" text -- same
+// .empty wrapper class as before so callers that already read `.card.empty`
+// styling keep working, just with real content inside now.
+function emptyState(iconName, title, hint = '') {
+  return `
+    <div class="empty">
+      <div class="empty-icon">${icon(iconName, { size: 24 })}</div>
+      <div class="empty-title">${title}</div>
+      ${hint ? `<div class="empty-hint">${hint}</div>` : ''}
+    </div>`;
 }
 
 // Staggered scroll-reveal: called once at the end of each render*() function,
@@ -292,17 +364,92 @@ function animateCountUps(container) {
   });
 }
 
+// Same declarative pattern as count-up, for a bar meant to fill in rather
+// than just appear at its final width (the Body tab's segmental lean-mass
+// bars) -- rendered at width:0 with the real value stashed in a data
+// attribute, then grown on the next frame so the CSS width transition
+// actually has something to animate between.
+function animateBars(container) {
+  if (!container) return;
+  const bars = container.querySelectorAll('[data-target-width]');
+  if (!bars.length) return;
+  if (prefersReducedMotion()) {
+    bars.forEach((el) => {
+      el.style.width = el.dataset.targetWidth;
+    });
+    return;
+  }
+  requestAnimationFrame(() => {
+    bars.forEach((el) => {
+      el.style.width = el.dataset.targetWidth;
+    });
+  });
+}
+
 // The one call every render*() function makes once its innerHTML has
-// landed: stagger the cards in, and count up any headline numbers.
+// landed: stagger the cards in, count up any headline numbers, and
+// cross-fade the whole view in from whatever skeleton/previous content it
+// just replaced. Re-triggering a CSS *animation* (not a transition) on a
+// class that's already present needs the remove -> reflow -> re-add dance
+// below; a transition can't be reused this way since nothing about the
+// property value actually changes between renders.
 function afterRender(view) {
   revealCards(view);
   animateCountUps(view);
+  animateBars(view);
+  if (view && !prefersReducedMotion()) {
+    view.classList.remove('content-in');
+    void view.offsetWidth;
+    view.classList.add('content-in');
+  }
 }
 
 // ---------------------------------------------------------------- tabs ----
 
 function prefersReducedMotion() {
   return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+// Segmented-control sliding indicator: filterChips/rangeChips/objectiveChips
+// are all single-select chip rows whose click handler just flips state and
+// fully re-renders the tab, so there's no single persistent indicator node
+// to animate across a click the way switchTab's view-transition can. Instead
+// this remembers each row's last indicator rect (module-level, by row id)
+// across renders and starts the new one there -- a manual FLIP -- so the
+// capsule still visibly slides to the newly active chip instead of the old
+// one's color just fading out while the new one fades in.
+const chipIndicatorRects = new Map();
+function wireSegmentedChips(rowId) {
+  const row = document.getElementById(rowId);
+  if (!row) return;
+  const active = row.querySelector('.chip.active');
+  let indicator = row.querySelector('.chip-indicator');
+  if (!indicator) {
+    indicator = document.createElement('div');
+    indicator.className = 'chip-indicator';
+    row.prepend(indicator);
+  }
+  if (!active) {
+    indicator.style.opacity = '0';
+    chipIndicatorRects.delete(rowId);
+    return;
+  }
+  indicator.style.opacity = '1';
+  const target = { left: active.offsetLeft, width: active.offsetWidth };
+  const prev = chipIndicatorRects.get(rowId);
+  const animate = prev && !prefersReducedMotion();
+  chipIndicatorRects.set(rowId, target);
+  indicator.style.transition = 'none';
+  indicator.style.transform = `translateX(${animate ? prev.left : target.left}px)`;
+  indicator.style.width = `${animate ? prev.width : target.width}px`;
+  if (animate) {
+    void indicator.offsetWidth; // force reflow so the "start" position commits before animating
+    requestAnimationFrame(() => {
+      indicator.style.transition = '';
+      indicator.style.transform = `translateX(${target.left}px)`;
+      indicator.style.width = `${target.width}px`;
+    });
+  }
 }
 
 function switchTab(tab) {
@@ -500,7 +647,7 @@ function readinessTier(score) {
 
 async function renderToday() {
   const view = $('#view-today');
-  view.innerHTML = skeletonCards(1) + skeletonCards(2);
+  view.innerHTML = skeletonRing() + skeletonStatRow(2);
   try {
     const hour = new Date().getHours();
     const isMorning = hour < 15;
@@ -597,7 +744,7 @@ async function renderToday() {
 
 function renderActivityListInto(container, activities, { compact = false } = {}) {
   if (!activities.length) {
-    container.innerHTML = '<div class="empty">No activities in this view yet.</div>';
+    container.innerHTML = emptyState('list', 'No activities here yet', 'Try a different filter, or log a session your watch missed with the + button above.');
     return;
   }
   container.innerHTML = activities
@@ -613,14 +760,158 @@ function renderActivityListInto(container, activities, { compact = false } = {})
     </div>`
     )
     .join('');
-  $$('.activity-item', container).forEach((node) =>
-    node.addEventListener('click', () => openActivitySheet(Number(node.dataset.id)))
-  );
+  $$('.activity-item', container).forEach((node) => {
+    const id = Number(node.dataset.id);
+    const activity = activities.find((x) => x.id === id);
+    wireActivityLongPress(node, activity);
+    node.addEventListener('click', () => {
+      if (node.dataset.longPressed === '1') {
+        node.dataset.longPressed = '';
+        return;
+      }
+      openActivitySheet(id);
+    });
+  });
+}
+
+// Long-press (touch) or long-click (mouse/trackpad) on a row surfaces quick
+// actions instead of the usual tap-to-open-detail -- held past LONG_PRESS_MS
+// without moving more than MOVE_TOLERANCE px counts as a press; the node's
+// own dataset flag (checked by the click handler above) suppresses the
+// detail-sheet tap that browsers still synthesize right after touchend.
+function wireActivityLongPress(node, activity) {
+  const LONG_PRESS_MS = 480;
+  const MOVE_TOLERANCE = 10;
+  let timer = null;
+  let startX = 0;
+  let startY = 0;
+  const clear = () => {
+    if (timer) clearTimeout(timer);
+    timer = null;
+  };
+  node.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    startX = e.clientX;
+    startY = e.clientY;
+    clear();
+    timer = setTimeout(() => {
+      timer = null;
+      node.dataset.longPressed = '1';
+      if (navigator.vibrate) navigator.vibrate(12);
+      openActivityQuickActions(activity);
+    }, LONG_PRESS_MS);
+  });
+  node.addEventListener('pointermove', (e) => {
+    if (timer && (Math.abs(e.clientX - startX) > MOVE_TOLERANCE || Math.abs(e.clientY - startY) > MOVE_TOLERANCE)) clear();
+  });
+  node.addEventListener('pointerup', clear);
+  node.addEventListener('pointercancel', clear);
+  node.addEventListener('pointerleave', clear);
+}
+
+function activitySummaryText(a) {
+  const bits = [a.name, fmtDate(a.startTime)];
+  if (a.distanceKm) bits.push(`${a.distanceKm} km`);
+  bits.push(fmtDuration(a.durationMin));
+  if (a.elevationGainM) bits.push(`↑${a.elevationGainM}m`);
+  return bits.join(' — ');
+}
+
+async function shareActivity(a) {
+  const text = activitySummaryText(a);
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: a.name, text });
+    } catch {
+      // User dismissed the native share sheet -- not an error.
+    }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('Copied to clipboard');
+  } catch {
+    toast('Could not share');
+  }
+}
+
+// Garmin's discipline ids (see server/classify.js) don't all line up with
+// the manual-log form's LOGGABLE_TYPES keys (biking/strength vs.
+// cycling/strength_training) -- unmapped disciplines (mountaineering,
+// cardio, ski, water, other) just leave the type-select at its default.
+const TYPE_KEY_FOR_DISCIPLINE = {
+  biking: 'cycling',
+  strength: 'strength_training',
+  climbing: 'climbing',
+  running: 'running',
+  hiking: 'hiking',
+  walking: 'walking',
+  slacklining: 'slacklining',
+};
+
+function prefillFromActivity(a) {
+  return {
+    typeKey: TYPE_KEY_FOR_DISCIPLINE[a.discipline],
+    name: a.name,
+    durationMin: a.durationMin,
+    distanceKm: a.distanceKm,
+    elevationGainM: a.elevationGainM,
+    avgHR: a.avgHR,
+    calories: a.calories,
+  };
+}
+
+// The activity-detail sheet (#activitySheet) is reused for this menu too --
+// it's never open for two things at once, so a second sheet node would just
+// duplicate the same shell CSS. A single delegated click listener is wired
+// once ever (dataset guard, same pattern as wireSheetDrag) and reads
+// whichever activity is "current" rather than closing over one, since the
+// sheet's own innerHTML is replaced fresh on every open.
+let quickActionActivity = null;
+function wireActivityQuickActionSheet() {
+  const sheet = $('#activitySheet');
+  if (sheet.dataset.quickActionsWired) return;
+  sheet.dataset.quickActionsWired = '1';
+  sheet.addEventListener('click', (e) => {
+    const btn = e.target.closest('.quickaction-row');
+    if (!btn || !quickActionActivity) return;
+    const a = quickActionActivity;
+    const action = btn.dataset.action;
+    if (action === 'view') {
+      closeSheets();
+      openActivitySheet(a.id);
+    } else if (action === 'repeat') {
+      closeSheets();
+      openLogActivitySheet(prefillFromActivity(a));
+    } else if (action === 'share') {
+      shareActivity(a);
+    } else {
+      closeSheets();
+    }
+  });
+}
+
+function openActivityQuickActions(a) {
+  quickActionActivity = a;
+  const sheet = $('#activitySheet');
+  sheet.innerHTML = `
+    <div class="sheet-handle"></div>
+    <h3>${a.name}</h3>
+    <div class="hint" style="margin-top:2px">${fmtDate(a.startTime)}</div>
+    <div class="action-list">
+      <button class="action-row quickaction-row" data-action="view">${icon('list', { size: 18 })} View details</button>
+      <button class="action-row quickaction-row" data-action="repeat">${icon('refresh-cw', { size: 18 })} Repeat this activity</button>
+      <button class="action-row quickaction-row" data-action="share">${icon('share', { size: 18 })} Share</button>
+      <button class="action-row cancel quickaction-row" data-action="cancel">Cancel</button>
+    </div>
+  `;
+  wireActivityQuickActionSheet();
+  openSheet(sheet, $('#backdrop'));
 }
 
 async function renderActivities() {
   const view = $('#view-activities');
-  view.innerHTML = `<h2 class="section-title">Activities</h2>${skeletonCards(3)}`;
+  view.innerHTML = `<h2 class="section-title">Activities</h2>${skeletonChipRow(5)}${skeletonListRows(5)}`;
   try {
     const allActivities = await ensureActivitiesLoaded();
     const disciplines = Array.from(new Map(allActivities.map((a) => [a.discipline, a])).values());
@@ -643,6 +934,7 @@ async function renderActivities() {
         renderActivities();
       })
     );
+    wireSegmentedChips('filterChips');
     $('#logActivityBtn').addEventListener('click', openLogActivitySheet);
     const filtered = state.activityFilter === 'all' ? state.activities : state.activities.filter((a) => a.discipline === state.activityFilter);
     renderActivityListInto($('#activityList'), filtered);
@@ -662,28 +954,29 @@ const LOGGABLE_TYPES = [
   { typeKey: 'slacklining', label: 'Slacklining' },
 ];
 
-function openLogActivitySheet() {
+function openLogActivitySheet(prefill = null) {
   const sheet = $('#activitySheet');
+  const v = (key, fallback = '') => (prefill && prefill[key] != null ? prefill[key] : fallback);
   sheet.innerHTML = `
     <div class="sheet-handle"></div>
-    <h3>Log an activity</h3>
+    <h3>${prefill ? 'Repeat this activity' : 'Log an activity'}</h3>
     <div class="hint" style="margin-top:2px">For sessions your watch missed, or history from before you had one — this feeds the training-load and plan engine too.</div>
     <form class="stack-form" id="logForm">
       <select name="typeKey" required>
-        ${LOGGABLE_TYPES.map((t) => `<option value="${t.typeKey}">${t.label}</option>`).join('')}
+        ${LOGGABLE_TYPES.map((t) => `<option value="${t.typeKey}" ${v('typeKey') === t.typeKey ? 'selected' : ''}>${t.label}</option>`).join('')}
       </select>
-      <input type="text" name="name" placeholder="Name (optional)" />
+      <input type="text" name="name" placeholder="Name (optional)" value="${v('name')}" />
       <div class="field-row">
         <input type="date" name="date" value="${new Date().toISOString().slice(0, 10)}" required />
-        <input type="number" name="durationMin" placeholder="Duration (min)" min="1" required />
+        <input type="number" name="durationMin" placeholder="Duration (min)" min="1" required value="${v('durationMin')}" />
       </div>
       <div class="field-row">
-        <input type="number" name="distanceKm" placeholder="Distance (km)" step="0.1" min="0" />
-        <input type="number" name="elevationGainM" placeholder="Elevation gain (m)" min="0" />
+        <input type="number" name="distanceKm" placeholder="Distance (km)" step="0.1" min="0" value="${v('distanceKm')}" />
+        <input type="number" name="elevationGainM" placeholder="Elevation gain (m)" min="0" value="${v('elevationGainM')}" />
       </div>
       <div class="field-row">
-        <input type="number" name="avgHR" placeholder="Avg HR (optional)" min="0" />
-        <input type="number" name="calories" placeholder="Calories (optional)" min="0" />
+        <input type="number" name="avgHR" placeholder="Avg HR (optional)" min="0" value="${v('avgHR')}" />
+        <input type="number" name="calories" placeholder="Calories (optional)" min="0" value="${v('calories')}" />
       </div>
       <button class="btn" type="submit">Save activity</button>
     </form>
@@ -709,7 +1002,12 @@ let map;
 async function openActivitySheet(id) {
   const sheet = $('#activitySheet');
   const backdrop = $('#backdrop');
-  sheet.innerHTML = `<div class="sheet-handle"></div>${skeletonCards(2)}`;
+  sheet.innerHTML = `
+    <div class="sheet-handle"></div>
+    <div class="skeleton" style="height:20px;width:60%;margin-bottom:14px;border-radius:8px"></div>
+    <div class="skeleton detail-map"></div>
+    ${skeletonStatRow(3)}
+  `;
   openSheet(sheet, backdrop);
   try {
     const { activity: a, track, streams } = await api.activity(id);
@@ -961,7 +1259,7 @@ function mountainFitnessSectionHtml(activities) {
         </div>
         <div class="hint">VAM (vertical ascent rate) is how fast you climb, independent of distance — a solid proxy for uphill fitness. Based on your ${mtn.count} session${mtn.count === 1 ? '' : 's'} with 100m+ of gain.</div>
       </div>`
-          : `<div class="card"><div class="empty">No activities with significant elevation gain yet — this fills in once you've logged some climbing, hiking, or mountaineering sessions.</div></div>`
+          : `<div class="card">${emptyState('mountain-snow', 'No vert yet', "This fills in once you've logged some climbing, hiking, or mountaineering sessions.")}</div>`
       }
 
       <h2 class="section-title">Training Consistency</h2>
@@ -1067,14 +1365,14 @@ function climbingSectionHtml(activities) {
       </div>`
           : ''
       }`
-          : `<div class="card"><div class="empty">No climbing sessions logged yet — this fills in once you've got gym or outdoor climbing activities tracked.</div></div>`
+          : `<div class="card">${emptyState('hand', 'No climbing sessions yet', "This fills in once you've got gym or outdoor climbing activities tracked.")}</div>`
       }
   `;
 }
 
 async function renderTrends() {
   const view = $('#view-trends');
-  view.innerHTML = `<h2 class="section-title">Training Load</h2>${skeletonCards(3)}`;
+  view.innerHTML = `<h2 class="section-title">Training Load</h2>${skeletonRing()}${skeletonChartCard()}${skeletonChartCard()}`;
   try {
     const rangeDays = TRENDS_RANGES[state.trendsRange] ?? 90;
     const [summary, wellnessRes, scorecardRes, activities] = await Promise.all([
@@ -1153,6 +1451,7 @@ async function renderTrends() {
         renderTrends();
       })
     );
+    wireSegmentedChips('rangeChips');
 
     gaugeArc($('#acwrGauge'), Math.min(acwr.ratio, 2), 2, acwrColor);
 
@@ -1249,7 +1548,7 @@ function fmtMin(min) {
 
 async function renderSleep() {
   const view = $('#view-sleep');
-  view.innerHTML = `<h2 class="section-title">Sleep</h2>${skeletonCards(3)}`;
+  view.innerHTML = `<h2 class="section-title">Sleep</h2>${skeletonStatRow(2)}${skeletonChartCard()}${skeletonChartCard()}`;
   try {
     const wellnessRes = await api.wellness(30);
     const nights = wellnessRes.wellness;
@@ -1483,13 +1782,13 @@ function wireFigureTilt(wrap) {
 
 async function renderBody() {
   const view = $('#view-body');
-  view.innerHTML = `<h2 class="section-title">Body Composition</h2>${skeletonCards(1)}`;
+  view.innerHTML = `<h2 class="section-title">Body Composition</h2>${skeletonChartCard()}${skeletonStatRow(3)}`;
   try {
     const { body } = await api.body();
     if (!body) {
       view.innerHTML = `
         <h2 class="section-title">Body Composition</h2>
-        <div class="card empty">No body composition data yet. Import your health data (Settings → Import) to see it here.</div>
+        <div class="card">${emptyState('dna', 'No body composition data yet', 'Import your health data from Settings → Import to see it here.')}</div>
       `;
       return;
     }
@@ -1528,7 +1827,7 @@ async function renderBody() {
               <div class="sk">${segLabels[k] || k}</div>
               <div class="sv num">${v.lean_lbs ?? '–'}<span class="su"> lbs lean</span></div>
               <div class="su">${v.fat_pct ?? '–'}% fat</div>
-              <div class="sbar"><i style="width:${((v.lean_lbs || 0) / maxLean) * 100}%"></i></div>
+              <div class="sbar"><i style="width:0%" data-target-width="${((v.lean_lbs || 0) / maxLean) * 100}%"></i></div>
             </div>`
             )
             .join('')}
@@ -1688,7 +1987,7 @@ function objectiveSectionHtml(activities) {
 
 async function renderPlan() {
   const view = $('#view-plan');
-  view.innerHTML = `<h2 class="section-title">Today's Plan</h2>${skeletonCards(2)}`;
+  view.innerHTML = `<h2 class="section-title">Today's Plan</h2>${skeletonChipRow(3)}${skeletonRing()}${skeletonStatRow(3)}`;
   try {
     const [{ plan }, activities] = await Promise.all([api.planToday(), ensureActivitiesLoaded()]);
     const r = plan.readiness;
@@ -1750,6 +2049,7 @@ async function renderPlan() {
         renderPlan();
       })
     );
+    wireSegmentedChips('objectiveChips');
     afterRender(view);
   } catch (err) {
     view.innerHTML = `<h2 class="section-title">Today's Plan</h2>${errorCard(err)}`;

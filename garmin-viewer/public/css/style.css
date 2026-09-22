@@ -25,7 +25,11 @@
   --paper: #f2f2f7;
   --ink: #1c1c1e;
   --ink2: #6c6c70;
-  --muted: #8e8e93;
+  /* #8e8e93 (iOS's own tertiaryLabel) reads fine on iOS's own translucent
+     materials but only hits ~2.8:1 on this app's opaque --card2 -- darkened
+     to clear WCAG AA's 4.5:1 for small text everywhere it's actually used
+     (dates, hints, stat labels), not just its best-case background. */
+  --muted: #6b6b70;
   --rule: rgba(60, 60, 67, 0.13);
   --rule-soft: rgba(60, 60, 67, 0.08);
   --card: #ffffff;
@@ -50,6 +54,18 @@
   --label-secondary: var(--ink2);
   --separator: var(--rule);
   --accent: var(--blue);
+  /* Text-on-solid-fill pairs, validated for WCAG AA (>=4.5:1) against the
+     actual fill each is used with -- not just derived from --ink/#fff,
+     since both this app's light and dark --blue are too bright for white
+     text (long-standing tension in iOS's own system-blue filled buttons,
+     which don't clear 4.5:1 either; this app holds the line the brief
+     asked for instead of copying that particular Apple inconsistency).
+     --on-accent is one fixed dark value because both themes' --blue are
+     light/saturated enough to need it; --on-danger flips per theme because
+     dark theme's --red is lighter than light theme's and needs the same
+     treatment, while light theme's --red is dark enough for white text. */
+  --on-accent: #0a0e14;
+  --on-danger: #ffffff;
 
   /* Legacy aliases kept so component rules below read naturally. */
   --bg: var(--paper);
@@ -84,7 +100,7 @@
     --paper: #0f1217;
     --ink: #eef2f5;
     --ink2: #a3adb8;
-    --muted: #67717c;
+    --muted: #8992a0;
     --rule: rgba(255, 255, 255, 0.09);
     --rule-soft: rgba(255, 255, 255, 0.05);
     --card: #171c23;
@@ -101,6 +117,7 @@
     --plum: #ac82a5;
     --red: #e35a48;
     --accent-soft: rgba(79, 163, 224, 0.16);
+    --on-danger: #120705;
   }
 }
 
@@ -108,7 +125,7 @@
   --paper: #0f1217;
   --ink: #eef2f5;
   --ink2: #a3adb8;
-  --muted: #67717c;
+  --muted: #8992a0;
   --rule: rgba(255, 255, 255, 0.09);
   --rule-soft: rgba(255, 255, 255, 0.05);
   --card: #171c23;
@@ -125,6 +142,7 @@
   --plum: #ac82a5;
   --red: #e35a48;
   --accent-soft: rgba(79, 163, 224, 0.16);
+  --on-danger: #120705;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -298,6 +316,14 @@ main::-webkit-scrollbar { display: none; }
 .view { display: none; }
 .view.active { display: block; animation: fade 0.18s ease; }
 @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* Skeleton -> real-content cross-fade: afterRender() in app.js re-triggers
+   this on every render (not just a tab switch, which .view.active's own
+   fade above already covers), so a pull-to-refresh or filter-chip change
+   that swaps a view's innerHTML in place still reads as a fade rather than
+   a hard cut. */
+.view.content-in { animation: content-fade var(--dur-enter) var(--ease-enter); }
+@keyframes content-fade { from { opacity: 0; } to { opacity: 1; } }
 
 /* ---- scroll-reveal ------------------------------------------------------
    Cards start slightly lower + transparent, then rise/fade in as they enter
@@ -487,6 +513,7 @@ h2.section-title:first-child { margin-top: 6px; }
 .plan-preview .chev { margin-left: auto; color: var(--muted); }
 
 .chip-row {
+  position: relative;
   display: flex;
   gap: 8px;
   overflow-x: auto;
@@ -496,6 +523,7 @@ h2.section-title:first-child { margin-top: 6px; }
 }
 .chip-row::-webkit-scrollbar { display: none; }
 .chip {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -508,9 +536,30 @@ h2.section-title:first-child { margin-top: 6px; }
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
-  transition: background-color var(--dur-tap) var(--ease-tap), border-color var(--dur-tap) var(--ease-tap), color var(--dur-tap) var(--ease-tap);
+  transition: border-color var(--dur-tap) var(--ease-tap), color var(--dur-tap) var(--ease-tap);
 }
-.chip.active { background: var(--blue); color: #fff; border-color: var(--blue); font-weight: 700; }
+/* The active fill is the sliding .chip-indicator underneath (see
+   wireSegmentedChips in app.js), not the chip's own background -- so it can
+   visibly travel from the old selection to the new one instead of the two
+   ends just cross-fading in place. */
+.chip.active { background: transparent; color: var(--on-accent); border-color: transparent; font-weight: 700; }
+/* Sits behind every chip in DOM order (prepended, and chips keep their own
+   z-index:auto default stacking), sized/positioned in JS to match whichever
+   chip is currently .active. Rows with no active chip (plain tag lists like
+   the coach's note chips) never get one created. */
+.chip-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 4px;
+  left: 0;
+  width: 0;
+  border-radius: 999px;
+  background: var(--blue);
+  opacity: 0;
+  transition: transform var(--dur-tap) var(--ease-tap), width var(--dur-tap) var(--ease-tap), opacity var(--dur-tap) var(--ease-tap);
+  pointer-events: none;
+  z-index: 0;
+}
 .note-chip { display: flex; align-items: center; gap: 6px; }
 .note-remove { color: var(--muted); font-weight: 800; padding: 0 2px; }
 .note-remove:active { color: var(--red); }
@@ -534,11 +583,27 @@ h2.section-title:first-child { margin-top: 6px; }
 .activity-item .src { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; }
 
 .empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
   color: var(--muted);
-  padding: 32px 12px;
+  padding: 32px 20px;
   font-size: 14px;
+  gap: 10px;
 }
+.empty-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.empty-title { font-size: 14.5px; font-weight: 700; color: var(--ink); }
+.empty-hint { font-size: 13px; color: var(--muted); max-width: 280px; line-height: 1.45; }
 
 /* ---- body composition (dark scanner card inside the light page) ------- */
 .scanner {
@@ -558,7 +623,7 @@ h2.section-title:first-child { margin-top: 6px; }
 .segCard .sv { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: #eafcff; margin-top: 3px; line-height: 1.1; }
 .segCard .su { font-size: 11.5px; color: #6f96a6; font-weight: 600; }
 .segCard .sbar { height: 4px; border-radius: 3px; background: rgba(120, 180, 200, 0.18); margin-top: 8px; overflow: hidden; }
-.segCard .sbar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(135deg, #3fd0e8, #5be1a8); }
+.segCard .sbar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(135deg, #3fd0e8, #5be1a8); transition: width 700ms cubic-bezier(0.22, 1, 0.36, 1); }
 .compGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: rgba(90, 200, 235, 0.15); border: 1px solid rgba(90, 200, 235, 0.15); border-radius: 10px; overflow: hidden; }
 .compCell { background: rgba(6, 18, 25, 0.92); padding: 12px 13px; }
 .compCell .ck { font-size: 9.5px; letter-spacing: 0.09em; text-transform: uppercase; color: #7fa3b2; font-weight: 700; }
@@ -631,7 +696,7 @@ h2.section-title:first-child { margin-top: 6px; }
 .chat-bubble.user {
   align-self: flex-end;
   background: var(--blue);
-  color: #fff;
+  color: var(--on-accent);
   border-bottom-right-radius: 4px;
 }
 .chat-bubble.assistant {
@@ -833,7 +898,7 @@ form.login-form input, form.stack-form input, form.stack-form select {
 .field-row > * { flex: 1; }
 .btn {
   background: var(--blue);
-  color: #fff;
+  color: var(--on-accent);
   border: none;
   padding: 11px 16px;
   border-radius: 10px;
@@ -845,9 +910,34 @@ form.login-form input, form.stack-form input, form.stack-form select {
   color: var(--ink);
   border: 1px solid var(--rule);
 }
-.btn.danger { background: var(--red); color: #fff; }
+.btn.danger { background: var(--red); color: var(--on-danger); }
 .btn-row { display: flex; gap: 8px; margin-top: 4px; }
 .btn-row .btn { flex: 1; }
+
+/* iOS-style action list for the long-press quick-actions sheet (see
+   openActivityQuickActions in app.js) -- plain full-width rows rather than
+   .btn's filled pill, since a stack of filled buttons reads as a form, not
+   a menu. */
+.action-list { margin-top: 6px; }
+.action-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 4px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--rule-soft);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+}
+.action-row:last-of-type { border-bottom: none; }
+.action-row.cancel { margin-top: 10px; justify-content: center; color: var(--muted); border-bottom: none; }
+.action-row.destructive { color: var(--red); }
 
 .radio-row { display: flex; gap: 8px; margin: 10px 0; }
 .radio-row label {
