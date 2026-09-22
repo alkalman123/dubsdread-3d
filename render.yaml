@@ -34,6 +34,15 @@ services:
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/status
     envVars:
+      # Pin to a stable Python version. Render's own default tracks the
+      # newest release (currently 3.14), which is too new for some of our
+      # dependencies (pydantic-core in particular) to have prebuilt
+      # packages for yet -- pip then tries to compile it from source with
+      # Rust/maturin, which fails in Render's build sandbox (read-only
+      # filesystem for the cargo cache). 3.12 has prebuilt packages for
+      # everything in requirements.txt.
+      - key: PYTHON_VERSION
+        value: "3.12.7"
       # Secret you make up yourself (e.g. `openssl rand -hex 32`) that the
       # mobile app / frontend must send as "Authorization: Bearer <this>".
       - key: BACKEND_API_TOKEN
