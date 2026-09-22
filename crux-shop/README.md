@@ -1,6 +1,6 @@
-# Crux — a storefront for The Rock Ring
+# Rackhouse — a storefront for The Rock Ring
 
-A self-contained e-commerce site for **Crux**, a small-batch 3D-printing
+A self-contained e-commerce site for **Rackhouse**, a small-batch 3D-printing
 studio, selling **The Rock Ring** — a freestanding gear valet for climbers —
 built from the supplied `Rock_Ring_V1.STL` model.
 
@@ -53,7 +53,7 @@ base-pad set instead, before it ever shipped in this repo's history.
 This is a fully working storefront *front-end*. Two things need a real
 business behind them before it can take real money:
 
-1. **`SHOP.email`** in `js/store-data.js` is `hello@cruxsupply.example` —
+1. **`SHOP.email`** in `js/store-data.js` is `hello@rackhousesupply.example` —
    `.example` is a domain IANA reserves so it can never resolve, which
    means it's a safe placeholder rather than a guess at a real inbox that
    might belong to someone else. Swap it for an inbox you actually check.

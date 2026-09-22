@@ -1,5 +1,5 @@
 /* =============================================================================
-   CRUX — site chrome: header, mobile nav, cart drawer, reveals, misc
+   RACKHOUSE — site chrome: header, mobile nav, cart drawer, reveals, misc
    ========================================================================== */
 
 function openCartDrawer() {
