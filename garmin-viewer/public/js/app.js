@@ -6,6 +6,14 @@ import { contextStore } from './contextStore.js';
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
+function loadSavedObjective() {
+  try {
+    return localStorage.getItem('alpineLogObjective') || 'rainier';
+  } catch {
+    return 'rainier';
+  }
+}
+
 const state = {
   tab: 'today',
   mode: 'demo',
@@ -14,6 +22,7 @@ const state = {
   trendsRange: '90',
   chatMessages: [],
   contextNotes: [],
+  selectedObjective: loadSavedObjective(),
 };
 
 // Range chips on Trends map to a day count sent to the wellness API.
@@ -249,12 +258,12 @@ function insightCardsHtml(insights) {
     .join('')}</div>`;
 }
 
-function scorePanelHtml(sc) {
+function scorePanelHtml(sc, { label = 'Training Score', desc = 'A transparent average of four components, each capped at 100. Measures <b>training balance, not health</b> — read it alongside the insights above.' } = {}) {
   return `
     <div class="score-panel">
-      <div class="lbl">Training Score</div>
+      <div class="lbl">${label}</div>
       <div class="bigscore"><span class="v num">${sc.score}</span><span class="o">/ 100</span></div>
-      <div class="desc">A transparent average of four components, each capped at 100. Measures <b>training balance, not health</b> — read it alongside the insights above.</div>
+      <div class="desc">${desc}</div>
       ${sc.comp
         .map(
           (c) => `
@@ -745,6 +754,106 @@ function mountainFitnessSectionHtml(activities) {
   `;
 }
 
+// A Garmin typeKey is the only signal that distinguishes gym bouldering from
+// outdoor sport/trad climbing -- both collapse to the single "climbing"
+// discipline for the discipline-hours chart, but the raw typeKey survives
+// on the activity object, so venue can still be read off it here without
+// asking the athlete to tag anything by hand. Genuinely ambiguous keys
+// (a bare "climbing") stay "unspecified" rather than guessing.
+function climbingVenue(typeKey) {
+  const k = String(typeKey || '').toLowerCase();
+  if (/bouldering|indoor_climbing/.test(k)) return 'indoor';
+  if (/rock_climbing|via_ferrata/.test(k)) return 'outdoor';
+  return 'unspecified';
+}
+
+function climbingStats(activities) {
+  const climbs = [...activities.filter((a) => a.discipline === 'climbing')].sort(
+    (a, b) => new Date(a.startTime) - new Date(b.startTime)
+  );
+  if (!climbs.length) return null;
+  const cutoff90 = Date.now() - 90 * 86400000;
+  const recent = climbs.filter((a) => new Date(a.startTime).getTime() >= cutoff90);
+  const indoor = recent.filter((a) => climbingVenue(a.typeKey) === 'indoor');
+  const outdoor = recent.filter((a) => climbingVenue(a.typeKey) === 'outdoor');
+  const totalHours = recent.reduce((s, a) => s + a.durationMin, 0) / 60;
+  const perWeek = recent.length / (90 / 7);
+  // Gaps between consecutive sessions, across all history, capped at 30
+  // days so a genuine off-season break doesn't drag the "typical rest"
+  // number into meaninglessness.
+  const gaps = [];
+  for (let i = 1; i < climbs.length; i++) {
+    const days = (new Date(climbs[i].startTime) - new Date(climbs[i - 1].startTime)) / 86400000;
+    if (days > 0 && days < 30) gaps.push(days);
+  }
+  const avgRestDays = mean(gaps);
+  const cutoffActivities = (list) => list.filter((a) => new Date(a.startTime).getTime() >= cutoff90);
+  const fingerboardCount = cutoffActivities(activities.filter((a) => a.typeKey === 'hangboard')).length;
+  const strengthCount = cutoffActivities(activities.filter((a) => a.discipline === 'strength' && a.typeKey !== 'hangboard')).length;
+  return { recent, indoor, outdoor, totalHours, perWeek, avgRestDays, fingerboardCount, strengthCount };
+}
+
+function weeklyClimbingVolume(activities, weeks = 10) {
+  const thisWeek = weekStart(new Date());
+  const buckets = Array.from({ length: weeks }, (_, i) => {
+    const start = new Date(thisWeek);
+    start.setDate(start.getDate() - (weeks - 1 - i) * 7);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    return { start, end, indoorHr: 0, outdoorHr: 0, unspecHr: 0, label: start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) };
+  });
+  for (const a of activities) {
+    if (a.discipline !== 'climbing') continue;
+    const t = new Date(a.startTime);
+    const b = buckets.find((x) => t >= x.start && t < x.end);
+    if (!b) continue;
+    const hrs = a.durationMin / 60;
+    const venue = climbingVenue(a.typeKey);
+    if (venue === 'indoor') b.indoorHr += hrs;
+    else if (venue === 'outdoor') b.outdoorHr += hrs;
+    else b.unspecHr += hrs;
+  }
+  return buckets;
+}
+
+function climbingSectionHtml(activities) {
+  const c = climbingStats(activities);
+  return `
+      <h2 class="section-title">Climbing Fitness</h2>
+      ${
+        c
+          ? `
+      <div class="card">
+        <div class="chart-title">Climbing volume per week</div>
+        <div class="chart-subtitle">Hours by venue, last 10 weeks.</div>
+        <div class="chart-wrap"><canvas id="climbVolChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="stat-row three">
+          <div class="stat-tile"><div class="val num">${c.recent.length}</div><div class="lbl">Sessions (90d)</div></div>
+          <div class="stat-tile"><div class="val num">${c.perWeek.toFixed(1)}</div><div class="lbl">Per week</div></div>
+          <div class="stat-tile"><div class="val num">${Math.round(c.totalHours)}h</div><div class="lbl">Time (90d)</div></div>
+          <div class="stat-tile"><div class="val num">${c.indoor.length}</div><div class="lbl">Indoor/gym</div></div>
+          <div class="stat-tile"><div class="val num">${c.outdoor.length}</div><div class="lbl">Outdoor</div></div>
+          <div class="stat-tile"><div class="val small num">${c.avgRestDays != null ? c.avgRestDays.toFixed(1) + 'd' : '–'}</div><div class="lbl">Avg rest between</div></div>
+        </div>
+      </div>
+      ${
+        c.fingerboardCount || c.strengthCount
+          ? `
+      <div class="card">
+        <div class="stat-row two">
+          <div class="stat-tile"><div class="val num">${c.fingerboardCount}</div><div class="lbl">Fingerboard sessions (90d)</div></div>
+          <div class="stat-tile"><div class="val num">${c.strengthCount}</div><div class="lbl">Other strength (90d)</div></div>
+        </div>
+      </div>`
+          : ''
+      }`
+          : `<div class="card"><div class="empty">No climbing sessions logged yet — this fills in once you've got gym or outdoor climbing activities tracked.</div></div>`
+      }
+  `;
+}
+
 async function renderTrends() {
   const view = $('#view-trends');
   view.innerHTML = `<h2 class="section-title">Training Load</h2>${skeletonCards(3)}`;
@@ -780,6 +889,8 @@ async function renderTrends() {
       </div>
 
       ${mountainFitnessSectionHtml(activities)}
+
+      ${climbingSectionHtml(activities)}
 
       <h2 class="section-title">Daily Training Load</h2>
       <div class="card">
@@ -843,6 +954,19 @@ async function renderTrends() {
       colors: vertWeeks.map(() => '#4fa3e0'),
       valueLabel: 'Meters',
     });
+
+    if (climbingStats(activities)) {
+      const climbWeeks = weeklyClimbingVolume(activities, 10);
+      stackedBarChart($('#climbVolChart'), {
+        horizontal: false,
+        labels: climbWeeks.map((w) => w.label),
+        series: [
+          { label: 'Indoor', data: climbWeeks.map((w) => Number(w.indoorHr.toFixed(1))), color: '#eb6834' },
+          { label: 'Outdoor', data: climbWeeks.map((w) => Number(w.outdoorHr.toFixed(1))), color: '#4fa3e0' },
+          { label: 'Unspecified', data: climbWeeks.map((w) => Number(w.unspecHr.toFixed(1))), color: '#67717c' },
+        ],
+      });
+    }
 
     const byDay = {};
     for (const r of summary.recentLoad) {
@@ -1258,11 +1382,92 @@ function previewWeek(plan) {
 
 const INTENSITY_COLOR = { recovery: '#6fb6e0', moderate: '#d6bb85', hard: '#f0793d' };
 
+// ---------------------------------------------------------- objectives ----
+// Per-objective weekly-volume guideline targets: vertical gain (m/wk),
+// endurance (aerobic hours/wk), and climbing-specific hours/wk. These are
+// general training-volume heuristics for the kind of day each objective
+// demands (a big glacier slog vs. a technical alpine route vs. a pure
+// cragging trip) -- not a certified expedition-readiness calculation, and
+// the UI says so. Readiness is (actual/target, capped at 100) per axis,
+// averaged -- the exact same capped-component-average pattern the real
+// Training Score already uses (see scorecard.js) -- just re-parameterized
+// per objective instead of computed once for general fitness.
+const OBJECTIVES = [
+  { id: 'rainier', label: 'Mount Rainier', icon: '🗻', targets: { vertical: 2500, endurance: 5, climbing: 1 } },
+  { id: 'whitney', label: 'Mt. Whitney', icon: '⛰️', targets: { vertical: 2000, endurance: 5, climbing: 0.5 } },
+  { id: 'hood', label: 'Mt. Hood', icon: '🗻', targets: { vertical: 2200, endurance: 4.5, climbing: 1 } },
+  { id: 'matterhorn', label: 'Matterhorn', icon: '⛰️', targets: { vertical: 2500, endurance: 4, climbing: 3 } },
+  { id: 'montblanc', label: 'Mont Blanc', icon: '🗻', targets: { vertical: 3000, endurance: 6, climbing: 1.5 } },
+  { id: 'aconcagua', label: 'Aconcagua', icon: '🏔️', targets: { vertical: 2000, endurance: 7, climbing: 0.5 } },
+  { id: 'yosemite', label: 'Yosemite Trip', icon: '🧗', targets: { vertical: 500, endurance: 2, climbing: 5 } },
+  { id: 'redrock', label: 'Red Rock Trip', icon: '🧗', targets: { vertical: 500, endurance: 2, climbing: 5 } },
+];
+
+function objectiveActuals(activities) {
+  const weeks = weeklyElevation(activities, 4);
+  const avgVertical = mean(weeks.map((w) => w.gainM)) ?? 0;
+  const cutoff = Date.now() - 28 * 86400000;
+  const recent = activities.filter((a) => new Date(a.startTime).getTime() >= cutoff);
+  const hoursOf = (disciplines) => recent.filter((a) => disciplines.includes(a.discipline)).reduce((s, a) => s + a.durationMin, 0) / 60 / 4;
+  return {
+    vertical: avgVertical,
+    endurance: hoursOf(['biking', 'running', 'cardio', 'ski', 'walking']),
+    climbing: hoursOf(['climbing']),
+  };
+}
+
+function objectiveScorecard(activities, objective) {
+  const actual = objectiveActuals(activities);
+  const pct = (a, t) => Math.max(0, Math.min(100, Math.round((a / t) * 100)));
+  const colorFor = (v) => (v >= 80 ? '#6fae70' : v >= 50 ? '#d6bb85' : '#e35a48');
+  const axes = [
+    { key: 'vertical', k: 'Vertical', unit: 'm/wk', decimals: 0, big: true },
+    { key: 'endurance', k: 'Endurance', unit: 'h/wk', decimals: 1 },
+    { key: 'climbing', k: 'Climbing', unit: 'h/wk', decimals: 1 },
+  ];
+  const comp = axes.map(({ key, k, unit, decimals }) => {
+    const v = pct(actual[key], objective.targets[key]);
+    const fmt = (n) => (decimals ? n.toFixed(decimals) : Math.round(n).toLocaleString());
+    return { k, v, color: colorFor(v), detail: `${fmt(actual[key])}${unit} avg vs ${fmt(objective.targets[key])}${unit} target` };
+  });
+  const score = Math.round(comp.reduce((s, c) => s + c.v, 0) / comp.length);
+  return { score, comp };
+}
+
+function objectiveSectionHtml(activities) {
+  const obj = OBJECTIVES.find((o) => o.id === state.selectedObjective) || OBJECTIVES[0];
+  const sc = objectiveScorecard(activities, obj);
+  const cutoff = Date.now() - 28 * 86400000;
+  const recentLongest = [...activities].filter((a) => new Date(a.startTime).getTime() >= cutoff).sort((a, b) => b.durationMin - a.durationMin)[0];
+  return `
+      <h2 class="section-title">Objective Prep</h2>
+      <div class="chip-row" id="objectiveChips">
+        ${OBJECTIVES.map((o) => `<div class="chip ${o.id === obj.id ? 'active' : ''}" data-obj="${o.id}">${o.icon} ${o.label}</div>`).join('')}
+      </div>
+      ${scorePanelHtml(sc, {
+        label: `Readiness — ${obj.label}`,
+        desc: `Your last 4 weeks of training vs. general weekly-volume guidelines for this kind of objective — a starting point, not a substitute for route-specific research or a guide's assessment.`,
+      })}
+      ${
+        recentLongest
+          ? `
+      <div class="card">
+        <div class="stat-row three">
+          <div class="stat-tile"><div class="val num">${fmtDuration(recentLongest.durationMin)}</div><div class="lbl">Longest recent effort</div></div>
+          <div class="stat-tile"><div class="val num">${(recentLongest.elevationGainM || 0).toLocaleString()}m</div><div class="lbl">Its elevation gain</div></div>
+          <div class="stat-tile"><div class="val small">${recentLongest.disciplineLabel}</div><div class="lbl">Discipline</div></div>
+        </div>
+      </div>`
+          : ''
+      }
+  `;
+}
+
 async function renderPlan() {
   const view = $('#view-plan');
   view.innerHTML = `<h2 class="section-title">Today's Plan</h2>${skeletonCards(2)}`;
   try {
-    const { plan } = await api.planToday();
+    const [{ plan }, activities] = await Promise.all([api.planToday(), ensureActivitiesLoaded()]);
     const r = plan.readiness;
     const week = previewWeek(plan);
 
@@ -1292,6 +1497,8 @@ async function renderPlan() {
         </div>
       </div>
 
+      ${objectiveSectionHtml(activities)}
+
       <h2 class="section-title">Next 7 Days (auto-adjusts daily)</h2>
       <div class="card" style="padding:4px 12px">
         ${week
@@ -1309,6 +1516,17 @@ async function renderPlan() {
       </div>
       <div class="hint" style="margin:0 2px 12px">This preview re-rotates each time you open Plan, based on today's actual readiness — it's a guide, not a fixed schedule.</div>
     `;
+    $$('#objectiveChips .chip').forEach((chip) =>
+      chip.addEventListener('click', () => {
+        state.selectedObjective = chip.dataset.obj;
+        try {
+          localStorage.setItem('alpineLogObjective', state.selectedObjective);
+        } catch {
+          // Private-browsing/storage-disabled: selection just won't survive a reload.
+        }
+        renderPlan();
+      })
+    );
     revealCards(view);
   } catch (err) {
     view.innerHTML = `<h2 class="section-title">Today's Plan</h2>${errorCard(err)}`;
