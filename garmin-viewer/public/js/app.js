@@ -127,7 +127,7 @@ function microHabitsCardHtml() {
           </div>
         </div>
         <div class="activity-item">
-          <div class="glyph" style="background:#e8622c22;color:#e8622c">🖐️</div>
+          <div class="glyph" style="background:#f0793d22;color:#f0793d">🖐️</div>
           <div>
             <div class="name">${hangboard.title}</div>
             <div class="meta">${hangboard.detail}</div>
@@ -296,8 +296,8 @@ async function renderToday() {
     renderActivityListInto($('#recentList'), acts, { compact: true });
     // Canvas fillStyle can't resolve CSS custom properties, so these mirror
     // --teal/--blue from style.css as literal values rather than var(...).
-    gaugeArc($('#bbRing'), today.bodyBatteryHigh ?? 0, 100, '#00b0b9');
-    gaugeArc($('#sleepRing'), Math.min(((today.sleepHours ?? 0) / 9) * 100, 100), 100, '#0e7cf0');
+    gaugeArc($('#bbRing'), today.bodyBatteryHigh ?? 0, 100, '#2ec4cb');
+    gaugeArc($('#sleepRing'), Math.min(((today.sleepHours ?? 0) / 9) * 100, 100), 100, '#4fa3e0');
     await initCoachUI();
   } catch (err) {
     view.innerHTML = errorCard(err);
@@ -459,11 +459,11 @@ async function openActivitySheet(id) {
 
     if (streams.hr && streams.hr.length) {
       const labels = (streams.timeSec || []).map((s) => `${Math.round(s / 60)}m`);
-      lineChart($('#hrChart'), { labels, series: [{ label: 'HR', data: streams.hr, color: '#c9392a' }] });
+      lineChart($('#hrChart'), { labels, series: [{ label: 'HR', data: streams.hr, color: '#e35a48' }] });
     }
     if (streams.elevation && streams.elevation.length) {
       const labels = (streams.timeSec || []).map((s) => `${Math.round(s / 60)}m`);
-      lineChart($('#eleChart'), { labels, series: [{ label: 'Elevation', data: streams.elevation, color: '#8b5e83' }], fill: true });
+      lineChart($('#eleChart'), { labels, series: [{ label: 'Elevation', data: streams.elevation, color: '#ac82a5' }], fill: true });
     }
   } catch (err) {
     sheet.innerHTML = `<div class="sheet-handle"></div>${errorCard(err)}`;
@@ -555,7 +555,7 @@ async function renderTrends() {
       ensureActivitiesLoaded(),
     ]);
     const acwr = summary.acwr;
-    const acwrColor = { 'high-risk': '#c9392a', monitor: '#c9a86a', 'sweet-spot': '#5b8c5a', undertrained: '#4a90c2' }[acwr.status] || '#5b8c5a';
+    const acwrColor = { 'high-risk': '#e35a48', monitor: '#d6bb85', 'sweet-spot': '#6fae70', undertrained: '#6fb6e0' }[acwr.status] || '#6fae70';
 
     view.innerHTML = `
       <h2 class="section-title">Training Score</h2>
@@ -640,7 +640,7 @@ async function renderTrends() {
     const dayKeys = Object.keys(byDay).sort();
     lineChart($('#loadChart'), {
       labels: dayKeys.map((d) => d.slice(5)),
-      series: [{ label: 'Load', data: dayKeys.map((d) => byDay[d]), color: '#e8622c' }],
+      series: [{ label: 'Load', data: dayKeys.map((d) => byDay[d]), color: '#f0793d' }],
       fill: true,
       yLabel: 'Load score',
     });
@@ -651,19 +651,19 @@ async function renderTrends() {
     lineChart($('#bbChart'), {
       labels: w.map((d) => dateLabel(d.date)),
       series: [
-        { label: 'High', data: w.map((d) => d.bodyBatteryHigh), color: '#00b0b9' },
-        { label: 'Low', data: w.map((d) => d.bodyBatteryLow), color: '#0e7cf0' },
+        { label: 'High', data: w.map((d) => d.bodyBatteryHigh), color: '#2ec4cb' },
+        { label: 'Low', data: w.map((d) => d.bodyBatteryLow), color: '#4fa3e0' },
       ],
       yLabel: '0-100',
     });
     lineChart($('#rhrChart'), {
       labels: w.map((d) => dateLabel(d.date)),
-      series: [{ label: 'Resting HR', data: w.map((d) => d.restingHR), color: '#c9392a' }],
+      series: [{ label: 'Resting HR', data: w.map((d) => d.restingHR), color: '#e35a48' }],
       yLabel: 'bpm',
     });
     lineChart($('#sleepTrendChart'), {
       labels: w.map((d) => dateLabel(d.date)),
-      series: [{ label: 'Sleep', data: w.map((d) => d.sleepHours), color: '#8b5e83' }],
+      series: [{ label: 'Sleep', data: w.map((d) => d.sleepHours), color: '#ac82a5' }],
       fill: true,
       yLabel: 'Hours',
     });
@@ -767,12 +767,12 @@ async function renderSleep() {
         const end = hoursSince6pm(d.sleepEndMs);
         return start != null && end != null ? [start, end] : null;
       }),
-      color: '#8b5e83',
+      color: '#ac82a5',
     });
 
     lineChart($('#sleepDurationChart'), {
       labels: nights.map((d) => d.date.slice(5)),
-      series: [{ label: 'Sleep', data: nights.map((d) => d.sleepHours), color: '#8b5e83' }],
+      series: [{ label: 'Sleep', data: nights.map((d) => d.sleepHours), color: '#ac82a5' }],
       fill: true,
       yLabel: 'Hours',
     });
@@ -979,7 +979,7 @@ async function renderBody() {
       lineChart($('#bodyTrendChart'), {
         labels: body.history.map((h) => h.date.slice(5)),
         series: [
-          { label: 'Body fat %', data: body.history.map((h) => h.body_fat_pct), color: '#e8622c' },
+          { label: 'Body fat %', data: body.history.map((h) => h.body_fat_pct), color: '#f0793d' },
         ],
       });
     }
@@ -1015,7 +1015,7 @@ function previewWeek(plan) {
   return days;
 }
 
-const INTENSITY_COLOR = { recovery: '#4a90c2', moderate: '#c9a86a', hard: '#e8622c' };
+const INTENSITY_COLOR = { recovery: '#6fb6e0', moderate: '#d6bb85', hard: '#f0793d' };
 
 async function renderPlan() {
   const view = $('#view-plan');

@@ -19,7 +19,7 @@ const DISCIPLINES = {
   cardio: { label: 'Cardio', icon: '❤️', color: '#1baf7a' },
   strength: { label: 'Strength', icon: '🏋️', color: '#eda100' },
   slacklining: { label: 'Slacklining', icon: '🤸', color: '#e87ba4' },
-  hiking: { label: 'Hiking', icon: '🥾', color: '#008300' },
+  hiking: { label: 'Hiking', icon: '🥾', color: '#5ea23f' },
   mountaineering: { label: 'Mountaineering', icon: '⛰️', color: '#4a3aa7' },
   running: { label: 'Running', icon: '🏃', color: '#e34948' },
   ski: { label: 'Ski Touring', icon: '⛷️', color: '#9adfff' },

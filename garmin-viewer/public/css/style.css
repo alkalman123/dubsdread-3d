@@ -1,41 +1,56 @@
 :root {
-  --paper: #f6f3ed;
-  --ink: #14181b;
-  --ink2: #3d4650;
-  --muted: #7d8790;
-  --rule: rgba(20, 24, 27, 0.13);
-  --orange: #e8622c;
-  --rock: #5a6b7a;
-  --moss: #5b8c5a;
-  --ice: #4a90c2;
-  --sand: #c9a86a;
-  --plum: #8b5e83;
-  --red: #c9392a;
+  /* Dark-first alpine palette. Background matches manifest.webmanifest's
+     theme_color/background_color (#0f1217) exactly, so the OS splash
+     screen, status-bar tint, and the actual page never mismatch on launch.
+     Accent hues are the SAME ones validated earlier for CVD-safe separation
+     (see server/classify.js) — only lightened a few points each so they
+     stay legible on a near-black surface instead of the original white
+     one; re-deriving a whole new hue set would throw that validation away
+     for no reason. --orange keeps its reserved warning/"effort" meaning
+     (climbing's discipline color, insight warnings, high-load badges) —
+     it is never used as a decorative accent. */
+  --paper: #0f1217;
+  --ink: #eef2f5;
+  --ink2: #a3adb8;
+  --muted: #67717c;
+  --rule: rgba(255, 255, 255, 0.09);
+  --rule-soft: rgba(255, 255, 255, 0.05);
+  --orange: #f0793d;
+  --rock: #8a97a5;
+  --moss: #6fae70;
+  --ice: #6fb6e0;
+  --sand: #d6bb85;
+  --plum: #ac82a5;
+  --red: #e35a48;
 
-  /* Garmin-style app chrome accents (nav, buttons, section titles) — kept
-     distinct from --orange, which stays reserved for warning/"effort"
-     semantics (climbing's discipline color, insight warnings, high-load
-     badges) so retheming the chrome doesn't muddy that meaning. */
-  --blue: #0e7cf0;
-  --teal: #00b0b9;
+  /* Primary chrome accent -- a restrained "glacier blue" rather than a
+     generic SaaS blue, used for nav active-state, section labels, and the
+     verdict banner. */
+  --blue: #4fa3e0;
+  --teal: #2ec4cb;
 
   /* Legacy aliases kept so component rules below read naturally. */
   --bg: var(--paper);
-  --bg-elevated: #ffffff;
-  --card: #ffffff;
+  --bg-elevated: #171c23;
+  --card: #171c23;
+  --card2: #1d232c;
   --card-border: var(--rule);
   --text: var(--ink);
   --text-dim: var(--ink2);
   --text-faint: var(--muted);
   --accent: var(--blue);
-  --accent-soft: rgba(14, 124, 240, 0.12);
+  --accent-soft: rgba(79, 163, 224, 0.16);
   --green: var(--moss);
   --yellow: var(--sand);
   --purple: var(--plum);
 
-  --radius: 16px;
+  --radius: 14px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
 }
 
 * { box-sizing: border-box; }
@@ -51,7 +66,22 @@ html, body {
   overscroll-behavior-y: contain;
 }
 
-.num { font-variant-numeric: tabular-nums; }
+/* A faint topographic contour-line field behind the whole app -- pure CSS
+   (an inline SVG data-URI, no network fetch, so it can't break the PWA's
+   offline story). Kept to ~3% opacity: a background detail you'd only
+   notice if you went looking for it, never competing with data. */
+body {
+  background-image:
+    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(79, 163, 224, 0.05), transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.035' stroke-width='1'%3E%3Cpath d='M-20 60 Q 100 10, 220 60 T 460 60'/%3E%3Cpath d='M-20 120 Q 100 70, 220 120 T 460 120'/%3E%3Cpath d='M-20 180 Q 100 130, 220 180 T 460 180'/%3E%3Cpath d='M-20 240 Q 100 190, 220 240 T 460 240'/%3E%3Cpath d='M-20 300 Q 100 250, 220 300 T 460 300'/%3E%3Cpath d='M-20 360 Q 100 310, 220 360 T 460 360'/%3E%3C/g%3E%3C/svg%3E");
+  background-attachment: fixed, fixed;
+  background-size: auto, 400px 400px;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  font-family: 'SF Mono', ui-monospace, 'JetBrains Mono', Consolas, Menlo, monospace;
+}
 
 #app {
   max-width: 560px;
@@ -70,9 +100,9 @@ header.topbar {
   align-items: center;
   justify-content: space-between;
   padding: calc(14px + var(--safe-top)) 16px 12px;
-  background: rgba(246, 243, 237, 0.92);
-  backdrop-filter: blur(10px);
-  border-bottom: 2px solid var(--ink);
+  background: rgba(15, 18, 23, 0.86);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--rule);
   flex-shrink: 0;
 }
 
@@ -96,11 +126,11 @@ header.topbar h1 {
   letter-spacing: 0.6px;
   font-weight: 700;
 }
-.mode-pill.live { color: var(--teal); border-color: rgba(0, 176, 185, 0.4); background: rgba(0, 176, 185, 0.08); }
-.mode-pill.demo { color: var(--sand); border-color: rgba(201, 168, 106, 0.5); background: rgba(201, 168, 106, 0.1); }
+.mode-pill.live { color: var(--teal); border-color: rgba(46, 196, 203, 0.4); background: rgba(46, 196, 203, 0.1); }
+.mode-pill.demo { color: var(--sand); border-color: rgba(214, 187, 133, 0.4); background: rgba(214, 187, 133, 0.1); }
 
 .icon-btn {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--rule);
   color: var(--ink);
   width: 38px;
@@ -139,16 +169,17 @@ h2.section-title {
 h2.section-title:first-child { margin-top: 6px; }
 
 .card {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--rule);
   border-radius: var(--radius);
   padding: 16px;
   margin-bottom: 12px;
-  box-shadow: 0 2px 10px rgba(20, 24, 27, 0.06);
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.28);
 }
 
-.card.tappable { cursor: pointer; }
-.card.tappable:active { background: #faf8f4; }
+.card.tappable { cursor: pointer; transition: background-color 0.15s ease, transform 0.15s ease; }
+.card.tappable:hover { background: var(--card2); }
+.card.tappable:active { background: var(--card2); transform: scale(0.99); }
 
 /* ---- verdict banner ------------------------------------------------- */
 .verdict {
@@ -156,8 +187,8 @@ h2.section-title:first-child { margin-top: 6px; }
   padding: 18px 18px;
   border-radius: 8px;
   border-left: 5px solid var(--blue);
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(20, 24, 27, 0.07);
+  background: var(--card);
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.25);
 }
 .verdict .lbl {
   font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
@@ -174,7 +205,7 @@ h2.section-title:first-child { margin-top: 6px; }
   gap: 10px;
   margin-bottom: 14px;
 }
-.ic { background: #fff; border: 1px solid var(--rule); border-top: 3px solid var(--rock); border-radius: 10px; padding: 13px; }
+.ic { background: var(--card); border: 1px solid var(--rule); border-top: 3px solid var(--rock); border-radius: 10px; padding: 13px; }
 .ic.warn { border-top-color: var(--orange); }
 .ic.good { border-top-color: var(--moss); }
 .ic.info { border-top-color: var(--ice); }
@@ -186,7 +217,7 @@ h2.section-title:first-child { margin-top: 6px; }
 .ic .b { font-size: 11.8px; color: var(--ink2); line-height: 1.5; }
 
 /* ---- score panel -------------------------------------------------------*/
-.score-panel { background: #fff; border: 1px solid var(--rule); border-radius: var(--radius); padding: 18px; margin-bottom: 12px; }
+.score-panel { background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius); padding: 18px; margin-bottom: 12px; }
 .score-panel .lbl { font-size: 10.5px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); font-weight: 750; }
 .score-panel .bigscore { display: flex; align-items: baseline; gap: 8px; margin: 6px 0 4px; }
 .score-panel .bigscore .v { font-size: 42px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
@@ -195,7 +226,7 @@ h2.section-title:first-child { margin-top: 6px; }
 .comp-row { margin-top: 14px; }
 .comp-row .cr-lbl { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 5px; font-weight: 650; }
 .comp-row .cr-lbl span:last-child { color: var(--ink2); }
-.comp-track { height: 6px; background: rgba(20, 24, 27, 0.08); border-radius: 5px; overflow: hidden; }
+.comp-track { height: 6px; background: rgba(255, 255, 255, 0.08); border-radius: 5px; overflow: hidden; }
 .comp-fill { height: 100%; border-radius: 5px; }
 .comp-row .cr-detail { font-size: 11px; color: var(--muted); margin-top: 4px; }
 
@@ -207,11 +238,11 @@ h2.section-title:first-child { margin-top: 6px; }
   margin-bottom: 10px;
 }
 .ring-tile {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--rule);
   border-radius: var(--radius);
   padding: 14px 10px 12px;
-  box-shadow: 0 2px 10px rgba(20, 24, 27, 0.06);
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.28);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -233,7 +264,7 @@ h2.section-title:first-child { margin-top: 6px; }
 .stat-row.two { grid-template-columns: repeat(2, 1fr); }
 .stat-row.three { grid-template-columns: repeat(3, 1fr); }
 .stat-tile {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--rule);
   border-radius: 12px;
   padding: 10px 8px;
@@ -272,11 +303,12 @@ h2.section-title:first-child { margin-top: 6px; }
   padding: 7px 13px;
   border-radius: 999px;
   border: 1px solid var(--rule);
-  background: #fff;
+  background: var(--card);
   color: var(--ink2);
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 .chip.active { background: var(--blue); color: #fff; border-color: var(--blue); font-weight: 700; }
 .note-chip { display: flex; align-items: center; gap: 6px; }
@@ -363,10 +395,10 @@ h2.section-title:first-child { margin-top: 6px; }
 
 /* ---- coach chat --------------------------------------------------------- */
 .chat-card {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--rule);
   border-radius: var(--radius);
-  box-shadow: 0 2px 10px rgba(20, 24, 27, 0.06);
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.28);
   display: flex;
   flex-direction: column;
   height: calc(100dvh - 260px);
@@ -405,7 +437,7 @@ h2.section-title:first-child { margin-top: 6px; }
 }
 .chat-bubble.assistant {
   align-self: flex-start;
-  background: #f1f0ea;
+  background: var(--card2);
   color: var(--ink);
   border-bottom-left-radius: 4px;
 }
@@ -445,8 +477,8 @@ nav.tabbar {
   display: flex;
   justify-content: center;
   padding-bottom: var(--safe-bottom);
-  background: rgba(246, 243, 237, 0.94);
-  backdrop-filter: blur(10px);
+  background: rgba(15, 18, 23, 0.88);
+  backdrop-filter: blur(14px);
   border-top: 1px solid var(--rule);
 }
 nav.tabbar .inner {
@@ -460,12 +492,14 @@ nav.tabbar button {
   border: none;
   color: var(--muted);
   font-size: 9.5px;
-  padding: 8px 2px 7px;
+  padding: 9px 2px 7px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 3px;
   font-weight: 650;
+  position: relative;
+  transition: color 0.15s ease;
 }
 nav.tabbar button .ic {
   font-size: 18px;
@@ -477,13 +511,27 @@ nav.tabbar button .ic {
   border-radius: 10px;
   transition: background-color 0.15s ease;
 }
+/* A small waypoint tick above the active tab -- a nod to a topo map's
+   elevation markers -- instead of just a soft-pill icon background. */
+nav.tabbar button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--blue);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
 nav.tabbar button.active { color: var(--blue); }
+nav.tabbar button.active::before { opacity: 1; }
 nav.tabbar button.active .ic { background: var(--accent-soft); }
 
 /* Sheets / overlays */
 .sheet-backdrop {
   position: fixed; inset: 0;
-  background: rgba(20, 24, 27, 0.5);
+  background: rgba(0, 0, 0, 0.6);
   z-index: 50;
   display: none;
 }
@@ -510,7 +558,7 @@ nav.tabbar button.active .ic { background: var(--accent-soft); }
 }
 .sheet h3 { margin: 0 0 4px; font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
 
-.detail-map { width: 100%; height: 220px; border-radius: 14px; overflow: hidden; margin: 12px 0; background: #fff; border: 1px solid var(--rule); }
+.detail-map { width: 100%; height: 220px; border-radius: 14px; overflow: hidden; margin: 12px 0; background: var(--card); border: 1px solid var(--rule); }
 .detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
 .detail-grid .stat-tile .val { font-size: 16px; }
 
@@ -538,7 +586,7 @@ nav.tabbar button.active .ic { background: var(--accent-soft); }
 
 form.login-form, form.stack-form { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
 form.login-form input, form.stack-form input, form.stack-form select {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--rule);
   color: var(--ink);
   padding: 11px 13px;
@@ -558,7 +606,7 @@ form.login-form input, form.stack-form input, form.stack-form select {
   font-weight: 700;
 }
 .btn.secondary {
-  background: #fff;
+  background: var(--card);
   color: var(--ink);
   border: 1px solid var(--rule);
 }
@@ -575,21 +623,21 @@ form.login-form input, form.stack-form input, form.stack-form select {
   border: 1px solid var(--rule);
   font-size: 12.5px;
   color: var(--ink2);
-  background: #fff;
+  background: var(--card);
 }
 .radio-row input { display: none; }
 .radio-row input:checked + span { color: var(--blue); font-weight: 700; }
 .radio-row label:has(input:checked) { border-color: var(--blue); background: var(--accent-soft); }
 
 .hint { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 10px; }
-.hint code { background: rgba(20, 24, 27, 0.06); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+.hint code { background: rgba(255, 255, 255, 0.08); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
 .status-line { font-size: 13px; color: var(--ink2); margin: 4px 0 2px; }
 .status-line b { color: var(--ink); }
 
 .readiness-badge {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 13px; padding: 4px 10px; border-radius: 999px;
-  background: #fff; border: 1px solid var(--rule);
+  background: var(--card); border: 1px solid var(--rule);
 }
 .dot { width: 8px; height: 8px; border-radius: 50%; }
 
@@ -613,7 +661,7 @@ form.login-form input, form.stack-form input, form.stack-form select {
 .toast.show { opacity: 1; }
 
 .skeleton {
-  background: linear-gradient(90deg, #eeece6 25%, #e2ded4 37%, #eeece6 63%);
+  background: linear-gradient(90deg, #171c23 25%, #232a33 37%, #171c23 63%);
   background-size: 400% 100%;
   animation: shimmer 1.4s ease infinite;
   border-radius: 10px;

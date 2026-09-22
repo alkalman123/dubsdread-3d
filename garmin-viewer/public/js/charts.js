@@ -5,9 +5,9 @@
 // hairline recessive gridlines, and a styled dark tooltip that carries the
 // series swatch (never color-only identity).
 
-const GRID = 'rgba(20,24,27,0.08)';
-const TICK = '#7d8790';
-const SURFACE = '#ffffff';
+const GRID = 'rgba(255,255,255,0.07)';
+const TICK = '#8590a0';
+const SURFACE = '#171c23';
 
 Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 Chart.defaults.font.size = 11;
@@ -24,9 +24,11 @@ function makeChart(canvas, config) {
 }
 
 const TOOLTIP_STYLE = {
-  backgroundColor: 'rgba(20,24,27,0.94)',
-  titleColor: '#f6f3ed',
-  bodyColor: '#f6f3ed',
+  backgroundColor: 'rgba(29,35,44,0.97)',
+  titleColor: '#eef2f5',
+  bodyColor: '#eef2f5',
+  borderColor: 'rgba(255,255,255,0.12)',
+  borderWidth: 1,
   padding: 10,
   cornerRadius: 8,
   displayColors: true,
@@ -115,7 +117,7 @@ export function gaugeArc(canvas, value, max, color) {
       datasets: [
         {
           data: [value, Math.max(0, max - value)],
-          backgroundColor: [color, 'rgba(20,24,27,0.08)'],
+          backgroundColor: [color, 'rgba(255,255,255,0.08)'],
           borderWidth: 0,
         },
       ],
