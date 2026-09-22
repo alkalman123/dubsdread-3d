@@ -19,6 +19,31 @@ function emptyStreams() {
   return { timeSec: [], hr: [], elevation: [], speedKmh: [], distanceKm: [] };
 }
 
+// The garmin-connect library's own errors are the only diagnostic signal
+// we get back — it has no typed exceptions, just Error messages baked into
+// its login-flow HTML scraping. Its "MFA" handling is a literal no-op
+// (see node_modules/garmin-connect/dist/common/HttpClient.js), so an
+// MFA-enabled account produces a message that reads exactly like a wrong
+// password even though the credentials are fine — worth calling out
+// explicitly rather than telling someone with correct credentials to
+// re-check them.
+function classifyGarminLoginError(err) {
+  const msg = String(err && err.message || err || '');
+  if (/AccountLocked/i.test(msg)) {
+    return "Garmin says this account is locked. Open connect.garmin.com in a normal browser, log in there to unlock it, then try again here.";
+  }
+  if (/Ticket not found or MFA/i.test(msg)) {
+    return "Garmin rejected this login. The underlying library can't tell apart two different causes here, so it's one of: (1) MFA/2FA is enabled on this account — this app's login form can't complete a second-factor challenge, or (2) the password itself was rejected (a recent reset, or hidden whitespace from copy-pasting can cause this even when it looks right). Try typing the password manually instead of pasting it; if it still fails, MFA is the likely cause — temporarily disable it on your Garmin account to connect here, or use the health-data import feature instead.";
+  }
+  if (/Update Phone number/i.test(msg)) {
+    return "Garmin is asking this account to confirm a phone number before allowing login. Do that at connect.garmin.com, then try again here.";
+  }
+  if (/csrf not found/i.test(msg)) {
+    return "Garmin's login page didn't return what this app expected — Garmin likely changed something on their end. Try again in a few minutes.";
+  }
+  return `Garmin login failed: ${msg || 'unknown error'}. Double-check the email/password, and see the server logs for the raw error if this persists.`;
+}
+
 function createRouter(garminClient) {
   const router = express.Router();
   let modePreference = 'auto'; // 'auto' | 'demo' | 'live'
@@ -160,7 +185,7 @@ function createRouter(garminClient) {
       modePreference = 'auto';
       res.json({ ok: true, mode: effectiveMode() });
     } catch (err) {
-      res.status(401).json({ ok: false, error: 'Garmin login failed. Check your credentials (and check for an MFA prompt in Garmin Connect).' });
+      res.status(401).json({ ok: false, error: classifyGarminLoginError(err) });
     }
   });
 

@@ -57,7 +57,17 @@ class GarminClient {
 
   async login(username, password) {
     ensureDataDir();
-    await this.gc.login(username, password);
+    try {
+      await this.gc.login(username, password);
+    } catch (err) {
+      // The underlying library's errors are the only real diagnostic we
+      // get (it doesn't distinguish wrong password / MFA required /
+      // account locked / Garmin's login page having changed with typed
+      // errors), so log the raw message here rather than losing it —
+      // check Render's Logs tab for this line if a login keeps failing.
+      console.error('[garmin] login threw:', err.message);
+      throw err;
+    }
     const tokens = this.gc.exportToken();
     fs.writeFileSync(TOKEN_FILE, JSON.stringify(tokens), { mode: 0o600 });
     this.authenticated = true;
