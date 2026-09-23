@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shop — Rackhouse</title>
-<meta name="description" content="Shop the Big Biner gear organizer, the Rock Ring gear valet, the Cup Cradle cupholder adapter, and the Gift Duo bundle — all in six colorways.">
+<meta name="description" content="Shop the Gatekeeper gear organizer, the Rock Ring mini fingerboard, the Cup Cradle cupholder adapter, the Gift Duo bundle, and Rackhouse logo merch — tees and stickers.">
 <link rel="icon" type="image/png" sizes="512x512" href="img/favicon-512.png">
 <link rel="icon" type="image/png" sizes="192x192" href="img/favicon-192.png">
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
@@ -89,7 +89,7 @@
 <section class="section">
   <div class="container">
     <div class="shop-toolbar">
-      <span class="shop-count">5 products available now</span>
+      <span class="shop-count">7 products available now</span>
       <div class="filter-row" id="colorFilterRow" role="group" aria-label="Preview a colorway">
         <button class="filter-chip active" data-color="rock"><span class="dot" style="background:#63707c;"></span>Rock</button>
         <button class="filter-chip" data-color="moss"><span class="dot" style="background:#55805a;"></span>Moss</button>
@@ -101,13 +101,13 @@
     </div>
 
     <div class="grid grid-3">
-      <a href="product-big-biner.html" class="product-card" id="bigBinerCard">
+      <a href="product-gatekeeper.html" class="product-card" id="gatekeeperCard">
         <div class="thumb">
           <div class="badges"><span class="badge badge-ember">Flagship</span></div>
-          <img id="bigBinerCardImg" src="img/bigbiner-rock-hero.jpg" alt="The Big Biner gear organizer and helmet holder">
+          <img id="gatekeeperCardImg" src="img/gatekeeper-rock-hero.jpg" alt="The Gatekeeper gear organizer and helmet holder">
         </div>
         <div class="body">
-          <div class="title-row"><h3>The Big Biner</h3><span class="price">$29.00</span></div>
+          <div class="title-row"><h3>The Gatekeeper</h3><span class="price">$20.00</span></div>
           <p class="desc">Oversized carabiner-shaped organizer for a full trad rack and a helmet. "NOT FOR CLIMBING," it says so right on it.</p>
           <div class="swatches">
             <span class="swatch-dot" style="background:#63707c;"></span>
@@ -184,6 +184,33 @@
         </div>
       </a>
 
+      <a href="product-tee.html" class="product-card">
+        <div class="thumb">
+          <div class="badges"><span class="badge">Merch</span></div>
+          <img src="img/tee-ink.svg" alt="Rackhouse tee">
+        </div>
+        <div class="body">
+          <div class="title-row"><h3>Rackhouse Tee</h3><span class="price">$26.00</span></div>
+          <p class="desc">Logo tee, print-on-demand. Sizes S–XXL, three colors.</p>
+          <div class="swatches">
+            <span class="swatch-dot" style="background:#20232a;"></span>
+            <span class="swatch-dot" style="background:#d9c49a;"></span>
+            <span class="swatch-dot" style="background:#6b7680;"></span>
+          </div>
+        </div>
+      </a>
+
+      <a href="product-stickers.html" class="product-card">
+        <div class="thumb">
+          <div class="badges"><span class="badge">Merch</span></div>
+          <img src="img/stickers-pack.svg" alt="Rackhouse sticker pack">
+        </div>
+        <div class="body">
+          <div class="title-row"><h3>Sticker Pack</h3><span class="price">$8.00</span></div>
+          <p class="desc">Four die-cut vinyl stickers, weatherproof, print-on-demand.</p>
+        </div>
+      </a>
+
       <div class="product-card disabled" aria-disabled="true">
         <div class="thumb">
           <div class="badges"><span class="badge badge-soft">Coming soon</span></div>
@@ -214,7 +241,7 @@
     <div class="cta-band">
       <h2>Not sure which color?</h2>
       <p>Every colorway ships the same week — swap chips above to preview, or read the full spec sheet.</p>
-      <a href="product-big-biner.html" class="btn btn-primary btn-lg">View full details</a>
+      <a href="product-gatekeeper.html" class="btn btn-primary btn-lg">View full details</a>
     </div>
   </div>
 </section>
@@ -238,9 +265,11 @@
       <div>
         <h4>Shop</h4>
         <ul>
-          <li><a href="product-big-biner.html">The Big Biner</a></li>
+          <li><a href="product-gatekeeper.html">The Gatekeeper</a></li>
           <li><a href="product-rock-ring.html">The Rock Ring</a></li>
           <li><a href="product-cup-cradle.html">The Cup Cradle</a></li>
+          <li><a href="product-tee.html">Rackhouse Tee</a></li>
+          <li><a href="product-stickers.html">Sticker Pack</a></li>
           <li><a href="product-gift-duo.html">Gift Duo</a></li>
           <li><a href="product-felt-pads.html">Felt Base Pads</a></li>
           <li><a href="shop.html">All products</a></li>
@@ -284,8 +313,8 @@
     document.querySelectorAll('#colorFilterRow .filter-chip').forEach((c) => c.classList.remove('active'));
     btn.classList.add('active');
     const key = btn.getAttribute('data-color');
-    document.getElementById('bigBinerCardImg').src = `img/bigbiner-${key}-hero.jpg`;
-    document.getElementById('bigBinerCard').setAttribute('href', `product-big-biner.html?color=${key}`);
+    document.getElementById('gatekeeperCardImg').src = `img/gatekeeper-${key}-hero.jpg`;
+    document.getElementById('gatekeeperCard').setAttribute('href', `product-gatekeeper.html?color=${key}`);
     document.getElementById('rockRingCardImg').src = `img/rockring-${key}-hero.jpg`;
     document.getElementById('rockRingCard').setAttribute('href', `product-rock-ring.html?color=${key}`);
     document.getElementById('cupCradleCardImg').src = `img/cupcradle-${key}-hero.jpg`;

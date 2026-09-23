@@ -3,13 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The Cup Cradle — Rackhouse</title>
-<meta name="description" content="The Cup Cradle is a car-cupholder adapter that cradles a full-size wide-mouth Nalgene upright — a slim stem seats into the cupholder, flaring into a wide, scalloped basket. 106mm OD x 114mm tall.">
+<title>Rackhouse Tee — Rackhouse</title>
+<meta name="description" content="A soft midweight cotton tee with the Rackhouse carabiner mark and wordmark printed on the chest. Print-on-demand, sizes S–XXL, in Ink, Sand and Rock.">
 <link rel="icon" type="image/png" sizes="512x512" href="img/favicon-512.png">
 <link rel="icon" type="image/png" sizes="192x192" href="img/favicon-192.png">
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <link rel="stylesheet" href="css/style.css">
-<script type="importmap">{"imports": {"three": "./js/vendor/three.module.min.js"}}</script>
 </head>
 <body>
 <a class="visually-hidden" href="#main">Skip to content</a>
@@ -82,49 +81,45 @@
     <div class="breadcrumbs">
       <a href="index.html">Home</a><span class="sep">/</span>
       <a href="shop.html">Shop</a><span class="sep">/</span>
-      <span class="current">The Cup Cradle</span>
+      <span class="current">Rackhouse Tee</span>
     </div>
 
     <div class="pdp">
       <div class="pdp-gallery">
-        <div class="filter-row gallery-tabs" role="group" aria-label="Gallery view">
-          <button type="button" class="filter-chip active" data-gallery-tab="photos">Photos</button>
-          <button type="button" class="filter-chip" data-gallery-tab="3d">3D View</button>
-        </div>
-        <div class="main-frame" id="galleryPhotoFrame">
-          <img id="pdpMainImg" src="img/cupcradle-ice-hero.jpg" alt="The Cup Cradle, a Nalgene-to-cupholder adapter">
-        </div>
-        <div class="main-frame" id="gallery3DFrame" style="display:none;">
-          <div id="viewer3D" style="width:100%;height:100%;"></div>
-          <span class="viewer-hint">Drag to rotate · Scroll to zoom</span>
+        <div class="main-frame">
+          <img id="pdpMainImg" src="img/tee-ink.svg" alt="Rackhouse tee in Ink">
         </div>
         <div class="pdp-thumbs">
-          <button type="button" data-angle="hero" class="active"><img src="img/cupcradle-ice-hero.jpg" alt="Angle view"></button>
-          <button type="button" data-angle="top"><img src="img/cupcradle-ice-top.jpg" alt="Overhead view showing the bore and scalloped notch"></button>
-          <button type="button" data-angle="profile"><img src="img/cupcradle-ice-profile.jpg" alt="Side profile showing the stem-to-basket taper"></button>
+          <button type="button" data-angle="ink" class="active"><img src="img/tee-ink.svg" alt="Ink"></button>
+          <button type="button" data-angle="sand"><img src="img/tee-sand.svg" alt="Sand"></button>
+          <button type="button" data-angle="rock"><img src="img/tee-rock.svg" alt="Rock"></button>
         </div>
       </div>
 
       <div class="pdp-info">
-        <div class="badges-row">
-          <span class="badge badge-ember">New</span>
-        </div>
-        <h1>The Cup Cradle</h1>
-        <p class="muted" style="margin-top:6px;font-weight:650;">Nalgene-to-cupholder adapter</p>
-        <div class="price-row">
-          <span class="price num">$16.00</span>
-        </div>
-        <p class="desc">A slim stem sized for a standard car console cupholder steps up into a wide, scalloped basket that cradles a full-size wide-mouth Nalgene so it rides upright instead of sliding around on the next turn. One side of the rim is scooped low — enough to get a finger under the bottle or let its carry loop hang free instead of getting pinned against the plastic.</p>
+        <div class="badges-row"><span class="badge">Merch</span></div>
+        <h1>Rackhouse Tee</h1>
+        <p class="muted" style="margin-top:6px;font-weight:650;">Logo tee, print-on-demand</p>
+        <div class="price-row"><span class="price num">$26.00</span></div>
+        <p class="desc">Soft, midweight 100% cotton with the carabiner mark and Rackhouse wordmark printed on the chest. This one isn't 3D-printed in the home studio like the gear — it's made and shipped by a print-on-demand partner, so it ships separately from any Gatekeeper, Rock Ring or Cup Cradle order in the same cart.</p>
 
         <div class="option-block">
-          <div class="opt-title"><span>Color</span><span id="selectedColorName">Ice</span></div>
+          <div class="opt-title"><span>Color</span><span id="selectedColorName">Ink</span></div>
           <div class="swatch-picker" id="swatchPicker">
-            <button type="button" class="swatch-btn" data-color-key="rock" style="background:#63707c;" aria-label="Rock"></button>
-            <button type="button" class="swatch-btn" data-color-key="moss" style="background:#55805a;" aria-label="Moss"></button>
-            <button type="button" class="swatch-btn" data-color-key="ice" style="background:#4a90c2;" aria-label="Ice"></button>
-            <button type="button" class="swatch-btn" data-color-key="sand" style="background:#c9a86a;" aria-label="Sand"></button>
-            <button type="button" class="swatch-btn" data-color-key="ink" style="background:#202326;" aria-label="Ink"></button>
-            <button type="button" class="swatch-btn" data-color-key="ember" style="background:#d85c2a;" aria-label="Ember"></button>
+            <button type="button" class="swatch-btn" data-color-key="ink" style="background:#20232a;" aria-label="Ink"></button>
+            <button type="button" class="swatch-btn" data-color-key="sand" style="background:#d9c49a;" aria-label="Sand"></button>
+            <button type="button" class="swatch-btn" data-color-key="rock" style="background:#6b7680;" aria-label="Rock"></button>
+          </div>
+        </div>
+
+        <div class="option-block">
+          <div class="opt-title"><span>Size</span><span id="selectedSizeName">M</span></div>
+          <div class="filter-row" id="sizePicker" role="group" aria-label="Size">
+            <button type="button" class="filter-chip" data-size="S">S</button>
+            <button type="button" class="filter-chip active" data-size="M">M</button>
+            <button type="button" class="filter-chip" data-size="L">L</button>
+            <button type="button" class="filter-chip" data-size="XL">XL</button>
+            <button type="button" class="filter-chip" data-size="XXL">XXL</button>
           </div>
         </div>
 
@@ -138,14 +133,9 @@
           <button type="button" id="buyNowBtn" class="btn btn-ember">Buy now</button>
         </div>
 
-        <div class="safety-note" style="background:var(--ember-soft);border-color:rgba(216,92,42,.3);color:#6f3312;">
-          <b>Check your cupholder and bottle before ordering</b>
-          Car console cupholders and Nalgene bottle diameters both vary. The stem is sized for a standard ~70 mm (2.75 in) cupholder well and the basket for a standard-diameter wide-mouth Nalgene, but we can't guarantee fit sight-unseen in every vehicle — measure your cupholder if you're not sure, or <a href="contact.html" style="color:#6f3312;text-decoration:underline;">ask us first</a>.
-        </div>
-
         <ul class="pdp-trust">
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Made to order — ships in 2–4 business days</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> One piece, no hardware or assembly required</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Print-on-demand — typically ships in 3–5 business days</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Ships separately from 3D-printed items in the same order</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Free standard shipping over $60</li>
         </ul>
 
@@ -154,45 +144,33 @@
             <summary>Details &amp; specs<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></summary>
             <div class="panel">
               <table class="spec-table">
-                <tr><th>Overall height</th><td>114 mm (4.5 in)</td></tr>
-                <tr><th>Basket diameter</th><td>~106 mm (4.2 in) at the rim</td></tr>
-                <tr><th>Stem diameter</th><td>~70 mm (2.75 in) — sized for a standard console cupholder</td></tr>
-                <tr><th>Base foot</th><td>~67 mm (2.6 in), rests on the cupholder floor</td></tr>
-                <tr><th>Weight</th><td>Approx. 90–130 g depending on infill</td></tr>
-                <tr><th>Material</th><td>PLA+, matte finish</td></tr>
-                <tr><th>Rim</th><td>Scalloped low on one side for a grip or the bottle's carry loop</td></tr>
+                <tr><th>Material</th><td>100% ringspun cotton, midweight</td></tr>
+                <tr><th>Print</th><td>Chest-centered carabiner mark + wordmark, direct-to-garment</td></tr>
+                <tr><th>Sizes</th><td>S, M, L, XL, XXL</td></tr>
+                <tr><th>Colors</th><td>Ink, Sand, Rock</td></tr>
+                <tr><th>Fulfillment</th><td>Print-on-demand partner — no relation to the 3D-printed lineup's production schedule</td></tr>
               </table>
             </div>
           </details>
           <details>
-            <summary>Fit &amp; compatibility<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></summary>
+            <summary>Why does this ship separately?<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></summary>
             <div class="panel">
-              <p>Most car console cupholders run 2.5–3.5 in (64–89 mm); the stem here is sized toward the middle of that range at roughly 70 mm. Deep, narrow, or oddly-stepped cupholders (some SUVs and minivans use non-round or multi-tier wells) may not seat the same way — check your cupholder's diameter before ordering if it looks unusual.</p>
-              <p><em>Nalgene is a trademark of its respective owner — Rackhouse is an independent print shop and this adapter is not licensed, endorsed by, or affiliated with the brand.</em></p>
+              <p>The 3D-printed gear is sliced and printed by hand to order; this tee is produced and shipped by a separate print-on-demand partner so it can go out fast without waiting on a print queue. If your order includes both, expect two packages.</p>
+            </div>
+          </details>
+          <details>
+            <summary>Sizing &amp; fit<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></summary>
+            <div class="panel">
+              <p>Unisex, true-to-size fit. Between sizes or unsure? <a href="contact.html" style="color:var(--ember-dark);text-decoration:underline;">Ask us</a> before ordering — exchanges on a misprinted size are easy, exchanges on a correctly-printed "wrong choice" size are not.</p>
             </div>
           </details>
           <details>
             <summary>Shipping &amp; returns<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></summary>
             <div class="panel">
-              <p>Made to order, 2–4 business days before it ships. Because fit varies by vehicle, we'll gladly help you double-check sizing before you order — see the <a href="shipping-returns.html" style="color:var(--ember-dark);text-decoration:underline;">shipping &amp; returns page</a> for the full policy.</p>
+              <p>Typically ships in 3–5 business days directly from the print partner. Full policy on the <a href="shipping-returns.html" style="color:var(--ember-dark);text-decoration:underline;">shipping &amp; returns page</a>.</p>
             </div>
           </details>
         </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="section">
-  <div class="container">
-    <div class="grid grid-2" style="align-items:center; gap:56px;">
-      <div class="reveal">
-        <img src="img/usecase-cupcradle.svg" alt="Illustration of the Cup Cradle inserted into a car console cupholder, holding a wide-mouth Nalgene upright" style="border-radius:var(--radius-lg); border:1px solid var(--line); width:100%; height:auto; display:block;">
-      </div>
-      <div class="reveal reveal-1">
-        <span class="eyebrow">In use</span>
-        <h2 style="margin-top:10px;">Steady in the cupholder, all the way to the trailhead.</h2>
-        <p class="lede" style="margin-top:16px;">The stem drops into the console cupholder like any other cup; the flared basket picks up above the console rim and cradles the wider body of a wide-mouth Nalgene so it can't tip on a turn or rattle around on washboard road. The scalloped notch keeps the bottle's carry loop free to grab on the way out.</p>
       </div>
     </div>
   </div>
@@ -205,13 +183,13 @@
       <h2>Pairs well with</h2>
     </div>
     <div class="grid grid-3">
-      <a href="product-gatekeeper.html" class="product-card">
-        <div class="thumb"><div class="badges"><span class="badge badge-ember">Flagship</span></div><img src="img/gatekeeper-rock-hero.jpg" alt="The Gatekeeper"></div>
-        <div class="body"><div class="title-row"><h3>The Gatekeeper</h3><span class="price">$20.00</span></div><p class="desc">Gear organizer and helmet holder.</p></div>
+      <a href="product-stickers.html" class="product-card">
+        <div class="thumb"><div class="badges"><span class="badge">Merch</span></div><img src="img/stickers-pack.svg" alt="Rackhouse sticker pack"></div>
+        <div class="body"><div class="title-row"><h3>Sticker Pack</h3><span class="price">$8.00</span></div><p class="desc">Four die-cut vinyl stickers.</p></div>
       </a>
-      <a href="product-rock-ring.html" class="product-card">
-        <div class="thumb"><div class="badges"><span class="badge">Original</span></div><img src="img/rockring-rock-hero.jpg" alt="The Rock Ring"></div>
-        <div class="body"><div class="title-row"><h3>The Rock Ring</h3><span class="price">$34.00</span></div><p class="desc">Freestanding gear valet for the bench.</p></div>
+      <a href="product-gatekeeper.html" class="product-card">
+        <div class="thumb"><div class="badges"><span class="badge badge-ember">Flagship</span></div><img src="img/gatekeeper-rock-hero.jpg" alt="The Gatekeeper gear organizer and helmet holder"></div>
+        <div class="body"><div class="title-row"><h3>The Gatekeeper</h3><span class="price">$20.00</span></div><p class="desc">Gear organizer and helmet holder.</p></div>
       </a>
       <a href="shop.html" class="product-card">
         <div class="thumb"><div class="badges"><span class="badge badge-soft">Browse</span></div><img src="img/rockring-sand-hero.jpg" alt="Full shop"></div>
@@ -244,8 +222,6 @@
           <li><a href="product-cup-cradle.html">The Cup Cradle</a></li>
           <li><a href="product-tee.html">Rackhouse Tee</a></li>
           <li><a href="product-stickers.html">Sticker Pack</a></li>
-          <li><a href="product-gift-duo.html">Gift Duo</a></li>
-          <li><a href="product-felt-pads.html">Felt Base Pads</a></li>
           <li><a href="shop.html">All products</a></li>
         </ul>
       </div>
@@ -280,91 +256,54 @@
 <script src="js/store-data.js"></script>
 <script src="js/cart.js"></script>
 <script src="js/ui.js"></script>
-<script type="module">
-  import { mountModelViewer } from './js/model-viewer.js';
-  window.mountModelViewer = mountModelViewer;
-</script>
 <script>
 (function () {
-  const params = new URLSearchParams(location.search);
-  const requested = params.get('color');
-  let selected = COLORWAYS.some((c) => c.key === requested) ? requested : 'ice';
-  let activeAngle = 'hero';
+  let selectedColor = 'ink';
+  let selectedSize = 'M';
 
   const mainImg = document.getElementById('pdpMainImg');
   const thumbBtns = document.querySelectorAll('.pdp-thumbs button');
   const swatchBtns = document.querySelectorAll('.swatch-btn');
+  const sizeBtns = document.querySelectorAll('#sizePicker .filter-chip');
   const colorLabel = document.getElementById('selectedColorName');
-
-  let viewer = null;
-  const tabBtns = document.querySelectorAll('[data-gallery-tab]');
-  const photoFrame = document.getElementById('galleryPhotoFrame');
-  const frame3D = document.getElementById('gallery3DFrame');
-  const viewerContainer = document.getElementById('viewer3D');
-
-  function ensureViewer() {
-    if (viewer || !window.mountModelViewer) return;
-    const loading = document.createElement('div');
-    loading.className = 'viewer-loading';
-    loading.textContent = 'Loading 3D model…';
-    viewerContainer.appendChild(loading);
-    viewer = window.mountModelViewer(viewerContainer, {
-      stlUrl: 'models/cup-cradle.stl',
-      color: colorway(selected).hex,
-      onReady: () => loading.remove(),
-      onError: () => { loading.textContent = 'Could not load the 3D model.'; },
-    });
-  }
-
-  tabBtns.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      tabBtns.forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      const is3D = btn.getAttribute('data-gallery-tab') === '3d';
-      photoFrame.style.display = is3D ? 'none' : '';
-      frame3D.style.display = is3D ? '' : 'none';
-      if (is3D) ensureViewer();
-    });
-  });
+  const sizeLabel = document.getElementById('selectedSizeName');
 
   function render() {
-    const set = cupCradleImages(selected);
-    const c = colorway(selected);
-    mainImg.src = set[activeAngle];
-    mainImg.alt = `The Cup Cradle in ${c.name}, ${activeAngle} view`;
-    if (viewer) viewer.setColor(c.hex);
-    thumbBtns.forEach((b) => {
-      const angle = b.getAttribute('data-angle');
-      b.querySelector('img').src = set[angle];
-      b.classList.toggle('active', angle === activeAngle);
-    });
-    swatchBtns.forEach((b) => b.classList.toggle('selected', b.getAttribute('data-color-key') === selected));
-    colorLabel.textContent = c.name;
+    const img = teeImage(selectedColor);
+    mainImg.src = img;
+    mainImg.alt = `Rackhouse tee in ${selectedColor}`;
+    thumbBtns.forEach((b) => b.classList.toggle('active', b.getAttribute('data-angle') === selectedColor));
+    swatchBtns.forEach((b) => b.classList.toggle('selected', b.getAttribute('data-color-key') === selectedColor));
+    sizeBtns.forEach((b) => b.classList.toggle('active', b.getAttribute('data-size') === selectedSize));
+    const c = TEE_COLORWAYS.find((x) => x.key === selectedColor);
+    colorLabel.textContent = c ? c.name : selectedColor;
+    sizeLabel.textContent = selectedSize;
   }
 
-  swatchBtns.forEach((b) => b.addEventListener('click', () => { selected = b.getAttribute('data-color-key'); render(); }));
-  thumbBtns.forEach((b) => b.addEventListener('click', () => { activeAngle = b.getAttribute('data-angle'); render(); }));
+  swatchBtns.forEach((b) => b.addEventListener('click', () => { selectedColor = b.getAttribute('data-color-key'); render(); }));
+  thumbBtns.forEach((b) => b.addEventListener('click', () => { selectedColor = b.getAttribute('data-angle'); render(); }));
+  sizeBtns.forEach((b) => b.addEventListener('click', () => { selectedSize = b.getAttribute('data-size'); render(); }));
   render();
 
   const qty = initQtyStepper(document.getElementById('pdpQty'), { min: 1, max: 10 });
 
   function currentItem() {
-    const c = colorway(selected);
+    const c = TEE_COLORWAYS.find((x) => x.key === selectedColor);
     return {
-      key: `cup-cradle:${selected}`,
-      productId: 'cup-cradle',
-      name: 'The Cup Cradle',
-      variant: c.name,
-      variantHex: c.hex,
-      price: PRODUCTS['cup-cradle'].price,
+      key: `tee:${selectedColor}:${selectedSize}`,
+      productId: 'tee',
+      name: 'Rackhouse Tee',
+      variant: `${c ? c.name : selectedColor} · ${selectedSize}`,
+      variantHex: c ? c.hex : undefined,
+      price: PRODUCTS['tee'].price,
       qty: qty.get(),
-      image: cupCradleImages(selected).hero,
+      image: teeImage(selectedColor),
     };
   }
 
   document.getElementById('addToCartBtn').addEventListener('click', () => addToCartAndNotify(currentItem()));
   document.getElementById('buyNowBtn').addEventListener('click', () => {
-    const stripeLink = getStripeLink('cup-cradle');
+    const stripeLink = getStripeLink('tee');
     if (stripeLink) { window.location.href = stripeLink; return; }
     cartAdd(currentItem());
     window.location.href = 'checkout.html';

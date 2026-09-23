@@ -67,11 +67,13 @@ paste the URL for the product you just created:
 
 ```js
 productLinks: {
-  'rock-ring': 'https://buy.stripe.com/your-real-link-here',
-  'big-biner': '',
-  'bottle-adapter': '',
+  'gatekeeper': 'https://buy.stripe.com/your-real-link-here',
+  'rock-ring': '',
+  'cup-cradle': '',
   'gift-duo': '',
   'felt-pads': '',
+  'tee': '',
+  'stickers': '',
 },
 ```
 

@@ -1,4 +1,4 @@
-# Crux Supply Co. — Business Plan
+# Rackhouse Supply Co. — Business Plan
 
 *Working draft. Written to get you from "I have three 3D-printed designs
 and a climbing following" to a running, profitable small business with
@@ -7,15 +7,18 @@ Update the numbers in here as real ones replace the estimates.*
 
 ## 1. What this is
 
-Crux sells small-batch, 3D-printed goods for climbers, made to order:
+Rackhouse sells small-batch, 3D-printed goods for climbers, made to
+order, plus two print-on-demand merch items:
 
 | Product | Price | What it is |
 |---|---|---|
-| The Rock Ring | $34 | Freestanding gear valet — two open ports for chalk bag, keys, sunglasses |
-| The Big Biner | $29 | Oversized wall-mount rack shaped like a carabiner, explicitly marked "NOT FOR CLIMBING" |
-| Hydro Flask ↔ Nalgene Adapter | $14 | Split-ring bottle cap adapter |
+| The Gatekeeper | $20 | Flagship — oversized carabiner-shaped gear organizer and helmet holder, hangs a full trad rack off one point, explicitly marked "NOT FOR CLIMBING" |
+| The Rock Ring | $34 | Desktop mini fingerboard — two open ports for finger curls, doubles as storage for chalk bag, keys, sunglasses |
+| The Cup Cradle | $16 | Car-cupholder adapter that cradles a wide-mouth Nalgene upright |
 | Rock Ring — Gift Duo | $62 | Two Rock Rings, any two colors |
 | Felt Base Pad Set | $5 | Bought-in accessory for the Rock Ring's base |
+| Rackhouse Tee | $26 | Logo tee, print-on-demand, S–XXL |
+| Sticker Pack | $8 | Four die-cut vinyl stickers, print-on-demand |
 
 Full specs, photography, and the live cart/checkout are in `crux-shop/`.
 Cost basis for every price above is in `UNIT-ECONOMICS-AND-SCALING.md`.
@@ -47,7 +50,7 @@ changes the whole shape of the launch:
       with the email/manual-invoice flow already built and add Stripe
       once the first order proves demand. Either is a legitimate
       starting point; Stripe just removes a manual step for you.
-- [ ] Swap the placeholder contact email (`hello@cruxsupply.example`) for
+- [ ] Swap the placeholder contact email (`hello@rackhousesupply.example`) for
       a real inbox you check — see `crux-shop/README.md`.
 - [ ] Print (or have printed) **one of each product** as a photo/video
       prop and to get real cost numbers (see `UNIT-ECONOMICS-AND-SCALING.md`).
@@ -87,11 +90,11 @@ and a **modest first month** driven entirely by your existing audience:
 | | Conservative | Solid launch |
 |---|---|---|
 | Orders in month 1 | 8 | 25 |
-| Average order value | ~$35 (mostly single Rock Rings) | ~$38 |
-| Gross revenue | $280 | $950 |
-| Materials-only COGS (~20% of revenue) | $56 | $190 |
-| Payment processing (~3.3%) | $9 | $31 |
-| **Gross profit before your labor & one-time costs** | **~$215** | **~$729** |
+| Average order value | ~$28 (mostly single Gatekeepers/Rock Rings, some merch add-ons) | ~$32 |
+| Gross revenue | $224 | $800 |
+| Materials-only COGS (~20% of revenue, blended with lower-margin merch) | $45 | $160 |
+| Payment processing (~3.3%) | $7 | $26 |
+| **Gross profit before your labor & one-time costs** | **~$172** | **~$614** |
 
 One-time startup costs to weigh against that, all optional depending on
 what you already have:
@@ -119,8 +122,9 @@ version of the business.
 |---|---|
 | Overprinting before demand is proven | Make-to-order model, zero pre-built inventory |
 | Money spent before payment is collected | Checkout confirms orders by email before any print starts |
-| Liability from climbing-adjacent branding | Explicit "not climbing protection" disclaimers on every relevant product page and in the FAQ; the Big Biner has "NOT FOR CLIMBING" molded into the part itself |
-| Trademark exposure (Hydro Flask / Nalgene names) | Product page carries an explicit non-affiliation disclaimer; see `LEGAL-AND-ENTITY-FORMATION.md` |
+| Liability from climbing-adjacent branding | Explicit "not climbing protection" disclaimers on every relevant product page and in the FAQ; the Gatekeeper has "NOT FOR CLIMBING" molded into the part itself |
+| Trademark exposure (Nalgene name, on the Cup Cradle) | Product page carries an explicit non-affiliation disclaimer; see `LEGAL-AND-ENTITY-FORMATION.md` |
+| Lower margin / vendor dependency on merch | Tee and stickers are print-on-demand by design — zero upfront inventory risk, in exchange for a thinner margin than the 3D-printed line; see `UNIT-ECONOMICS-AND-SCALING.md` |
 | Fake social proof eroding trust | None added — no fabricated reviews, ratings, or testimonials anywhere on the site |
 | One-printer capacity ceiling | Modeled explicitly in `UNIT-ECONOMICS-AND-SCALING.md`, with a scaling ladder that only spends money once volume justifies it |
 
