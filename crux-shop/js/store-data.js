@@ -41,11 +41,13 @@ const SHOP = {
     // the built-in email-invoice checkout for that product. See
     // business/PAYMENTS-SETUP.md for exactly how to create these.
     productLinks: {
-      'big-biner': '',
+      'gatekeeper': '',
       'rock-ring': '',
       'cup-cradle': '',
       'gift-duo': '',
       'felt-pads': '',
+      'tee': '',
+      'stickers': '',
     },
   },
   social: {
@@ -75,11 +77,11 @@ function rockRingImages(colorKey) {
   };
 }
 
-function bigBinerImages(colorKey) {
+function gatekeeperImages(colorKey) {
   return {
-    hero: `img/bigbiner-${colorKey}-hero.jpg`,
-    front: `img/bigbiner-${colorKey}-front.jpg`,
-    detail: `img/bigbiner-${colorKey}-detail.jpg`,
+    hero: `img/gatekeeper-${colorKey}-hero.jpg`,
+    front: `img/gatekeeper-${colorKey}-front.jpg`,
+    detail: `img/gatekeeper-${colorKey}-detail.jpg`,
   };
 }
 
@@ -91,13 +93,25 @@ function cupCradleImages(colorKey) {
   };
 }
 
+const TEE_COLORWAYS = [
+  { key: 'ink',  name: 'Ink',  hex: '#20232a' },
+  { key: 'sand', name: 'Sand', hex: '#d9c49a' },
+  { key: 'rock', name: 'Rock', hex: '#6b7680' },
+];
+
+const SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
+
+function teeImage(colorKey) {
+  return `img/tee-${colorKey}.svg`;
+}
+
 const PRODUCTS = {
-  'big-biner': {
-    id: 'big-biner',
-    name: 'The Big Biner',
+  'gatekeeper': {
+    id: 'gatekeeper',
+    name: 'The Gatekeeper',
     tagline: 'Gear organizer & helmet holder — V2.2',
-    price: 29.0,
-    slug: 'product-big-biner.html',
+    price: 20.0,
+    slug: 'product-gatekeeper.html',
     badge: 'Flagship',
     hasColor: true,
     defaultColor: 'rock',
@@ -148,9 +162,32 @@ const PRODUCTS = {
     image: rockRingImages('sand').profile,
     short: 'Four self-adhesive felt pads sized for the Rock Ring’s base, so it sits quietly on a desk, shelf or van console without scuffing the finish.',
   },
+  'tee': {
+    id: 'tee',
+    name: 'Rackhouse Tee',
+    tagline: 'Logo tee, S–XXL',
+    price: 26.0,
+    slug: 'product-tee.html',
+    badge: 'Merch',
+    hasColor: true,
+    defaultColor: 'ink',
+    image: teeImage('ink'),
+    short: 'A soft, midweight cotton tee with the carabiner mark and Rackhouse wordmark printed on the chest. Print-on-demand — made and shipped separately from the 3D-printed gear.',
+  },
+  'stickers': {
+    id: 'stickers',
+    name: 'Sticker Pack',
+    tagline: 'Set of 4, vinyl, weatherproof',
+    price: 8.0,
+    slug: 'product-stickers.html',
+    badge: 'Merch',
+    hasColor: false,
+    image: 'img/stickers-pack.svg',
+    short: 'Four die-cut vinyl stickers: the carabiner mark, the wordmark, a mountain icon, and a "NOT FOR CLIMBING" tag pulled straight off the Gatekeeper. Waterproof, for a bottle, a bumper or a bin.',
+  },
 };
 
-const CATALOG_ORDER = ['big-biner', 'rock-ring', 'cup-cradle', 'gift-duo', 'felt-pads'];
+const CATALOG_ORDER = ['gatekeeper', 'rock-ring', 'cup-cradle', 'gift-duo', 'felt-pads', 'tee', 'stickers'];
 
 const COMING_SOON = [
   { name: 'Crimp Tray', note: 'A shallow dish for rings, coins and hold-shaped clutter.' },

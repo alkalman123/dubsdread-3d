@@ -35,10 +35,11 @@ divergence theorem, scaled by PLA's density of 1.24 g/cm³):
 | Product | Solid volume | Weight at 100% infill | Weight at ~20–35% infill (typical) |
 |---|---|---|---|
 | Rock Ring | 644.6 cm³ | 799 g | **~160–210 g** |
-| Big Biner | 87.1 cm³ | 108 g | **~70–100 g** |
-| Bottle Adapter | 228.8 cm³ | 284 g | **~110–160 g** |
+| Gatekeeper | 87.1 cm³ | 108 g | **~70–100 g** |
+| Cup Cradle | 129.9 cm³ | 161 g | **~90–130 g** |
 | Gift Duo (2× Rock Ring) | — | — | **~320–420 g** |
 | Felt Base Pads | — (not printed; a bought-in commodity item) | — | — |
+| Tee, Sticker Pack | — (not printed here; print-on-demand — see `ORDER-INTAKE-AND-FULFILLMENT.md`) | — | — |
 
 Print time is the one number I can't compute from geometry alone — it
 depends on your printer's speed, nozzle, layer height, and slicer
@@ -63,12 +64,21 @@ processing fee:
 | Product | Price | Filament cost | Packaging (est.) | Processing fee | Materials-only COGS | Gross margin |
 |---|---|---|---|---|---|---|
 | Rock Ring | $34.00 | $3.74 (170g) | $1.50 | $1.29 | $6.53 | **$27.47 (81%)** |
-| Big Biner | $29.00 | $1.87 (85g) | $2.00 (larger flat box) | $1.14 | $5.01 | **$23.99 (83%)** |
-| Bottle Adapter | $14.00 | $2.97 (135g) | $1.20 | $0.71 | $4.88 | **$9.12 (65%)** |
+| Gatekeeper | $20.00 | $1.87 (85g) | $2.00 (larger flat box) | $0.88 | $4.75 | **$15.25 (76%)** |
+| Cup Cradle | $16.00 | $2.42 (110g) | $1.30 | $0.76 | $4.48 | **$11.52 (72%)** |
 | Gift Duo | $62.00 | $7.48 (340g) | $2.50 | $2.10 | $12.08 | **$49.92 (81%)** |
 | Felt Base Pads | $5.00 | ~$0.75 (bought-in) | $0.75 | $0.45 | $1.95 | **$3.06 (61%)** |
 
-Two things this table deliberately leaves out, on purpose:
+Merch (print-on-demand, not filament — see `ORDER-INTAKE-AND-FULFILLMENT.md`):
+
+| Product | Price | Est. POD base cost | Processing fee | Est. COGS | Est. gross margin |
+|---|---|---|---|---|---|
+| Rackhouse Tee | $26.00 | ~$13.00 (verify with Printful/Printify) | $1.05 | $14.05 | **~$11.95 (46%)** |
+| Sticker Pack | $8.00 | ~$4.50 (verify with Printful/Printify) | $0.53 | $5.03 | **~$2.97 (37%)** |
+
+The merch margins run lower than the 3D-printed line — that's the trade for zero labor, zero inventory risk, and zero print-queue time. Get an exact quote from whichever POD vendor you pick before trusting these two rows; base costs vary by garment brand, print area, and vendor, and change over time.
+
+Two things the first table deliberately leaves out, on purpose:
 
 - **Shipping.** The site charges $5.95 standard (free over $60) — verify
   that actually covers a real USPS/UPS/regional-carrier rate for your

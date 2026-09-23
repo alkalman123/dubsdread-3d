@@ -65,7 +65,7 @@ climbing-adjacent, not despite it:
 - **The site's disclaimers are a real risk-reduction measure, not just
   copy.** Every relevant product page and the FAQ state plainly that
   these are storage/novelty items, not rated climbing protection, and
-  the Big Biner has "NOT FOR CLIMBING" printed into the physical part
+  the Gatekeeper has "NOT FOR CLIMBING" printed into the physical part
   itself. Keep these. If you add products in the future, keep the same
   standard — clear, prominent, on the product page itself.
 - **A disclaimer reduces risk, it doesn't eliminate it.** Someone
@@ -81,14 +81,14 @@ climbing-adjacent, not despite it:
   against the business either way; the entity structure just decides
   whose assets are exposed to it.
 
-## 4. Trademark: the Hydro Flask / Nalgene adapter, specifically
+## 4. Trademark: the Cup Cradle mentions "Nalgene," specifically
 
-The bottle adapter's name and description reference two real brands
+The Cup Cradle's description references one real brand ("Nalgene")
 because that's the honest, useful way to tell a customer what it fits —
 this is generally covered under **nominative fair use** (using a
 trademark to truthfully describe compatibility, not to imply
 sponsorship), and the product page already carries an explicit
-disclaimer: *"not licensed, endorsed by, or affiliated with either
+disclaimer: *"not licensed, endorsed by, or affiliated with the
 brand."* That's a reasonable, common practice for compatibility
 accessories.
 
@@ -97,17 +97,33 @@ ever becomes a real concern:
 
 - **Keep the disclaimer visible** (already done) — don't remove it.
 - **Never imply sponsorship or an official partnership** in your own
-  marketing/social posts, even casually ("official Hydro Flask adapter"
+  marketing/social posts, even casually ("official Nalgene adapter"
   would cross a line the current copy doesn't).
 - **If this product becomes a meaningful share of revenue**, it's worth
   a cheap trademark-focused consult, or simply renaming it something
-  descriptive-but-not-brand-forward (e.g. "Wide-Mouth Bottle Cap
+  descriptive-but-not-brand-forward (e.g. "Wide-Mouth Bottle Cupholder
   Adapter," with the brand compatibility mentioned in the body copy
   instead of the title) — an easy, low-cost way to reduce exposure
   further if you want to be conservative, entirely your call.
-- If you ever receive a cease-and-desist or any legal letter from either
+- If you ever receive a cease-and-desist or any legal letter from the
   company, don't respond yourself — that's the moment to get a lawyer,
   not negotiate solo.
+
+## 4b. Trademark: your own "Rackhouse" name, and the merch line
+
+Two things worth doing before this takes off, not required to launch:
+
+- **A basic knockout search on your own name.** Before it's worth
+  defending, check the USPTO's free TESS database
+  (uspto.gov/trademarks/search) and a plain web/social search for
+  "Rackhouse" in the outdoor/apparel space — this is a common enough
+  word that a name collision is plausible. Not a blocker to launching;
+  worth doing before you sink real marketing spend into the name.
+- **The tee and stickers only carry your own logo** — no third-party
+  marks involved, so there's no nominative-fair-use question there the
+  way there is with the Cup Cradle. The only trademark question for
+  merch is protecting *your own* mark (above), not clearing someone
+  else's.
 
 ## 5. Sales tax — the honest current state
 

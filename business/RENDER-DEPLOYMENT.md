@@ -1,5 +1,11 @@
 # Deploying the shop to Render
 
+**Not the active deployment.** The live site actually runs on GitHub
+Pages today — see the live link if you don't already have it. This
+document is kept as a documented alternative (Render gives you a
+custom-domain-friendly host outside GitHub), not a step you still need
+to do.
+
 This needs your own Render account — I can prepare everything on the
 code side, but connecting your GitHub repo to Render's hosting has to
 happen from inside your own Render dashboard (it's your account, your
@@ -53,7 +59,7 @@ take about the same five minutes.
 
 Render's free `onrender.com` subdomain is a completely legitimate URL to
 launch and take real orders on — plenty of small shops never bother with
-a custom domain. If you want one later (e.g. `cruxsupply.com`):
+a custom domain. If you want one later (e.g. `rackhousesupply.com`):
 
 1. Buy the domain from any registrar (Namecheap, Google Domains'
    successor Squarespace Domains, Cloudflare Registrar — doesn't matter

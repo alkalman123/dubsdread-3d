@@ -1,0 +1,41 @@
+<svg viewBox="0 0 800 700" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Rackhouse t-shirt with the carabiner logo printed on the chest">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f2ede2"/>
+      <stop offset="1" stop-color="#e6dfcf"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="700" rx="20" fill="url(#bg)"/>
+
+  <!-- tee shadow -->
+  <ellipse cx="400" cy="610" rx="230" ry="26" fill="#15191c" opacity=".14"/>
+
+  <!-- sleeves -->
+  <path d="M240 150 L120 230 L150 340 L245 280 Z" fill="#d9c49a" stroke="#15191c" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M560 150 L680 230 L650 340 L555 280 Z" fill="#d9c49a" stroke="#15191c" stroke-width="5" stroke-linejoin="round"/>
+
+  <!-- body -->
+  <path d="M245 165
+           C 245 130 285 108 330 100
+           C 345 128 375 142 400 142
+           C 425 142 455 128 470 100
+           C 515 108 555 130 555 165
+           L 560 590
+           C 560 605 548 615 533 615
+           L 267 615
+           C 252 615 240 605 240 590 Z"
+        fill="#d9c49a" stroke="#15191c" stroke-width="5" stroke-linejoin="round"/>
+
+  <!-- collar rib -->
+  <path d="M330 100 C 345 128 375 142 400 142 C 425 142 455 128 470 100"
+        fill="none" stroke="#15191c" stroke-opacity=".4" stroke-width="4"/>
+
+  <!-- chest print: carabiner mark + wordmark -->
+  <g transform="translate(400,330)">
+    <circle cx="0" cy="0" r="52" fill="none" stroke="#20232a" stroke-width="9"/>
+    <line x1="-38" y1="-24" x2="6" y2="-24" stroke="#b8481e" stroke-width="9" stroke-linecap="round"/>
+    <circle cx="-38" cy="-24" r="5.5" fill="#b8481e"/>
+    <circle cx="6" cy="-24" r="5.5" fill="#b8481e"/>
+    <text x="0" y="100" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="800" font-size="32" letter-spacing="5" fill="#20232a">RACKHOUSE</text>
+  </g>
+</svg>

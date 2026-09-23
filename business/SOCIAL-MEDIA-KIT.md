@@ -8,25 +8,26 @@ outperform them on social every time). Swap `[link]` for your shop URL.
 
 ## Before you post anything
 
-- Get **one real photo or short video** of at least the Rock Ring printed
-  and in your hands, on your gear bench, clipped to your pack — whatever
-  is true to how you'd actually use it. Real beats rendered on social,
-  even if the render is prettier.
-- Have the link live and working (see `RENDER-DEPLOYMENT.md`) before the
-  first post — nothing kills momentum like a broken or "coming soon" link
-  the moment people are curious.
+- Get **one real photo or short video** of at least the Gatekeeper
+  printed and loaded up — a real trad rack and helmet hung off it, on an
+  actual hook — whatever is true to how you'd actually use it. Real
+  beats rendered on social, even if the render is prettier.
+- Have the link live and working before the first post — nothing kills
+  momentum like a broken or "coming soon" link the moment people are
+  curious.
 - Put the link in your bio / link-in-bio tool before you post, not after.
 
 ## Launch week sequence (don't post all of these the same day)
 
-### Post 1 — the reveal (day 1)
+### Post 1 — the reveal, flagship first (day 1)
 
 > Been sitting on this for a while — finally printed and shipping.
 >
-> The Rock Ring: a little valet for the stuff that always ends up on the
-> ground at the base of a boulder problem. Two ports, one solid block,
-> no wall required. Chalk bag drawstring through one, keys through the
-> other, done.
+> The Gatekeeper: an oversized carabiner-shaped rack that hangs your
+> whole trad kit off one hook. Full rack, draws, slings, helmet — all
+> off the floor, all in one spot. And yes, "NOT FOR CLIMBING" is printed
+> right into the plastic — it's a rack, not rated hardware, and I'd
+> rather you know that up front.
 >
 > Small batch, printed to order, six colors. First run is live — link in
 > bio. 🧗
@@ -34,39 +35,46 @@ outperform them on social every time). Swap `[link]` for your shop URL.
 *Attach: your real photo/video from the "before you post" step above.*
 
 **Hashtag starter (trim to what actually fits your account/platform):**
-`#climbing #bouldering #climbinggear #3dprinting #smallbatch #madetoorder #gearorganization #climbergirl #climberlife #vanlife` — pick 5–8 that actually match your existing audience's tags, more isn't better.
+`#climbing #tradclimbing #climbinggear #3dprinting #smallbatch #madetoorder #gearorganization #climbergirl #climberlife #vanlife` — pick 5–8 that actually match your existing audience's tags, more isn't better.
 
 ### Post 2 — the "why" (day 2–3)
 
-> Why I made this: every session ends with chalk bag in one spot, keys
-> somewhere else, sunglasses under the pad. Nothing about climbing gear
-> is small enough to stay put.
+> Why I made this: a full rack always ends up as a tangle on the garage
+> floor or the bottom of the trunk — cams jumbled together, helmet
+> rolling around loose, twenty minutes lost before you even leave.
 >
-> So — two open ports, one block, sits on its own base. No wall, no
-> drilling, no losing it in the bottom of your pack.
+> So — one hook, one board, everything clipped in its own hole where you
+> can see it. Grab and go.
 >
 > Six colorways named after actual terrain — Rock, Moss, Ice, Sand, Ink,
 > Ember. [link]
 
-*Good spot for a short video: hand threading a chalk bag drawstring
-through the lower port, or a quick 360° of the piece.*
+*Good spot for a short video: hanging the board on one hook, then
+clipping cams and a helmet into it one by one.*
 
-### Post 3 — the Big Biner + Bottle Adapter (day 4–5)
+### Post 3 — the Rock Ring + Cup Cradle (day 4–5)
 
-> Two more just dropped:
+> Two more in the lineup:
 >
-> The Big Biner — an oversized wall rack shaped like a carabiner, with a
-> row of holes to hang gear from. And yes, it says "NOT FOR CLIMBING"
-> right on the piece — it's a rack, not rated hardware, and I'd rather
-> you know that up front than find out the hard way.
+> The Rock Ring — started as a desk fingerboard for finger curls between
+> sessions, doubles as a little valet for chalk bag, keys, sunglasses,
+> whatever's loose on the bench.
 >
-> And for the van/crag water bottle problem: a Hydro Flask ↔ Nalgene
-> adapter, so your favorite cap doesn't lock you into one brand of
-> bottle.
+> And for the drive out: the Cup Cradle, a car-cupholder insert that
+> cradles a wide-mouth Nalgene so it stops sliding around on the way to
+> the trailhead.
 >
 > Both live now. [link]
 
-### Post 4 — social proof, once you have any (week 2+)
+### Post 4 — merch drop (week 2)
+
+> Added a tee and a sticker pack to the lineup — same carabiner mark,
+> now on your chest or your bottle. Printed on demand, so no idea how
+> long these stay up. [link]
+
+*Attach: the tee mockup or a real photo once you have one on your back.*
+
+### Post 5 — social proof, once you have any (week 2+)
 
 Don't post this until it's true. Once your first buyer posts a photo or
 sends you one:
@@ -83,18 +91,21 @@ read as more credible for exactly that reason.*
 
 ## Evergreen posts (use anytime, space them out)
 
-> POV: you finally have somewhere for the chalk bag that isn't "on the
-> ground." [Rock Ring, in use, quick clip]
+> POV: your whole rack, off the floor, on one hook. [Gatekeeper, loaded
+> up, quick clip]
 
-> Every Rock Ring is printed to order — not pulled off a shelf. Made
-> after you order it, not before. [link]
+> Every piece is printed to order — not pulled off a shelf. Made after
+> you order it, not before. [link]
 
 > Which colorway are you? Rock / Moss / Ice / Sand / Ink / Ember — drop
 > yours below. [grid image of all six, from the site's colorway section]
 
 > "NOT FOR CLIMBING" — it's printed right into the plastic, because it's
 > shaped like a biner and we'd rather be obvious about it than clever
-> about it. [Big Biner detail shot]
+> about it. [Gatekeeper detail shot]
+
+> Nalgene sliding around in the cupholder on every turn out to the crag?
+> Made a fix for that. [Cup Cradle, in the car, quick clip]
 
 ## Format notes by platform
 
@@ -115,9 +126,9 @@ read as more credible for exactly that reason.*
 - Don't claim reviews, ratings, or sales numbers you don't have yet —
   the whole site is built on not doing that; keep your posts consistent
   with it.
-- Don't imply the bottle adapter is an official Hydro Flask or Nalgene
-  product, even casually — see `LEGAL-AND-ENTITY-FORMATION.md` for why.
-- Don't oversell the Big Biner as climbing gear, even as a joke that
+- Don't imply the Cup Cradle is an official Nalgene product, even
+  casually — see `LEGAL-AND-ENTITY-FORMATION.md` for why.
+- Don't oversell the Gatekeeper as climbing gear, even as a joke that
   could get screenshotted out of context — "NOT FOR CLIMBING" is the
   whole point of that product's honesty; keep your captions on the same
   side of that line.
