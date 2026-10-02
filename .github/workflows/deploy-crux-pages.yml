@@ -1,9 +1,15 @@
-name: Deploy Crux shop to GitHub Pages
+name: Deploy golf app (and Crux shop) to GitHub Pages
+
+# The site root is the golf app, so the plain Pages URL is the thing to open on
+# a phone. The old Crux shop keeps working one level down at /crux-shop/ —
+# Rackhouse has its own repo and its own Pages site now, but links to the shop
+# that predate the move should not start returning 404s.
 
 on:
   push:
     branches: [master]
     paths:
+      - 'golf/**'
       - 'crux-shop/**'
       - '.github/workflows/deploy-crux-pages.yml'
   workflow_dispatch:
@@ -25,11 +31,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Assemble the site
+        run: |
+          mkdir _site
+          cp -r golf/. _site/
+          mkdir _site/crux-shop
+          cp -r crux-shop/. _site/crux-shop/
+          # Pages runs Jekyll by default, which drops files and folders whose
+          # names start with an underscore. Nothing here wants Jekyll.
+          touch _site/.nojekyll
       - uses: actions/configure-pages@v5
         with:
           enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: crux-shop
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4
