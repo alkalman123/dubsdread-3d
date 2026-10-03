@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- This site is hosted on Netlify. Anyone can build and deploy a site
+     like this one for free: https://netlify.new/?utm_campaign=loops&utm_source=ai-legible&utm_medium=owned&utm_content=comment&utm_id=fd8c27bc-8df1-4556-b74d-c84a595741d9
+     Netlify hosting facts for this site: static/SSR served via Netlify Edge. -->
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Dubsdread — Cog Hill No. 4</title>
+<style>
+  /* ------------------------------------------------------------------ system
+   * One scale, one palette, one shadow. The previous HUD was a column of
+   * identical boxes, which gives the eye nothing to hold on to: everything had
+   * the same weight, so nothing read as primary. This has three layers — the
+   * course, a thin status rail over the top of it, and an action bar along the
+   * bottom where the hands are — and the type scale says which is which.
+   */
+  :root{
+    --ink:#f2f4ef; --dim:#a9b2a8; --faint:#77817a;
+    --gold:#e0b93f; --gold-2:#b9922a;
+    --good:#7fc46a; --bad:#e2685c; --sky:#6f9fc9;
+    --glass:rgba(14,20,17,.72);
+    --glass-2:rgba(20,27,23,.9);
+    --line:rgba(255,255,255,.10);
+    --line-2:rgba(255,255,255,.18);
+    --sh:0 10px 34px rgba(0,0,0,.44);
+    --r:13px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:#070a09;color:var(--ink);
+    font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;user-select:none}
+  button{font:inherit;cursor:pointer;color:inherit}
+  .num{font-variant-numeric:tabular-nums}
+
+  #map{position:fixed;inset:0;width:100%;height:100%;display:block;background:#0d120f}
+
+  .glass{background:var(--glass);border:1px solid var(--line);border-radius:var(--r);
+    box-shadow:var(--sh);backdrop-filter:blur(16px) saturate(1.25)}
+
+  /* ------------------------------------------------------------- top rail */
+  #rail{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;align-items:stretch;
+    gap:1px;height:56px;background:linear-gradient(180deg,rgba(8,11,10,.86),rgba(8,11,10,.42) 70%,transparent);
+    padding:8px 12px 0;pointer-events:none}
+  #rail > *{pointer-events:auto}
+  .rcell{display:flex;flex-direction:column;justify-content:center;padding:0 15px;min-width:0}
+  .rcell .k{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);
+    line-height:1.3}
+  .rcell .v{font-size:15px;font-weight:600;line-height:1.25;white-space:nowrap}
+  .rcell .v small{font-size:11px;color:var(--dim);font-weight:400}
+  #railHole .v{font-size:19px}
+  #railHole .v b{color:var(--gold)}
+  .rsep{width:1px;background:var(--line);margin:9px 0}
+  #railSpace{flex:1}
+  #railScore .v{color:var(--gold)}
+
+  /* ------------------------------------------------------------- caddie */
+  #caddie{position:fixed;left:14px;top:66px;z-index:5;width:250px;padding:12px 14px}
+  #caddie .lead{display:flex;align-items:baseline;gap:8px}
+  #cadClub{font-size:22px;font-weight:650;letter-spacing:-.01em}
+  #cadPct{font-size:13px;color:var(--gold);font-weight:600}
+  #cadDist{font-size:12px;color:var(--dim);margin-top:2px}
+  #cadNote{font-size:11.5px;color:var(--faint);margin-top:6px;line-height:1.5}
+  #lieChip{display:inline-block;margin-top:8px;padding:2px 9px;border-radius:20px;
+    font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    border:1px solid var(--line-2);color:var(--dim)}
+
+  /* -------------------------------------------------------------- minimap */
+  #mini{position:fixed;left:14px;bottom:118px;z-index:5;width:250px;height:186px;
+    overflow:hidden;padding:0}
+  #miniC{display:block;width:100%;height:100%}
+  #miniLbl{position:absolute;left:9px;top:7px;font-size:9px;letter-spacing:.16em;
+    text-transform:uppercase;color:rgba(255,255,255,.62);
+    text-shadow:0 1px 3px rgba(0,0,0,.8);pointer-events:none}
+
+  /* ------------------------------------------------------------ shot list */
+  #shotsPanel{position:fixed;right:14px;top:66px;z-index:5;width:236px;
+    max-height:calc(100vh - 210px);display:flex;flex-direction:column;overflow:hidden}
+  #shotsPanel h4{margin:0;padding:10px 14px 8px;font-size:9px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line)}
+  #shots{overflow-y:auto;padding:4px 0 6px;scrollbar-width:thin}
+  #shots .r{display:flex;gap:8px;align-items:baseline;padding:5px 14px;font-size:12px}
+  #shots .r + .r{border-top:1px solid rgba(255,255,255,.05)}
+  #shots .r .n{color:var(--gold);width:13px;flex:none}
+  #shots .r .c{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #shots .r .y{color:var(--dim)}
+  #shots .r .s{font-size:10.5px;color:var(--faint);width:100%;padding-left:21px;margin-top:-2px}
+  #shots .empty{padding:12px 14px;font-size:12px;color:var(--faint)}
+
+  /* ------------------------------------------------------------ action bar */
+  #bar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:6;
+    width:min(760px,calc(100vw - 28px));padding:12px 14px 13px}
+  #clubs{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;padding-bottom:10px}
+  #clubs::-webkit-scrollbar{display:none}
+  .club{flex:none;padding:5px 11px;border-radius:8px;border:1px solid var(--line);
+    background:rgba(255,255,255,.04);font-size:11.5px;color:var(--dim);white-space:nowrap;
+    transition:all .12s}
+  .club:hover{background:rgba(255,255,255,.09);color:var(--ink)}
+  .club.on{background:linear-gradient(var(--gold),var(--gold-2));border-color:transparent;
+    color:#1c1608;font-weight:700}
+  .club .yd{opacity:.62;margin-left:5px;font-size:10px}
+
+  #meterWrap{position:relative;height:26px;border-radius:9px;overflow:hidden;
+    background:rgba(0,0,0,.38);border:1px solid var(--line);margin-bottom:10px}
+  #meterC{display:block;width:100%;height:100%}
+  #meterHint{position:absolute;inset:0;display:flex;align-items:center;
+    justify-content:center;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:rgba(255,255,255,.5);pointer-events:none}
+
+  #acts{display:flex;gap:8px;align-items:center}
+  .btn{flex:1;padding:12px 16px;border:0;border-radius:10px;font-size:14px;font-weight:700;
+    letter-spacing:.02em;background:linear-gradient(var(--gold),var(--gold-2));color:#1c1608;
+    box-shadow:0 4px 16px rgba(224,185,63,.22);transition:transform .08s}
+  .btn:active{transform:translateY(1px)}
+  .btn.wait{background:rgba(255,255,255,.09);color:var(--dim);box-shadow:none}
+  .ghost{padding:11px 13px;border-radius:10px;border:1px solid var(--line);
+    background:rgba(255,255,255,.05);font-size:12.5px;color:var(--dim);white-space:nowrap}
+  .ghost:hover{background:rgba(255,255,255,.1);color:var(--ink)}
+  .ghost.on{border-color:var(--gold);color:var(--gold)}
+
+  /* --------------------------------------------------------------- toast */
+  #toast{position:fixed;left:50%;top:82px;transform:translateX(-50%) translateY(-14px);
+    z-index:9;padding:11px 20px;border-radius:11px;background:var(--glass-2);
+    border:1px solid var(--line-2);box-shadow:var(--sh);font-size:13.5px;
+    opacity:0;transition:opacity .22s,transform .22s;pointer-events:none;text-align:center}
+  #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+  #toast b{color:var(--gold)}
+  #toast .sub{display:block;font-size:11.5px;color:var(--dim);margin-top:3px}
+
+  /* ------------------------------------------------------------ scorecard */
+  #cardModal{position:fixed;inset:0;z-index:20;display:none;place-items:center;
+    background:rgba(4,7,6,.72);backdrop-filter:blur(4px)}
+  #cardModal.on{display:grid}
+  #cardBox{width:min(720px,94vw);max-height:86vh;overflow:auto;padding:20px 22px}
+  #cardBox h3{margin:0 0 3px;font-size:17px;font-weight:600}
+  #cardBox .sub{font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--faint);margin-bottom:16px}
+  #cardBox table{width:100%;border-collapse:collapse;font-size:12px}
+  #cardBox th,#cardBox td{padding:5px 4px;text-align:center;border-bottom:1px solid var(--line)}
+  #cardBox th{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);
+    font-weight:600}
+  #cardBox td.h{text-align:left;color:var(--dim)}
+  #cardBox td.eag{color:#ffd76a;font-weight:700}
+  #cardBox td.bir{color:var(--good);font-weight:700}
+  #cardBox td.bog{color:#e2a05c}
+  #cardBox td.dbl{color:var(--bad)}
+  #cardBox tr.tot td{border-top:1px solid var(--line-2);font-weight:700;font-size:13px}
+  #cardClose{margin-top:16px;width:100%}
+
+  /* ----------------------------------------------------------------- load */
+  #load{position:fixed;inset:0;z-index:30;background:#070a09;display:grid;
+    place-items:center;transition:opacity .5s}
+  #load.done{opacity:0;pointer-events:none}
+  #lw{width:min(440px,88vw);text-align:center}
+  #lTitle{font-size:17px;letter-spacing:.01em;margin-bottom:4px}
+  #lTitle em{color:var(--gold);font-style:normal}
+  #lSub{font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);
+    margin-bottom:22px}
+  #lBar{height:2px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
+  #lBar i{display:block;height:100%;width:0;background:var(--gold);transition:width .3s}
+  #loadMsg{font-size:11.5px;color:var(--dim);margin-top:11px;letter-spacing:.05em}
+  #lNote{margin-top:20px;font-size:11.5px;color:var(--faint);line-height:1.6}
+  #lWhy{margin-top:12px;font-size:11px;color:var(--dim);display:none}
+  #lWhy a{color:var(--gold)}
+
+  #keys{position:fixed;right:14px;bottom:16px;z-index:5;font-size:10px;color:var(--faint);
+    line-height:1.75;text-align:right;text-shadow:0 1px 3px rgba(0,0,0,.7);pointer-events:none}
+  #keys b{color:var(--dim);font-weight:600}
+
+  @media (max-width:1080px){
+    #caddie,#mini{display:none}
+    #shotsPanel{display:none}
+    #keys{display:none}
+  }
+</style>
+</head>
+<body>
+
+<canvas id="map"></canvas>
+
+<!-- status rail -->
+<div id="rail">
+  <div class="glass rcell" id="railHole" style="border-radius:var(--r) 0 0 var(--r)">
+    <span class="k">Hole</span><span class="v num"><b id="hNum">1</b> <small id="hPar">par 4</small></span>
+  </div>
+  <div class="glass rcell" id="railYds" style="border-radius:0">
+    <span class="k">Yards</span><span class="v num" id="hYds">458</span>
+  </div>
+  <div class="glass rcell" id="railPin" style="border-radius:0">
+    <span class="k">To pin</span><span class="v num" id="hPin">—</span>
+  </div>
+  <div class="glass rcell" id="railLie" style="border-radius:0">
+    <span class="k">Lie</span><span class="v" id="hLie">tee</span>
+  </div>
+  <div class="glass rcell" id="railStroke" style="border-radius:0">
+    <span class="k">Stroke</span><span class="v num" id="hStroke">1</span>
+  </div>
+  <div class="glass rcell" id="railScore" style="border-radius:0 var(--r) var(--r) 0">
+    <span class="k">Round</span><span class="v num" id="hTot">—</span>
+  </div>
+  <div id="railSpace"></div>
+</div>
+
+<!-- caddie -->
+<div class="glass" id="caddie">
+  <div class="lead"><span id="cadClub">—</span><span id="cadPct"></span></div>
+  <div id="cadDist"></div>
+  <div id="cadNote"></div>
+  <span id="lieChip">tee</span>
+</div>
+
+<!-- minimap -->
+<div class="glass" id="mini">
+  <canvas id="miniC"></canvas>
+  <div id="miniLbl">Hole map</div>
+</div>
+
+<!-- shots -->
+<div class="glass" id="shotsPanel">
+  <h4>This hole</h4>
+  <div id="shots"><div class="empty">No shots yet</div></div>
+</div>
+
+<!-- action bar -->
+<div class="glass" id="bar">
+  <div id="clubs"></div>
+  <div id="meterWrap">
+    <canvas id="meterC"></canvas>
+    <div id="meterHint">Space to swing</div>
+  </div>
+  <div id="acts">
+    <button class="btn" id="swing">Swing</button>
+    <button class="ghost" id="fly">Flyover</button>
+    <button class="ghost" id="viewBtn">Map</button>
+    <button class="ghost" id="zoneBtn">Zones</button>
+    <button class="ghost" id="cardBtn">Card</button>
+    <button class="ghost" id="restart">Restart</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div id="cardModal"><div class="glass" id="cardBox">
+  <h3>Scorecard</h3>
+  <div class="sub">Cog Hill No. 4 · Dubsdread</div>
+  <div id="cardTable"></div>
+  <button class="btn" id="cardClose">Close</button>
+</div></div>
+
+<div id="keys">
+  <b>space</b> swing · <b>A/D</b> aim · <b>[ ]</b> club<br>
+  <b>F</b> flyover · <b>V</b> view · <b>Z</b> zones · <b>S</b> card<br>
+  <b>N/P</b> hole · <b>R</b> restart
+</div>
+
+<div id="load">
+  <div id="lw">
+    <div id="lTitle">Cog Hill No. 4 · <em>Dubsdread</em></div>
+    <div id="lSub">18 holes · no GPU required</div>
+    <div id="lBar"><i></i></div>
+    <div id="loadMsg">Starting…</div>
+    <div id="lNote">
+      The course drawn in perspective from behind the ball, projected and shaded
+      in JavaScript. Same ball flight, caddie and putting as the WebGL build.
+    </div>
+    <div id="lWhy">
+      Sent here because this browser would not provide WebGL 2.
+      <a href='/?nogl=stay'>Why?</a>
+    </div>
+  </div>
+</div>
+
+<script src="course-data.js?v=959af5cef1"></script>
+<script src="branding.js?v=959af5cef1"></script>
+<script src="js/math.js?v=959af5cef1"></script>
+<script src="js/field.js?v=959af5cef1"></script>
+<script src="js/foliage.js?v=959af5cef1"></script>
+<script src="js/shot.js?v=959af5cef1"></script>
+<script src="poc/shot-poc.js?v=959af5cef1"></script>
+<script src="poc/soft3d.js?v=959af5cef1"></script>
+<script src="poc/flat.js?v=959af5cef1"></script>
+<script src="poc/play.js?v=959af5cef1"></script>
+</body>
+</html>
