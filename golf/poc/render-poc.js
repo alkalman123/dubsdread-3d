@@ -34,7 +34,9 @@
     /* clock */
     date: '2025-06-21',
     minutes: 17 * 60 + 30,       // local wall-clock minutes
-    tzOffset: -5,                // CDT
+    // the course's own clock: hours from UTC in summer (CDT is -5)
+    tzOffset: (root.COURSE && root.COURSE.meta && typeof root.COURSE.meta.tz === 'number')
+      ? root.COURSE.meta.tz : -5,
     turbidity: 2.4,
     cloudCover: 0.36,
     cloudAlt: 1500,
@@ -1256,7 +1258,34 @@
        there; the physics, the cup and everything else stay real size. */
     const c = this.canvas;
     const bs = c && c.clientHeight > c.clientWidth * 1.2 ? 1.5 : 1.0;
-    m[0] = m[5] = m[10] = bs;
+    /* Roll. On the ground the ball turns about the axis across its path by
+       exactly the distance it covered over its radius — what makes the line on
+       it tumble at the right rate as a putt dies. In the air it carries a
+       little of the backspin a struck ball has. */
+    const R3 = this._ballRot || (this._ballRot = [1, 0, 0, 0, 1, 0, 0, 0, 1]);
+    const lp = this._ballLast;
+    if (lp) {
+      const dx = b[0] - lp[0], dz = b[2] - lp[2], dist = Math.hypot(dx, dz);
+      if (dist > 1e-5 && dist < 3) {
+        const onGround = !this.field || b[1] - this.field.height(b[0], b[2]) < 0.03;
+        const ang = onGround ? dist / 0.0213 : Math.min(dist, 0.6) * 4;
+        const ax = dz / dist, az = -dx / dist;             // up x direction
+        const cs = Math.cos(ang), sn = Math.sin(ang), t = 1 - cs;
+        const Rm = [t * ax * ax + cs, -sn * az, t * ax * az,
+                    sn * az, cs, -sn * ax,
+                    t * ax * az, sn * ax, t * az * az + cs];
+        const o = new Array(9);
+        for (let r = 0; r < 3; r++) for (let k = 0; k < 3; k++) {
+          o[r * 3 + k] = Rm[r * 3] * R3[k] + Rm[r * 3 + 1] * R3[3 + k] + Rm[r * 3 + 2] * R3[6 + k];
+        }
+        for (let i = 0; i < 9; i++) R3[i] = o[i];
+      }
+    }
+    this._ballLast = b.slice();
+    // column-major mat4 from the row-major 3x3, scaled
+    m[0] = R3[0] * bs; m[1] = R3[3] * bs; m[2] = R3[6] * bs;
+    m[4] = R3[1] * bs; m[5] = R3[4] * bs; m[6] = R3[7] * bs;
+    m[8] = R3[2] * bs; m[9] = R3[5] * bs; m[10] = R3[8] * bs;
     m[12] = b[0]; m[13] = b[1] + 0.0213 * bs - bed; m[14] = b[2];
     /* In the hole. The roll ends two centimetres down, at the rim; from there
        the ball drops to the floor of the cup, quickly, the way it does. */

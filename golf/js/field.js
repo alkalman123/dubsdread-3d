@@ -424,6 +424,29 @@
     demSample(x, z) {
       const d = this.course.dem;
       if (!d) return 0;
+      /* Lidar courses carry a fine patch over every green (under a metre a
+         sample); inside one, read that instead of the property-wide grid. */
+      if (d.patches) {
+        for (const p of d.patches) {
+          if (x <= p.x0 || x >= p.x1 || z <= p.z0 || z >= p.z1) continue;
+          const u = (x - p.x0) / (p.x1 - p.x0) * (p.nx - 1);
+          const v = (z - p.z0) / (p.z1 - p.z0) * (p.nz - 1);
+          const i0 = Math.min(p.nx - 2, u | 0), j0 = Math.min(p.nz - 2, v | 0);
+          const fu = u - i0, fv = v - j0, h = p.h, w = p.nx;
+          const a = h[j0 * w + i0], b = h[j0 * w + i0 + 1];
+          const c = h[(j0 + 1) * w + i0], e = h[(j0 + 1) * w + i0 + 1];
+          // feather the patch into the coarse grid over its outer few metres
+          const edge = Math.min(x - p.x0, p.x1 - x, z - p.z0, p.z1 - z);
+          const fine = lerp(lerp(a, b, fu), lerp(c, e, fu), fv) - d.base;
+          if (edge >= 4) return fine;
+          return lerp(this.demCoarse(x, z), fine, edge / 4);
+        }
+      }
+      return this.demCoarse(x, z);
+    }
+
+    demCoarse(x, z) {
+      const d = this.course.dem;
       const n = d.n;
       // dem rows run north->south in world Z because Z = -north
       let u = (x - d.x0) / (d.x1 - d.x0) * (n - 1);
@@ -445,6 +468,10 @@
       //    noise runs at 30 m+ wavelengths, so evaluate on a coarse grid and
       //    bilinearly upsample — same result, a fraction of the work.
       const CS = 8;                       // coarse cells per fine cell
+      /* Invented relief is there to stand in for detail a 10 m grid cannot
+         hold. A lidar grid already has most of it, so add far less. */
+      const lidar = !!(this.course.dem && this.course.dem.lidar);
+      const rollAmt = lidar ? 0.25 : 1.0;
       const cn = Math.ceil(n / CS) + 1;
       const cBase = new Float32Array(cn * cn);
       const cRoll = new Float32Array(cn * cn);
@@ -454,8 +481,8 @@
           const x = this.x0 + i * CS * mpp;
           const k = j * cn + i;
           cBase[k] = this.demSample(x, z);
-          cRoll[k] = fbm(x * 0.0075, z * 0.0075, 4, 2.1, 0.5) * 1.35
-                   + fbm(x * 0.031, z * 0.031, 3, 2.3, 0.5) * 0.42;
+          cRoll[k] = (fbm(x * 0.0075, z * 0.0075, 4, 2.1, 0.5) * 1.35
+                   + fbm(x * 0.031, z * 0.031, 3, 2.3, 0.5) * 0.42) * rollAmt;
         }
       }
       const bil = (arr, u, v) => {
@@ -534,7 +561,10 @@
             const k = j * n + i;
             const rr = Math.hypot(x - cxp, z - czp) / rmax;
             let hh = h0 + (x - cxp) * tdx + (z - czp) * tdz;
-            if (pad.kind === 'green') {
+            if (pad.kind === 'green' && lidar) {
+              // the surveyed green: its real slopes, which is what a putt reads
+              hh = this.demSample(x, z);
+            } else if (pad.kind === 'green') {
               // gentle crown falling away to the edges + subtle internal contour
               hh += crown * (1 - clamp(rr, 0, 1) * clamp(rr, 0, 1));
               hh += fbm((x + wob) * 0.055, (z + wob) * 0.055, 3, 2.2, 0.5) * 0.34;
