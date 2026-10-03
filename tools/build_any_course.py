@@ -294,7 +294,12 @@ def build(cfg):
         for e in els:
             tg = e.get('tags', {})
             if not pred(tg): continue
-            for r in rings(e):
+            rs = rings(e)
+            if closed and e['type'] == 'relation':
+                # multipolygon members are open pieces: join them, and keep only
+                # what closes — a piece closed on its own cuts across the land
+                rs = [r for r in stitch(rs) if len(r) > 3 and r[0] == r[-1]]
+            for r in rs:
                 rr = ring_xz(r)
                 if closed and (len(rr) < 4 or poly_area(rr) < minarea): continue
                 if any(abs(x) < 1600 and abs(z) < 1600 for x, z in rr): out.append(rr)
@@ -359,6 +364,7 @@ def build(cfg):
                   outPar=sum(h['par'] for h in holes[:9]), inPar=sum(h['par'] for h in holes[9:]),
                   outYards=sum(h['yards'] for h in holes[:9]), inYards=sum(h['yards'] for h in holes[9:]),
                   rating=cfg.get('rating'), slope=cfg.get('slope'), tz=cfg.get('tz', -5),
+                  trees=cfg.get('trees', 1.0),
                   source='Geometry: © OpenStreetMap contributors (ODbL). Terrain: USGS 3D Elevation Program (lidar).'),
         origin=dict(lat0=LAT0, lon0=LON0, mlat=MLAT, mlon=MLON),
         holes=holes, ponds=rr(ponds), woods=rr(wood), buildings=rr(buildings),
@@ -396,6 +402,9 @@ def build(cfg):
                             h=[round(float(v), 2) for v in pg.flatten()]))
         time.sleep(0.5)
     out['dem']['patches'] = patches
+    # coastal: 'b' means the lowest ground in the survey (the sea or lake surface)
+    if cfg.get('sea') is not None:
+        out['meta']['seaLevel'] = round(base + 0.3 if cfg['sea'] == 'b' else cfg['sea'], 2)
     print('   terrain %.1f..%.1f m, %d green patches' % (g.min(), g.max(), len(patches)), flush=True)
 
     os.makedirs(OUT, exist_ok=True)

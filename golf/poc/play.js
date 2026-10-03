@@ -142,6 +142,18 @@
     return plan;
   };
 
+  /** Whether the hole, and a little of the stick, is inside the frame. */
+  App.pinInFrame = function (eye, look, pin) {
+    const c = this.canvas;
+    if (!c || !c.clientHeight) return true;
+    const half = this.effectiveFov(this.fovTarget || this.fov || 45, c.clientWidth / c.clientHeight) * 0.5;
+    const dx = look[0] - eye[0], dz = look[2] - eye[2];
+    const pitch = Math.atan2(look[1] - eye[1], Math.hypot(dx, dz));
+    const ph = Math.hypot(pin[0] - eye[0], pin[2] - eye[2]);
+    const pinPitch = Math.atan2(pin[1] + 0.6 - eye[1], Math.max(ph, 0.05));
+    return Math.tan(pinPitch - pitch) / Math.tan(half) < 0.88;
+  };
+
   const origUpdateCamera = App.updateCamera;
   App.updateCamera = function (dt) {
     const P = root.Play;
@@ -203,10 +215,19 @@
       const pin = this.pinPos();
       const a = P && P.state.active ? P.aim : Math.atan2(pin[2] - from[2], pin[0] - from[0]);
       const d = Math.hypot(pin[0] - from[0], pin[2] - from[2]);
-      const back = clamp(1.6 + d * 0.10, 1.8, 4.2);
-      const ex = from[0] - Math.cos(a) * back, ez = from[2] - Math.sin(a) * back;
-      const ey = g(ex, ez) + clamp(0.95 + d * 0.05, 1.0, 2.2);
-      eye = [ex, ey, ez];
+      /* Stand back far enough that the ball, kept clear of the controls, and
+         the hole are both in shot. Close behind the ball and looking down, a
+         small screen with a tall control bar can have room for only one of
+         them; each step back and up flattens the view until both fit. */
+      let back = clamp(1.6 + d * 0.10, 1.8, 4.2), up = clamp(0.95 + d * 0.05, 1.0, 2.2);
+      for (let tries = 0; tries < 6; tries++) {
+        const ex = from[0] - Math.cos(a) * back, ez = from[2] - Math.sin(a) * back;
+        eye = [ex, g(ex, ez) + up, ez];
+        const lk = [pin[0], pin[1] + 0.15, pin[2]];
+        this.keepInFrame(eye, lk, b);
+        if (this.pinInFrame(eye, lk, pin) || d < 0.6) break;
+        back *= 1.45; up *= 1.18;
+      }
       if (rolling) {
         // between the ball and the hole, weighted to the ball, so both stay in
         // shot and the eye is led to where it is going

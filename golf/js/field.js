@@ -377,6 +377,29 @@
       r = this._canvas();
       this._fillPolys(r.g, waterPolys);
       const covWa = this._coverage(r.g, 'wa');
+      /* The sea. OpenStreetMap draws a coast as a line, not as water, so on a
+         coastal course the ocean would be flat ground at the foot of the
+         cliffs. The lidar terrain puts the sea surface at sea level, so
+         anything at or below the course's sea level is water — for the
+         renderer and for the ball alike. */
+      const sea = this.course.meta && this.course.meta.seaLevel;
+      if (typeof sea === 'number' && this.course.dem) {
+        const base = this.course.dem.base, mpp0 = this.size / n;
+        // a band along every hole's line of play: the land a hole is played
+        // over is land, even where a coarse sample has it at the waterline
+        const rl = this._canvas();
+        this._strokePolys(rl.g, spines, 24);
+        const covLine = this._coverage(rl.g, 'line');
+        for (let j = 0; j < n; j++) {
+          const z = this.z0 + (j + 0.5) * mpp0;
+          for (let i = 0; i < n; i++) {
+            const k = j * n + i;
+            // the course itself is never the sea, whatever a coarse sample says
+            if (covFw[k] > 20 || covGr[k] > 20 || covSa[k] > 20 || covLine[k] > 20) continue;
+            if (this.demSample(this.x0 + (i + 0.5) * mpp0, z) + base <= sea) covWa[k] = 255;
+          }
+        }
+      }
 
       r = this._canvas();
       this._fillPolys(r.g, teePolys);
@@ -654,15 +677,26 @@
                     cx: (minx + maxx) / 2, cz: (minz + maxz) / 2,
                     r: Math.hypot(maxx - minx, maxz - minz) * 0.5 + 24 });
       }
+      /* The sea (see the coverage step in build): one surface at the
+         course's sea level over the whole field. The water shader clips it to
+         where the water map says there is water, and a pond keeps its own
+         level — the sea is only the answer where no pond is. */
+      const sea = this.course.meta && this.course.meta.seaLevel;
+      const seaLevel = typeof sea === 'number' && this.course.dem ? sea - this.course.dem.base : null;
+      if (seaLevel !== null) {
+        list.push({ minx: this.x0, maxx: this.x0 + this.size, minz: this.z0, maxz: this.z0 + this.size,
+                    level: seaLevel, cx: this.cx, cz: this.cz, r: 0, sea: true });
+      }
       return {
         list,
         sample(x, z) {
           let best = null, bd = 1e9;
           for (const p of list) {
+            if (p.sea) continue;
             const d = Math.hypot(x - p.cx, z - p.cz);
             if (d < p.r && d < bd) { bd = d; best = p; }
           }
-          return best ? best.level : null;
+          return best ? best.level : seaLevel;
         }
       };
     }

@@ -12,7 +12,9 @@
    36.5686,
    -121.9495
   ],
-  "nameRe": "pebble beach"
+  "nameRe": "pebble beach",
+  "trees": 0.3,
+  "sea": 1.25
  },
  {
   "id": "spyglass-hill",
@@ -27,7 +29,9 @@
    36.5838,
    -121.9535
   ],
-  "nameRe": "spyglass"
+  "nameRe": "spyglass",
+  "trees": 1.0,
+  "sea": 1.25
  },
  {
   "id": "torrey-pines-south",
@@ -38,7 +42,9 @@
   "course": "South Course",
   "city": "La Jolla, California",
   "tz": -7,
-  "blurb": "The city of San Diego’s clifftop course above the Pacific, a U.S. Open venue."
+  "blurb": "The city of San Diego’s clifftop course above the Pacific, a U.S. Open venue.",
+  "trees": 0.25,
+  "sea": 0.2
  },
  {
   "id": "bethpage-black",
@@ -79,7 +85,9 @@
   "course": "Chambers Bay",
   "city": "University Place, Washington",
   "tz": -7,
-  "blurb": "A fescue links in a former sand-and-gravel quarry on Puget Sound, by Robert Trent Jones Jr."
+  "blurb": "A fescue links in a former sand-and-gravel quarry on Puget Sound, by Robert Trent Jones Jr.",
+  "trees": 0.03,
+  "sea": -1.3
  },
  {
   "id": "whistling-straits",
@@ -94,7 +102,9 @@
    43.8505,
    -87.734
   ],
-  "nameRe": "straits"
+  "nameRe": "straits",
+  "trees": 0.02,
+  "sea": 177.08
  },
  {
   "id": "pinehurst-2",
@@ -116,7 +126,9 @@
   "course": "Harbour Town Golf Links",
   "city": "Hilton Head Island, South Carolina",
   "tz": -4,
-  "blurb": "Pete Dye and Jack Nicklaus, 1969: tight, tree-lined, and finishing at the lighthouse."
+  "blurb": "Pete Dye and Jack Nicklaus, 1969: tight, tree-lined, and finishing at the lighthouse.",
+  "trees": 1.0,
+  "sea": -1.3
  },
  {
   "id": "kiawah-ocean",
@@ -127,7 +139,9 @@
   "course": "The Ocean Course",
   "city": "Kiawah Island, South Carolina",
   "tz": -4,
-  "blurb": "Pete Dye’s course in the dunes along the Atlantic, exposed to the wind on every hole."
+  "blurb": "Pete Dye’s course in the dunes along the Atlantic, exposed to the wind on every hole.",
+  "trees": 0.03,
+  "sea": 0.1
  },
  {
   "id": "bandon-dunes",
@@ -164,7 +178,8 @@
   "course": "Erin Hills",
   "city": "Erin, Wisconsin",
   "tz": -5,
-  "blurb": "Glacial hills and fescue in the Kettle Moraine, a U.S. Open venue."
+  "blurb": "Glacial hills and fescue in the Kettle Moraine, a U.S. Open venue.",
+  "trees": 0.05
  },
  {
   "id": "harding-park",
@@ -187,6 +202,7 @@
   "city": "Lemont, Illinois",
   "tz": -5,
   "holeRef": "^\\s*(\\d+)\\s+No\\.2\\s*$",
-  "blurb": "The Ravines: Dubsdread’s neighbour, shorter and rolling."
+  "blurb": "The Ravines: Dubsdread’s neighbour, shorter and rolling.",
+  "trees": 1.0
  }
 ]
