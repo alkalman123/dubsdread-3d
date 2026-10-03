@@ -603,7 +603,8 @@
     },
 
     async boot() {
-      if (this.bounceIf3D()) return;
+      // No bounce to the WebGL build: this is the home page now, and the WebGL
+      // build lives at webgl.html for anyone who wants it.
       const msg = $('loadMsg');
       const bar = $('lBar').firstElementChild;
       let done = 0;
