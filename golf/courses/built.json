@@ -70,5 +70,41 @@
   "holes": 18,
   "tz": -5,
   "blurb": "The Ravines: Dubsdread\u2019s neighbour, shorter and rolling."
+ },
+ {
+  "id": "pebble-beach",
+  "file": "courses/pebble-beach.js",
+  "club": "Pebble Beach Golf Links",
+  "course": "Pebble Beach Golf Links",
+  "city": "Pebble Beach, California",
+  "par": 72,
+  "yards": 6956,
+  "holes": 18,
+  "tz": -7,
+  "blurb": "Jack Neville and Douglas Grant\u2019s 1919 links on the cliffs above Carmel Bay \u2014 the small greens of the 7th and the long 18th along the shore."
+ },
+ {
+  "id": "spyglass-hill",
+  "file": "courses/spyglass-hill.js",
+  "club": "Spyglass Hill Golf Course",
+  "course": "Spyglass Hill",
+  "city": "Pebble Beach, California",
+  "par": 72,
+  "yards": 6824,
+  "holes": 18,
+  "tz": -7,
+  "blurb": "Robert Trent Jones Sr., 1966: five holes in the sand dunes by the ocean, then up into the Del Monte Forest."
+ },
+ {
+  "id": "whistling-straits",
+  "file": "courses/whistling-straits.js",
+  "club": "Whistling Straits",
+  "course": "The Straits Course",
+  "city": "Haven, Wisconsin",
+  "par": 72,
+  "yards": 7347,
+  "holes": 18,
+  "tz": -5,
+  "blurb": "Pete Dye\u2019s shaped links along two miles of Lake Michigan shoreline, with bunkers beyond counting."
  }
 ]
