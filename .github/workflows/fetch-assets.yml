@@ -1,0 +1,29 @@
+name: Fetch CC0 asset catalogs (temporary)
+on:
+  push:
+    branches: [claude/golf-hole-poc-realistic-0lfn8x]
+    paths: ['.github/workflows/fetch-assets.yml']
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: claude/golf-hole-poc-realistic-0lfn8x }
+      - name: Catalogs
+        run: |
+          mkdir -p asset-catalog
+          curl -sfL 'https://api.polyhaven.com/assets?t=textures' -o asset-catalog/ph-textures.json
+          curl -sfL 'https://api.polyhaven.com/assets?t=hdris' -o asset-catalog/ph-hdris.json
+          for q in Grass Ground Gravel Sand LeafSet Bark Asphalt Foliage Leaf; do
+            curl -sfL "https://ambientcg.com/api/v2/full_json?type=Material&q=$q&limit=200&include=tagData,dimensionsData" -o asset-catalog/acg-$q.json || echo "acg $q failed"
+          done
+          ls -la asset-catalog
+      - name: Commit
+        run: |
+          git config user.name "asset-fetch"
+          git config user.email "actions@users.noreply.github.com"
+          git add asset-catalog
+          git commit -m "Asset catalogs for picking CC0 textures (temporary)" || exit 0
+          git push
