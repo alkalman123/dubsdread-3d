@@ -157,6 +157,8 @@
     const half = field.size / 2 - spacing;
     const cx = field.cx, cz = field.cz;
     const out = [];
+    const meta = (course && course.meta) || {};
+    const treeAmt = typeof meta.trees === 'number' ? meta.trees : 1;
 
     const nCells = Math.floor((half * 2) / spacing);
     for (let j = 0; j < nCells; j++) {
@@ -176,10 +178,12 @@
 
         // probability: right at the corridor edge trees are sparse specimens,
         // deeper out it becomes solid woodland
+        // how wooded the land around the holes is: parkland 1, a links almost
+        // none — woods actually mapped as woods stay woods either way
         let p = 0;
-        if (dCo > 3) p = clamp((dCo - 3) / 20, 0, 1) * 0.92;
+        if (dCo > 3) p = clamp((dCo - 3) / 20, 0, 1) * 0.92 * treeAmt;
+        if (dCo > 46) p = Math.max(p, 0.90 * treeAmt);
         p = Math.max(p, wood * 0.92 * (dCo > 2 ? 1 : 0));
-        if (dCo > 46) p = Math.max(p, 0.90);
         if (p <= 0.02 || R() > p) continue;
 
         const y = field.height(x, z);

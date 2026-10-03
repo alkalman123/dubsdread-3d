@@ -1,0 +1,208 @@
+[
+ {
+  "id": "pebble-beach",
+  "name": "Pebble Beach Golf Links",
+  "sub": "Pebble Beach Resorts",
+  "club": "Pebble Beach Golf Links",
+  "course": "Pebble Beach Golf Links",
+  "city": "Pebble Beach, California",
+  "tz": -7,
+  "blurb": "Jack Neville and Douglas Grant’s 1919 links on the cliffs above Carmel Bay — the small greens of the 7th and the long 18th along the shore.",
+  "near": [
+   36.5686,
+   -121.9495
+  ],
+  "nameRe": "pebble beach",
+  "trees": 0.3,
+  "sea": 1.25
+ },
+ {
+  "id": "spyglass-hill",
+  "name": "Spyglass Hill",
+  "sub": "Pebble Beach Resorts",
+  "club": "Spyglass Hill Golf Course",
+  "course": "Spyglass Hill",
+  "city": "Pebble Beach, California",
+  "tz": -7,
+  "blurb": "Robert Trent Jones Sr., 1966: five holes in the sand dunes by the ocean, then up into the Del Monte Forest.",
+  "near": [
+   36.5838,
+   -121.9535
+  ],
+  "nameRe": "spyglass",
+  "trees": 1.0,
+  "sea": 1.25
+ },
+ {
+  "id": "torrey-pines-south",
+  "query": "Torrey Pines South Course",
+  "name": "Torrey Pines South",
+  "sub": "Torrey Pines Golf Course",
+  "club": "Torrey Pines Golf Course",
+  "course": "South Course",
+  "city": "La Jolla, California",
+  "tz": -7,
+  "blurb": "The city of San Diego’s clifftop course above the Pacific, a U.S. Open venue.",
+  "trees": 0.25,
+  "sea": 0.2
+ },
+ {
+  "id": "bethpage-black",
+  "name": "Bethpage Black",
+  "sub": "Bethpage State Park",
+  "club": "Bethpage State Park",
+  "course": "Black Course",
+  "city": "Farmingdale, New York",
+  "tz": -4,
+  "blurb": "A.W. Tillinghast’s public-course brute; the sign at the first tee warns that it is recommended only for highly skilled golfers.",
+  "near": [
+   40.744,
+   -73.456
+  ],
+  "nameRe": "black"
+ },
+ {
+  "id": "tpc-sawgrass",
+  "name": "TPC Sawgrass Stadium",
+  "sub": "TPC Sawgrass",
+  "club": "TPC Sawgrass",
+  "course": "THE PLAYERS Stadium Course",
+  "city": "Ponte Vedra Beach, Florida",
+  "tz": -4,
+  "blurb": "Pete Dye’s 1980 stadium course, built for spectators — and for the island green at the 17th.",
+  "near": [
+   30.1975,
+   -81.3948
+  ],
+  "nameRe": "stadium|players"
+ },
+ {
+  "id": "chambers-bay",
+  "query": "Chambers Bay Golf Course",
+  "name": "Chambers Bay",
+  "sub": "Pierce County",
+  "club": "Chambers Bay",
+  "course": "Chambers Bay",
+  "city": "University Place, Washington",
+  "tz": -7,
+  "blurb": "A fescue links in a former sand-and-gravel quarry on Puget Sound, by Robert Trent Jones Jr.",
+  "trees": 0.03,
+  "sea": -1.3
+ },
+ {
+  "id": "whistling-straits",
+  "name": "Whistling Straits",
+  "sub": "The Straits Course",
+  "club": "Whistling Straits",
+  "course": "The Straits Course",
+  "city": "Haven, Wisconsin",
+  "tz": -5,
+  "blurb": "Pete Dye’s shaped links along two miles of Lake Michigan shoreline, with bunkers beyond counting.",
+  "near": [
+   43.8505,
+   -87.734
+  ],
+  "nameRe": "straits",
+  "trees": 0.02,
+  "sea": 177.08
+ },
+ {
+  "id": "pinehurst-2",
+  "query": "Pinehurst No. 2",
+  "name": "Pinehurst No. 2",
+  "sub": "Pinehurst Resort",
+  "club": "Pinehurst Resort",
+  "course": "No. 2",
+  "city": "Pinehurst, North Carolina",
+  "tz": -4,
+  "blurb": "Donald Ross’s crowned, turtle-backed greens and sandy waste areas."
+ },
+ {
+  "id": "harbour-town",
+  "query": "Harbour Town Golf Links",
+  "name": "Harbour Town Golf Links",
+  "sub": "Sea Pines Resort",
+  "club": "Sea Pines Resort",
+  "course": "Harbour Town Golf Links",
+  "city": "Hilton Head Island, South Carolina",
+  "tz": -4,
+  "blurb": "Pete Dye and Jack Nicklaus, 1969: tight, tree-lined, and finishing at the lighthouse.",
+  "trees": 1.0,
+  "sea": -1.3
+ },
+ {
+  "id": "kiawah-ocean",
+  "query": "Ocean Course Kiawah Island",
+  "name": "The Ocean Course",
+  "sub": "Kiawah Island Golf Resort",
+  "club": "Kiawah Island Golf Resort",
+  "course": "The Ocean Course",
+  "city": "Kiawah Island, South Carolina",
+  "tz": -4,
+  "blurb": "Pete Dye’s course in the dunes along the Atlantic, exposed to the wind on every hole.",
+  "trees": 0.03,
+  "sea": 0.1
+ },
+ {
+  "id": "bandon-dunes",
+  "query": "Bandon Dunes Golf Course",
+  "name": "Bandon Dunes",
+  "sub": "Bandon Dunes Golf Resort",
+  "club": "Bandon Dunes Golf Resort",
+  "course": "Bandon Dunes",
+  "city": "Bandon, Oregon",
+  "tz": -7,
+  "blurb": "David McLay Kidd’s 1999 links on the cliffs of the Oregon coast."
+ },
+ {
+  "id": "pacific-dunes",
+  "name": "Pacific Dunes",
+  "sub": "Bandon Dunes Golf Resort",
+  "club": "Bandon Dunes Golf Resort",
+  "course": "Pacific Dunes",
+  "city": "Bandon, Oregon",
+  "tz": -7,
+  "blurb": "Tom Doak’s routing through the dunes above the Pacific.",
+  "near": [
+   43.187,
+   -124.389
+  ],
+  "nameRe": "pacific"
+ },
+ {
+  "id": "erin-hills",
+  "query": "Erin Hills Golf Course",
+  "name": "Erin Hills",
+  "sub": "Erin Hills",
+  "club": "Erin Hills",
+  "course": "Erin Hills",
+  "city": "Erin, Wisconsin",
+  "tz": -5,
+  "blurb": "Glacial hills and fescue in the Kettle Moraine, a U.S. Open venue.",
+  "trees": 0.05
+ },
+ {
+  "id": "harding-park",
+  "query": "TPC Harding Park",
+  "name": "TPC Harding Park",
+  "sub": "City of San Francisco",
+  "club": "TPC Harding Park",
+  "course": "Harding Park",
+  "city": "San Francisco, California",
+  "tz": -7,
+  "blurb": "A municipal course wrapped around Lake Merced, lined with cypress."
+ },
+ {
+  "id": "cog-hill-2",
+  "query": "Cog Hill Golf Course",
+  "name": "Cog Hill No. 2",
+  "sub": "Cog Hill Golf & Country Club",
+  "club": "Cog Hill Golf & Country Club",
+  "course": "No. 2 — Ravines",
+  "city": "Lemont, Illinois",
+  "tz": -5,
+  "holeRef": "^\\s*(\\d+)\\s+No\\.2\\s*$",
+  "blurb": "The Ravines: Dubsdread’s neighbour, shorter and rolling.",
+  "trees": 1.0
+ }
+]

@@ -1485,7 +1485,21 @@ void main(){
                + uCloudFill * (0.45 + 0.55 * max(N.y, 0.0)) * ao
                + uGroundTint * 0.34 * (1.0 - N.y) * ao;
 
-  vec3 col = uBallTint * (uSunColor * diff * sh * 1.30 + ambient);
+  /* Markings, in the ball's own frame so they turn with it: the alignment
+     line players draw round the equator to aim a putt, and a small logo.
+     They are what makes a roll visible as a roll, rather than a white dot
+     sliding over the green. Faded out where they would be sub-pixel. */
+  float mk = 1.0 - smoothstep(4.0, 14.0, viewDist);
+  vec3 tint = uBallTint;
+  if (mk > 0.001){
+    float line = 1.0 - smoothstep(0.035, 0.055, abs(vObj.y));
+    line *= step(0.0, vObj.x) * (1.0 - smoothstep(0.55, 0.75, abs(vObj.z)));
+    float logo = 1.0 - smoothstep(0.16, 0.20, length(vObj.yz)) ;
+    logo *= step(0.0, -vObj.x);
+    tint = mix(tint, vec3(0.04, 0.04, 0.05), line * mk);
+    tint = mix(tint, vec3(0.05, 0.10, 0.32), logo * mk * 0.85);
+  }
+  vec3 col = tint * (uSunColor * diff * sh * 1.30 + ambient);
   col += uSunColor * spec * sh;
   // the cover is slightly translucent, which shows as a rim that never goes
   // fully dark on the shadow side

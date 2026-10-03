@@ -142,6 +142,18 @@
     return plan;
   };
 
+  /** Whether the hole, and a little of the stick, is inside the frame. */
+  App.pinInFrame = function (eye, look, pin) {
+    const c = this.canvas;
+    if (!c || !c.clientHeight) return true;
+    const half = this.effectiveFov(this.fovTarget || this.fov || 45, c.clientWidth / c.clientHeight) * 0.5;
+    const dx = look[0] - eye[0], dz = look[2] - eye[2];
+    const pitch = Math.atan2(look[1] - eye[1], Math.hypot(dx, dz));
+    const ph = Math.hypot(pin[0] - eye[0], pin[2] - eye[2]);
+    const pinPitch = Math.atan2(pin[1] + 0.6 - eye[1], Math.max(ph, 0.05));
+    return Math.tan(pinPitch - pitch) / Math.tan(half) < 0.88;
+  };
+
   const origUpdateCamera = App.updateCamera;
   App.updateCamera = function (dt) {
     const P = root.Play;
@@ -194,16 +206,40 @@
       /* Behind the ball on the line of the putt, looking at the hole — and,
          while the putt is rolling, staying behind the ball rather than behind
          where it started, so it cannot run out of the bottom of the frame. */
+      /* While the putt is rolling the camera stays where the player stood and
+         turns to watch the ball, the way you watch your own putt — it does not
+         chase it down the green. */
       const b = this.ballPos || (P && P.state.ballAt) || this.teePos();
+      const rolling = !!(P && P.pending && P.pending.kind === 'putt' && this.shot && this.shotAnim < 1);
+      const from = rolling && P.state.ballAt ? P.state.ballAt : b;
       const pin = this.pinPos();
-      const a = P && P.state.active ? P.aim : Math.atan2(pin[2] - b[2], pin[0] - b[0]);
-      const d = Math.hypot(pin[0] - b[0], pin[2] - b[2]);
-      const back = clamp(1.6 + d * 0.10, 1.8, 4.2);
-      const ex = b[0] - Math.cos(a) * back, ez = b[2] - Math.sin(a) * back;
-      const ey = g(ex, ez) + clamp(0.95 + d * 0.05, 1.0, 2.2);
-      eye = [ex, ey, ez];
-      look = [pin[0], pin[1] + 0.15, pin[2]];
-      if (d < 0.3) look = [b[0] + Math.cos(a) * 3, b[1], b[2] + Math.sin(a) * 3];
+      const a = P && P.state.active ? P.aim : Math.atan2(pin[2] - from[2], pin[0] - from[0]);
+      const d = Math.hypot(pin[0] - from[0], pin[2] - from[2]);
+      /* Stand back far enough that the ball, kept clear of the controls, and
+         the hole are both in shot. Close behind the ball and looking down, a
+         small screen with a tall control bar can have room for only one of
+         them; each step back and up flattens the view until both fit. */
+      let back = clamp(1.6 + d * 0.10, 1.8, 4.2), up = clamp(0.95 + d * 0.05, 1.0, 2.2);
+      for (let tries = 0; tries < 6; tries++) {
+        const ex = from[0] - Math.cos(a) * back, ez = from[2] - Math.sin(a) * back;
+        eye = [ex, g(ex, ez) + up, ez];
+        const lk = [pin[0], pin[1] + 0.15, pin[2]];
+        this.keepInFrame(eye, lk, b);
+        if (this.pinInFrame(eye, lk, pin) || d < 0.6) break;
+        back *= 1.45; up *= 1.18;
+      }
+      if (rolling) {
+        // between the ball and the hole, weighted to the ball, so both stay in
+        // shot and the eye is led to where it is going
+        look = [lerp(b[0], pin[0], 0.3), lerp(b[1], pin[1], 0.3) + 0.05, lerp(b[2], pin[2], 0.3)];
+        const went = Math.hypot(b[0] - from[0], b[2] - from[2]);
+        this.fovTarget = clamp(34 - went * 0.9, 20, 34);
+        snapK = 0.004;
+      } else {
+        look = [pin[0], pin[1] + 0.15, pin[2]];
+        if (d < 0.3) look = [b[0] + Math.cos(a) * 3, b[1], b[2] + Math.sin(a) * 3];
+        this.fovTarget = 34;
+      }
       this.keepInFrame(eye, look, b);
     } else if (this.camMode === 'follow') {
       // Chase camera: behind and above the ball, along the direction it is
@@ -242,6 +278,34 @@
 
   /* ------------------------------------------------------------ shot driver */
 
+  /**
+   * Move the ball along the shot.
+   *
+   * The shared version stepped from sample to sample and squeezed every shot
+   * into one to four seconds. For a full shot that pacing is a choice — a
+   * real drive hangs for six seconds and nobody wants to wait for it — but a
+   * putt is watched in real time, and a twenty-foot putt that dies into the
+   * hole in a second and a half looks wrong in a way everyone can see. So a
+   * putt runs on the simulation's own clock, and every shot glides between
+   * samples instead of jumping.
+   */
+  App.advanceShot = function (dt) {
+    const S = this.shot;
+    if (!S || this.shotAnim >= 1) return;
+    const dur = S.putt ? Math.max(0.3, S.putt.hangTime || 1)
+                       : clamp(S.stats.hangTime * 0.62 + 1.0, 1.4, 4.2);
+    this.shotAnim = clamp(this.shotAnim + dt / dur, 0, 1);
+    const pts = S._pts || (S._pts = (S.path || []).concat(S.roll || []));
+    if (pts.length) {
+      const f = this.shotAnim * (pts.length - 1);
+      const i = Math.min(pts.length - 1, Math.floor(f)), j = Math.min(pts.length - 1, i + 1);
+      const t = f - i, a = pts[i], b = pts[j];
+      this.ballPos = [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+    }
+    if (this.shotAnim >= 1) this.ballPos = S.finalPoint;
+    if (root.UI && root.UI.onShotProgress) root.UI.onShotProgress(this.shotAnim);
+  };
+
   App.playShotPoc = function (opts) {
     if (this.loading) return null;
     const res = SP.simulate(opts);
@@ -255,6 +319,18 @@
   App.playPutt = function (opts) {
     if (this.loading) return null;
     const res = SP.putt(opts);
+    /* A holed putt's path ends with the point in the cup and then, because the
+       simulation appends where it stopped, the rim again — so the ball dropped
+       in and popped back out before the hole was scored. End it in the cup. */
+    if (res.holed && res.path.length > 3) {
+      res.path.pop();                     // the rim, appended after the loop
+      res.path.pop();                     // the centre, at rim height
+      const pin = opts.pin, last = res.path[res.path.length - 1];
+      const dx = last[0] - pin[0], dz = last[2] - pin[2], dl = Math.hypot(dx, dz) || 1;
+      const off = Math.min(dl, 0.02);
+      res.finalPoint = [pin[0] + dx / dl * off, pin[1] - 0.075, pin[2] + dz / dl * off];
+      res.path.push([pin[0] + dx / dl * 0.035, pin[1] - 0.02, pin[2] + dz / dl * 0.035]);
+    }
     // reuse the tracer ribbon for the roll, so the line the ball took is visible
     this.shot = {
       path: res.path, roll: [res.finalPoint],
@@ -1053,7 +1129,15 @@
         };
         this.round.complete = this.roundTotals().complete;
       }
-      App.setCamera('green', false);
+      /* Holed with the putter: stay on the putting view long enough to see it
+         drop and hear the cup, then go to the green. */
+      const last = this.state.shots[this.state.shots.length - 1];
+      if (last && last.club === 'Putter') {
+        const hole = App.hole;
+        setTimeout(() => { if (this.state.holed && App.hole === hole) App.setCamera('green', false); }, 1900);
+      } else {
+        App.setCamera('green', false);
+      }
       this.notify();
     },
 

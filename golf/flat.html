@@ -292,6 +292,7 @@
       <button class="ghost" id="zoneBtn">Zones</button>
       <button class="ghost" id="cardBtn">Card</button>
       <button class="ghost" id="restart">Restart</button>
+      <a class="ghost" href="./" style="text-decoration:none;text-align:center">Courses</a>
     </div>
   </div>
 </div>
@@ -328,7 +329,9 @@
   </div>
 </div>
 
-<script src="course-data.js"></script>
+<script src="courses/index.js"></script>
+<script src="js/course-loader.js"></script>
+<script src="js/course-ui.js"></script>
 <script src="branding.js"></script>
 <script src="js/math.js"></script>
 <script src="js/field.js"></script>
@@ -338,5 +341,7 @@
 <script src="poc/soft3d.js"></script>
 <script src="poc/flat.js"></script>
 <script src="poc/play.js"></script>
+<script src="poc/save-poc.js"></script>
+<script>if ('serviceWorker' in navigator) addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });</script>
 </body>
 </html>

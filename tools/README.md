@@ -43,3 +43,32 @@ check the yardages against the published card before shipping.
 For a single-course club the refs are usually just `"1"`, `"2"`, … so `HOLE_RE` and
 the `courses` grouping need adjusting, and `PUBLISHED` should be replaced with that
 club's scorecard. Everything downstream is course-agnostic.
+
+# Building other courses (any well-mapped U.S. course)
+
+`build_any_course.py` generalises the steps above. List the course in
+`courses.json` — by search name (`query`), by location (`near` + `nameRe`), or by
+OSM id (`osm`: `"way/123"`) — then:
+
+    pip install numpy tifffile imagecodecs pillow
+    python build_any_course.py <id> [<id> ...]     # writes ../golf/courses/<id>.js
+    python course_thumb.py ../golf/courses/<id>.js # the picker's map thumbnail
+    python update_index.py                         # adds it to golf/courses/index.js
+
+What it does:
+
+- Finds the course outline (`leisure=golf_course`) with Nominatim, and pulls
+  everything around it from the OSM API (`osm_fetch.py`) — no Overpass needed.
+- Keeps the `golf=hole` ways inside the outline whose `ref` is a number
+  (`holeRef` overrides the pattern), needs all 18, and refuses a property where
+  two courses inside one outline share hole numbers.
+- Pulls USGS 3DEP elevation from The National Map's image service: one grid over
+  the property, plus a sub-metre patch over every green. 3DEP is lidar-derived
+  wherever it has been flown, so the greens carry their surveyed contours and the
+  game uses them as-is (see `Field.demSample` and `buildHeight`).
+- Leaves `natural=scrub` out of the woods: on a links it is fescue and dune.
+
+Courses that would not build from the public data at the time of writing:
+Bethpage Black, TPC Sawgrass and Pacific Dunes (no separately named outline),
+Pinehurst No. 2 (holes without numbers), Bandon Dunes and TPC Harding Park
+(two courses inside one outline).

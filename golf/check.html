@@ -80,13 +80,13 @@
   head('deployed build');
   try {
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'index.html?cachebust=' + Date.now(), false);
+    xhr.open('GET', 'play.html?cachebust=' + Date.now(), false);
     xhr.send(null);
     var m = /src="[^"]*\?v=([0-9a-f]+)"/.exec(xhr.responseText || '');
-    if (m) put('  index.html build id: ' + m[1]);
-    else warn('index.html has no build id — it predates the versioned build');
+    if (m) put('  play.html build id: ' + m[1]);
+    else warn('play.html has no build id — it predates the versioned build');
     put('  this file expects:   ' + ('959af5cef1' || '(any)'));
-  } catch (e) { warn('could not read index.html: ' + ((e && e.message) || e)); }
+  } catch (e) { warn('could not read play.html: ' + ((e && e.message) || e)); }
 
   /* ---------------------------------------------------------- context */
   head('WebGL 2 context');

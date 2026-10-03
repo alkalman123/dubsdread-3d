@@ -1,0 +1,110 @@
+[
+ {
+  "id": "torrey-pines-south",
+  "file": "courses/torrey-pines-south.js",
+  "club": "Torrey Pines Golf Course",
+  "course": "South Course",
+  "city": "La Jolla, California",
+  "par": 72,
+  "yards": 7735,
+  "holes": 18,
+  "tz": -7,
+  "blurb": "The city of San Diego\u2019s clifftop course above the Pacific, a U.S. Open venue."
+ },
+ {
+  "id": "chambers-bay",
+  "file": "courses/chambers-bay.js",
+  "club": "Chambers Bay",
+  "course": "Chambers Bay",
+  "city": "University Place, Washington",
+  "par": 72,
+  "yards": 7542,
+  "holes": 18,
+  "tz": -7,
+  "blurb": "A fescue links in a former sand-and-gravel quarry on Puget Sound, by Robert Trent Jones Jr."
+ },
+ {
+  "id": "harbour-town",
+  "file": "courses/harbour-town.js",
+  "club": "Sea Pines Resort",
+  "course": "Harbour Town Golf Links",
+  "city": "Hilton Head Island, South Carolina",
+  "par": 71,
+  "yards": 6592,
+  "holes": 18,
+  "tz": -4,
+  "blurb": "Pete Dye and Jack Nicklaus, 1969: tight, tree-lined, and finishing at the lighthouse."
+ },
+ {
+  "id": "kiawah-ocean",
+  "file": "courses/kiawah-ocean.js",
+  "club": "Kiawah Island Golf Resort",
+  "course": "The Ocean Course",
+  "city": "Kiawah Island, South Carolina",
+  "par": 72,
+  "yards": 7406,
+  "holes": 18,
+  "tz": -4,
+  "blurb": "Pete Dye\u2019s course in the dunes along the Atlantic, exposed to the wind on every hole."
+ },
+ {
+  "id": "erin-hills",
+  "file": "courses/erin-hills.js",
+  "club": "Erin Hills",
+  "course": "Erin Hills",
+  "city": "Erin, Wisconsin",
+  "par": 72,
+  "yards": 7646,
+  "holes": 18,
+  "tz": -5,
+  "blurb": "Glacial hills and fescue in the Kettle Moraine, a U.S. Open venue."
+ },
+ {
+  "id": "cog-hill-2",
+  "file": "courses/cog-hill-2.js",
+  "club": "Cog Hill Golf & Country Club",
+  "course": "No. 2 \u2014 Ravines",
+  "city": "Lemont, Illinois",
+  "par": 72,
+  "yards": 6548,
+  "holes": 18,
+  "tz": -5,
+  "blurb": "The Ravines: Dubsdread\u2019s neighbour, shorter and rolling."
+ },
+ {
+  "id": "pebble-beach",
+  "file": "courses/pebble-beach.js",
+  "club": "Pebble Beach Golf Links",
+  "course": "Pebble Beach Golf Links",
+  "city": "Pebble Beach, California",
+  "par": 72,
+  "yards": 6956,
+  "holes": 18,
+  "tz": -7,
+  "blurb": "Jack Neville and Douglas Grant\u2019s 1919 links on the cliffs above Carmel Bay \u2014 the small greens of the 7th and the long 18th along the shore."
+ },
+ {
+  "id": "spyglass-hill",
+  "file": "courses/spyglass-hill.js",
+  "club": "Spyglass Hill Golf Course",
+  "course": "Spyglass Hill",
+  "city": "Pebble Beach, California",
+  "par": 72,
+  "yards": 6824,
+  "holes": 18,
+  "tz": -7,
+  "blurb": "Robert Trent Jones Sr., 1966: five holes in the sand dunes by the ocean, then up into the Del Monte Forest."
+ },
+ {
+  "id": "whistling-straits",
+  "file": "courses/whistling-straits.js",
+  "club": "Whistling Straits",
+  "course": "The Straits Course",
+  "city": "Haven, Wisconsin",
+  "par": 72,
+  "yards": 7347,
+  "holes": 18,
+  "tz": -5,
+  "blurb": "Pete Dye\u2019s shaped links along two miles of Lake Michigan shoreline, with bunkers beyond counting."
+ }
+]

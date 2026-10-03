@@ -132,7 +132,9 @@
     advanceShot(dt) {
       if (!this.shot || this.shotAnim >= 1) return;
       const hang = Math.max(0.4, (this.shot.stats && this.shot.stats.hangTime) || 1.2);
-      this.shotAnim = Math.min(1, this.shotAnim + dt / (hang * 0.8 + 0.9));
+      // a putt rolls in real time; a full shot keeps the brisker pacing
+      const dur = this.shot.putt ? Math.max(0.3, this.shot.putt.hangTime || 1) : hang * 0.8 + 0.9;
+      this.shotAnim = Math.min(1, this.shotAnim + dt / dur);
       const pts = this.tracerPts;
       if (!pts) { this.ballPos = this.shot.finalPoint; return; }
       const f = this.shotAnim * (pts.length - 1);
@@ -697,6 +699,7 @@
       root.UI = this;                       // Play notifies through UI
       this.resize();
       root.Play.init();
+      if (root.Save) root.Save.afterInit();
       this.newHoleView();
       this.bind();
       const H = App.holeData;

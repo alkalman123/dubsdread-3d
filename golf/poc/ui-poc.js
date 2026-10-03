@@ -104,9 +104,11 @@
          else gets shadows, occlusion and HDR light. */
       const phone = matchMedia('(pointer: coarse)').matches &&
                     Math.min(screen.width, screen.height) < 820;
-      App.quality = App.TIERS && App.TIERS[p.get('q')] ? p.get('q')
-                  : phone ? 'mobile' : 'fast';
-      this.qPinned = !!(App.TIERS && App.TIERS[p.get('q')]);
+      const qSet = root.Save ? root.Save.settings().quality : 'auto';
+      const qWant = App.TIERS && App.TIERS[p.get('q')] ? p.get('q')
+                  : App.TIERS && App.TIERS[qSet] ? qSet : null;
+      App.quality = qWant || (phone ? 'mobile' : 'fast');
+      this.qPinned = !!qWant;
       /* The tier owns which passes run. Applying it here rather than only when
          the tier changes is what makes the choice mean anything on the first
          frame — which is the frame that decides whether the driver survives. */
@@ -157,7 +159,8 @@
           '</div></div>');
       }
 
-      App.profile = 'tour';
+      const ST = root.Save ? root.Save.settings() : { profile: 'tour' };
+      App.profile = ST.profile || 'tour';
       App.teeSet = this.deepTee;
       if (this.deepHole !== App.hole) {
         // the engine booted on hole 1; walk to the requested one before the
@@ -165,6 +168,7 @@
         await App.loadHoleAsync(this.deepHole, false, null);
       }
       Play.init();
+      if (root.Save) root.Save.afterInit();
 
       this.buildCamBar();
       this.buildStrip();
@@ -244,6 +248,7 @@
     syncUrl() {
       try {
         const u = new URL(location.href);
+        if (root.COURSE_ID) u.searchParams.set('course', root.COURSE_ID);
         u.searchParams.set('hole', App.hole);
         u.searchParams.set('tee', App.teeSet);
         history.replaceState(null, '', u);
@@ -942,7 +947,14 @@
       this.draw();
       this.refreshStrip();
 
-      if (st.holed) this.showCard();
+      // a beat to watch it drop before the card comes up
+      if (st.holed && !$('done').classList.contains('on') && !this._cardT) {
+        const hole = App.hole;
+        this._cardT = setTimeout(() => {
+          this._cardT = null;
+          if (Play.state.holed && App.hole === hole) this.showCard();
+        }, 1700);
+      }
     },
 
     showCaddie() {

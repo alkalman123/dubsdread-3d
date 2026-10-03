@@ -377,6 +377,29 @@
       r = this._canvas();
       this._fillPolys(r.g, waterPolys);
       const covWa = this._coverage(r.g, 'wa');
+      /* The sea. OpenStreetMap draws a coast as a line, not as water, so on a
+         coastal course the ocean would be flat ground at the foot of the
+         cliffs. The lidar terrain puts the sea surface at sea level, so
+         anything at or below the course's sea level is water — for the
+         renderer and for the ball alike. */
+      const sea = this.course.meta && this.course.meta.seaLevel;
+      if (typeof sea === 'number' && this.course.dem) {
+        const base = this.course.dem.base, mpp0 = this.size / n;
+        // a band along every hole's line of play: the land a hole is played
+        // over is land, even where a coarse sample has it at the waterline
+        const rl = this._canvas();
+        this._strokePolys(rl.g, spines, 24);
+        const covLine = this._coverage(rl.g, 'line');
+        for (let j = 0; j < n; j++) {
+          const z = this.z0 + (j + 0.5) * mpp0;
+          for (let i = 0; i < n; i++) {
+            const k = j * n + i;
+            // the course itself is never the sea, whatever a coarse sample says
+            if (covFw[k] > 20 || covGr[k] > 20 || covSa[k] > 20 || covLine[k] > 20) continue;
+            if (this.demSample(this.x0 + (i + 0.5) * mpp0, z) + base <= sea) covWa[k] = 255;
+          }
+        }
+      }
 
       r = this._canvas();
       this._fillPolys(r.g, teePolys);
@@ -424,6 +447,29 @@
     demSample(x, z) {
       const d = this.course.dem;
       if (!d) return 0;
+      /* Lidar courses carry a fine patch over every green (under a metre a
+         sample); inside one, read that instead of the property-wide grid. */
+      if (d.patches) {
+        for (const p of d.patches) {
+          if (x <= p.x0 || x >= p.x1 || z <= p.z0 || z >= p.z1) continue;
+          const u = (x - p.x0) / (p.x1 - p.x0) * (p.nx - 1);
+          const v = (z - p.z0) / (p.z1 - p.z0) * (p.nz - 1);
+          const i0 = Math.min(p.nx - 2, u | 0), j0 = Math.min(p.nz - 2, v | 0);
+          const fu = u - i0, fv = v - j0, h = p.h, w = p.nx;
+          const a = h[j0 * w + i0], b = h[j0 * w + i0 + 1];
+          const c = h[(j0 + 1) * w + i0], e = h[(j0 + 1) * w + i0 + 1];
+          // feather the patch into the coarse grid over its outer few metres
+          const edge = Math.min(x - p.x0, p.x1 - x, z - p.z0, p.z1 - z);
+          const fine = lerp(lerp(a, b, fu), lerp(c, e, fu), fv) - d.base;
+          if (edge >= 4) return fine;
+          return lerp(this.demCoarse(x, z), fine, edge / 4);
+        }
+      }
+      return this.demCoarse(x, z);
+    }
+
+    demCoarse(x, z) {
+      const d = this.course.dem;
       const n = d.n;
       // dem rows run north->south in world Z because Z = -north
       let u = (x - d.x0) / (d.x1 - d.x0) * (n - 1);
@@ -445,6 +491,10 @@
       //    noise runs at 30 m+ wavelengths, so evaluate on a coarse grid and
       //    bilinearly upsample — same result, a fraction of the work.
       const CS = 8;                       // coarse cells per fine cell
+      /* Invented relief is there to stand in for detail a 10 m grid cannot
+         hold. A lidar grid already has most of it, so add far less. */
+      const lidar = !!(this.course.dem && this.course.dem.lidar);
+      const rollAmt = lidar ? 0.25 : 1.0;
       const cn = Math.ceil(n / CS) + 1;
       const cBase = new Float32Array(cn * cn);
       const cRoll = new Float32Array(cn * cn);
@@ -454,8 +504,8 @@
           const x = this.x0 + i * CS * mpp;
           const k = j * cn + i;
           cBase[k] = this.demSample(x, z);
-          cRoll[k] = fbm(x * 0.0075, z * 0.0075, 4, 2.1, 0.5) * 1.35
-                   + fbm(x * 0.031, z * 0.031, 3, 2.3, 0.5) * 0.42;
+          cRoll[k] = (fbm(x * 0.0075, z * 0.0075, 4, 2.1, 0.5) * 1.35
+                   + fbm(x * 0.031, z * 0.031, 3, 2.3, 0.5) * 0.42) * rollAmt;
         }
       }
       const bil = (arr, u, v) => {
@@ -534,7 +584,10 @@
             const k = j * n + i;
             const rr = Math.hypot(x - cxp, z - czp) / rmax;
             let hh = h0 + (x - cxp) * tdx + (z - czp) * tdz;
-            if (pad.kind === 'green') {
+            if (pad.kind === 'green' && lidar) {
+              // the surveyed green: its real slopes, which is what a putt reads
+              hh = this.demSample(x, z);
+            } else if (pad.kind === 'green') {
               // gentle crown falling away to the edges + subtle internal contour
               hh += crown * (1 - clamp(rr, 0, 1) * clamp(rr, 0, 1));
               hh += fbm((x + wob) * 0.055, (z + wob) * 0.055, 3, 2.2, 0.5) * 0.34;
@@ -624,15 +677,26 @@
                     cx: (minx + maxx) / 2, cz: (minz + maxz) / 2,
                     r: Math.hypot(maxx - minx, maxz - minz) * 0.5 + 24 });
       }
+      /* The sea (see the coverage step in build): one surface at the
+         course's sea level over the whole field. The water shader clips it to
+         where the water map says there is water, and a pond keeps its own
+         level — the sea is only the answer where no pond is. */
+      const sea = this.course.meta && this.course.meta.seaLevel;
+      const seaLevel = typeof sea === 'number' && this.course.dem ? sea - this.course.dem.base : null;
+      if (seaLevel !== null) {
+        list.push({ minx: this.x0, maxx: this.x0 + this.size, minz: this.z0, maxz: this.z0 + this.size,
+                    level: seaLevel, cx: this.cx, cz: this.cz, r: 0, sea: true });
+      }
       return {
         list,
         sample(x, z) {
           let best = null, bd = 1e9;
           for (const p of list) {
+            if (p.sea) continue;
             const d = Math.hypot(x - p.cx, z - p.cz);
             if (d < p.r && d < bd) { bd = d; best = p; }
           }
-          return best ? best.level : null;
+          return best ? best.level : seaLevel;
         }
       };
     }

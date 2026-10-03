@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<title>Dubsdread — Cog Hill No. 4</title>
-<!-- Add to Home Screen on an iPhone opens this full screen, like an app -->
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Dubsdread Golf</title>
+<meta name="description" content="Real golf courses in 3D, in your browser. Courses built from OpenStreetMap and USGS lidar terrain.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,605 +14,353 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="manifest" href="manifest.json">
+<script>
+  /* Old links went straight into a round (index.html?hole=7…). Keep them working. */
+  (function () {
+    var q = new URLSearchParams(location.search);
+    if (['hole', 'tee', 'course', 'q', 'sky', 'resume', 't', 'cam', 'safe'].some(function (k) { return q.has(k); })) {
+      location.replace('play.html' + location.search);
+    }
+  })();
+</script>
 <style>
   :root{
-    --gold:#c9a227; --gold-dim:#907418;
-    --panel:rgba(12,16,15,.80); --panel-solid:#0d1211;
-    --line:rgba(255,255,255,.09);
-    --ink:#e8eae4; --dim:#9aa39a; --faint:#6d766e;
-    --good:#7fc46a; --warn:#e0a83c; --bad:#d1584f;
+    --bg:#080b0a; --bg2:#0e1412; --card:#121a17; --card2:#17211d;
+    --ink:#eef1ea; --dim:#a7b1a6; --faint:#6f7a71; --line:rgba(255,255,255,.09);
+    --gold:#d4ad35; --gold2:#b38f22; --good:#7fc46a; --bad:#e2685c;
+    --r:16px;
   }
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%;overflow:hidden;background:#080b0a;color:var(--ink);
-    font:13px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-    -webkit-font-smoothing:antialiased}
-  #gl{position:fixed;inset:0;width:100vw;height:100vh;display:block;touch-action:none;cursor:crosshair}
-  #gl.dragging{cursor:grabbing}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  a{color:inherit}
+  button,select{font:inherit;color:inherit}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 18px}
 
-  /* ------------------------------------------------------------- chrome */
-  .hud{position:fixed;inset:0;pointer-events:none;z-index:2}
-  .hud > *{pointer-events:auto}
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:11px;
-    backdrop-filter:blur(14px) saturate(1.2);box-shadow:0 14px 40px rgba(0,0,0,.42)}
-  .ph{display:flex;align-items:center;justify-content:space-between;gap:8px;
-    padding:8px 12px;border-bottom:1px solid var(--line);
-    font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
-  .ph b{color:var(--gold);font-weight:600;letter-spacing:.14em}
-  .pb{padding:10px 12px}
+  /* header */
+  header{position:relative;overflow:hidden;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 70% -10%,rgba(212,173,53,.12),transparent 60%),
+               linear-gradient(180deg,#0d1512,#080b0a)}
+  .top{display:flex;align-items:center;gap:12px;padding:18px 0 6px}
+  .crest{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--gold);display:grid;place-items:center;
+    color:var(--gold);font-weight:700;letter-spacing:.04em;flex:none}
+  .brand{font-weight:700;font-size:18px;letter-spacing:.01em}
+  .brand em{color:var(--gold);font-style:normal}
+  .tag{color:var(--faint);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+  .hero{padding:22px 0 28px}
+  .hero h1{margin:0 0 6px;font-size:clamp(26px,5vw,40px);line-height:1.12;letter-spacing:-.015em;font-weight:700}
+  .hero p{margin:0;color:var(--dim);max-width:640px}
 
-  /* left column */
-  #left{position:fixed;left:14px;top:14px;bottom:14px;width:288px;display:flex;
-    flex-direction:column;gap:10px;z-index:3;pointer-events:none;overflow:hidden}
-  #left > *{pointer-events:auto}
+  /* continue */
+  #cont{display:none;margin:18px 0 0;padding:14px 16px;border-radius:var(--r);
+    background:linear-gradient(135deg,rgba(212,173,53,.16),rgba(212,173,53,.04));border:1px solid rgba(212,173,53,.35)}
+  #cont.on{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  #cont .t{flex:1;min-width:200px}
+  #cont .k{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+  #cont b{font-size:17px}
+  #cont .s{color:var(--dim);font-size:13px}
 
-  #brand{display:flex;align-items:center;gap:10px;padding:9px 12px}
-  #crest{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--gold);
-    display:grid;place-items:center;font-size:11px;letter-spacing:.06em;color:var(--gold);flex:none}
-  #brand .t{font-size:13px;font-weight:600;letter-spacing:.02em}
-  #brand .t em{color:var(--gold);font-style:normal}
-  #brand .s{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
+  /* sections */
+  section{padding:26px 0 6px}
+  h2{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);margin:0 0 14px;font-weight:600}
 
-  #card .pb{display:flex;gap:12px;align-items:flex-start}
-  #hNum{font-size:40px;line-height:.92;font-weight:300;color:var(--gold);font-variant-numeric:tabular-nums}
-  #hMeta{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint)}
-  #hYds{font-size:21px;font-weight:300}
-  #hYds span{font-size:11px;color:var(--dim)}
-  #hDesc{padding:0 12px 10px;font-size:11.5px;color:var(--dim);line-height:1.5}
+  /* course cards */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px}
+  .course{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
+    display:flex;flex-direction:column}
+  .thumb{position:relative;aspect-ratio:18/11;background:#0f1713 center/cover no-repeat}
+  .thumb .nm{position:absolute;left:0;right:0;bottom:0;padding:26px 14px 10px;
+    background:linear-gradient(transparent,rgba(5,8,7,.88))}
+  .thumb .nm b{display:block;font-size:20px;letter-spacing:-.01em;line-height:1.15}
+  .thumb .nm span{font-size:12.5px;color:var(--dim)}
+  .best{position:absolute;right:10px;top:10px;padding:3px 9px;border-radius:20px;font-size:11.5px;
+    background:rgba(8,11,10,.75);border:1px solid var(--line);color:var(--gold)}
+  .body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:10px;flex:1}
+  .facts{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--dim)}
+  .facts b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .blurb{font-size:13px;color:var(--dim);margin:0;flex:1}
+  .row{display:flex;gap:8px;align-items:center}
+  select{background:#0c1210;border:1px solid var(--line);border-radius:10px;padding:10px 10px;font-size:15px;flex:1;min-width:0}
+  .btn{border:0;border-radius:11px;padding:11px 18px;font-weight:700;letter-spacing:.02em;cursor:pointer;
+    background:linear-gradient(var(--gold),var(--gold2));color:#1a1508;white-space:nowrap;text-decoration:none;
+    display:inline-block;text-align:center}
+  .btn:active{transform:translateY(1px)}
+  .ghost{border:1px solid var(--line);border-radius:11px;padding:10px 14px;background:rgba(255,255,255,.04);
+    color:var(--dim);cursor:pointer}
+  .src{font-size:11px;color:var(--faint)}
 
-  #mapWrap{position:relative}
-  #map,#book{display:block;width:100%;height:186px;border-radius:0 0 10px 10px}
-  #book{display:none}
-  #mapTabs{display:flex;gap:0}
-  #mapTabs button{flex:1;background:none;border:0;border-bottom:1px solid var(--line);
-    color:var(--faint);font:inherit;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
-    padding:7px 4px;cursor:pointer}
-  #mapTabs button.on{color:var(--gold);border-bottom-color:var(--gold)}
+  /* rounds */
+  #rounds .r{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:10px 14px;
+    background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:8px}
+  #rounds .r .c{font-weight:600}
+  #rounds .r .d{font-size:12px;color:var(--faint)}
+  #rounds .r .g{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+  #rounds .r .p{font-size:13px;font-variant-numeric:tabular-nums;min-width:44px;text-align:right}
+  .under{color:var(--good)} .over{color:var(--bad)}
+  .empty{color:var(--faint);font-size:14px}
 
-  #shots{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin}
-  #shots table{width:100%;border-collapse:collapse;font-size:11px}
-  #shots td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
-  #shots td.n{color:var(--gold);width:16px;font-variant-numeric:tabular-nums}
-  #shots td.d{color:var(--dim);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
-  #shots .note{color:var(--faint);font-size:10px}
+  /* settings */
+  .set{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+  .set label{display:flex;flex-direction:column;gap:6px;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:12px 14px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .set .hint{text-transform:none;letter-spacing:0;font-size:12px;color:var(--faint)}
 
-  /* right column */
-  #right{position:fixed;right:14px;top:14px;bottom:14px;width:296px;display:flex;
-    flex-direction:column;gap:10px;z-index:3;pointer-events:none;overflow-y:auto;
-    scrollbar-width:thin}
-  #right > *{pointer-events:auto;flex:none}
+  details{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:8px}
+  summary{cursor:pointer;font-weight:600}
+  details p,details li{color:var(--dim);font-size:14px}
+  details ul{padding-left:18px;margin:8px 0}
 
-  .row{display:flex;align-items:center;justify-content:space-between;gap:8px;
-    padding:4px 0;font-size:12px}
-  .row .k{color:var(--dim);font-size:11px}
-  .row .v{font-variant-numeric:tabular-nums}
-  .big{font-size:23px;font-weight:300;font-variant-numeric:tabular-nums;line-height:1.1}
-  .big small{font-size:11px;color:var(--dim);font-weight:400}
-  hr.sep{border:0;border-top:1px solid var(--line);margin:8px -12px}
+  #install{display:none;margin-top:14px;font-size:13px;color:var(--dim);padding:10px 14px;border-radius:12px;
+    border:1px dashed var(--line)}
+  #install.on{display:block}
 
-  .chip{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;
-    letter-spacing:.06em;border:1px solid var(--line);color:var(--dim)}
-  .chip.g{color:var(--good);border-color:rgba(127,196,106,.4)}
-  .chip.w{color:var(--warn);border-color:rgba(224,168,60,.4)}
-  .chip.b{color:var(--bad);border-color:rgba(209,88,79,.4)}
+  footer{padding:30px 0 40px;color:var(--faint);font-size:12px;line-height:1.7;border-top:1px solid var(--line);margin-top:30px}
+  footer a{color:var(--dim)}
 
-  select,input[type=range]{width:100%;font:inherit}
-  select{background:#131816;color:var(--ink);border:1px solid var(--line);
-    border-radius:7px;padding:6px 8px;font-size:12px}
-  input[type=range]{-webkit-appearance:none;appearance:none;height:20px;background:none;cursor:pointer}
-  input[type=range]::-webkit-slider-runnable-track{height:3px;background:rgba(255,255,255,.16);border-radius:2px}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;
-    margin-top:-5px;border-radius:50%;background:var(--gold);border:0;
-    box-shadow:0 0 0 3px rgba(201,162,39,.18)}
-  input[type=range]::-moz-range-track{height:3px;background:rgba(255,255,255,.16)}
-  input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:50%;background:var(--gold)}
-
-  button{font:inherit;cursor:pointer}
-  .btn{background:linear-gradient(#d8b23a,#b4901e);color:#1a1508;border:0;border-radius:8px;
-    padding:10px 14px;font-weight:600;letter-spacing:.05em;font-size:13px;width:100%}
-  .btn:disabled{opacity:.4;cursor:default}
-  .btn2{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--ink);
-    border-radius:8px;padding:8px 10px;font-size:12px}
-  .btn2:hover{background:rgba(255,255,255,.11)}
-  .btn2.on{border-color:var(--gold);color:var(--gold)}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-
-  .toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;
-    padding:5px 0;font-size:11.5px}
-  .sw{width:34px;height:18px;border-radius:10px;background:rgba(255,255,255,.13);
-    position:relative;flex:none;cursor:pointer;transition:background .18s}
-  .sw i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
-    background:#cfd3cc;transition:left .18s}
-  .sw.on{background:rgba(201,162,39,.5)}
-  .sw.on i{left:18px;background:var(--gold)}
-
-  /* bottom */
-  #bottom{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:4;
-    display:flex;flex-direction:column;align-items:center;gap:9px;pointer-events:none}
-  #bottom > *{pointer-events:auto}
-  #camBar{display:flex;gap:0;overflow:hidden;border-radius:9px}
-  #camBar button{background:var(--panel);border:1px solid var(--line);border-right:0;
-    color:var(--dim);padding:7px 13px;font-size:10.5px;letter-spacing:.11em;
-    text-transform:uppercase;backdrop-filter:blur(12px)}
-  #camBar button:first-child{border-radius:9px 0 0 9px}
-  #camBar button:last-child{border-right:1px solid var(--line);border-radius:0 9px 9px 0}
-  #camBar button.on{color:var(--gold);background:rgba(201,162,39,.14)}
-
-  #meter{width:min(560px,86vw);padding:11px 14px;display:none}
-  #meter.on{display:block}
-  .bar{position:relative;height:12px;border-radius:6px;background:rgba(255,255,255,.08);
-    overflow:hidden;margin:5px 0 2px}
-  .bar .fill{position:absolute;inset:0 auto 0 0;width:0;
-    background:linear-gradient(90deg,#5aa04a,#c9a227 78%,#d1584f)}
-  .bar .over{position:absolute;top:0;bottom:0;left:89.3%;right:0;background:rgba(209,88,79,.28)}
-  .bar .needle{position:absolute;top:-3px;bottom:-3px;width:2px;background:#fff;
-    box-shadow:0 0 6px rgba(255,255,255,.8)}
-  .bar .zone{position:absolute;top:0;bottom:0;left:46.4%;width:7.2%;background:rgba(127,196,106,.35)}
-  .bar .mark{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,.35)}
-  .mlabel{display:flex;justify-content:space-between;font-size:9.5px;letter-spacing:.14em;
-    text-transform:uppercase;color:var(--faint)}
-  #mHint{text-align:center;font-size:11px;color:var(--gold);margin-top:6px;letter-spacing:.04em}
-
-  /* labels / flash */
-  #labels{position:fixed;inset:0;pointer-events:none;z-index:3}
-  .lbl{position:absolute;transform:translate(-50%,-100%);white-space:nowrap;
-    padding:2px 7px;border-radius:5px;font-size:10.5px;letter-spacing:.05em;
-    background:rgba(8,12,10,.62);border:1px solid rgba(255,255,255,.12);color:#dfe4dc;
-    text-shadow:0 1px 3px rgba(0,0,0,.8)}
-  .lbl.pin{color:#f0d878;border-color:rgba(201,162,39,.5)}
-  .lbl.dist{color:#fff}
-  #flash{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:6;
-    background:rgba(8,12,10,.8);border:1px solid rgba(201,162,39,.42);color:#f0e2b4;
-    padding:6px 15px;border-radius:20px;font-size:11.5px;letter-spacing:.05em;
-    backdrop-filter:blur(8px);pointer-events:none;opacity:0;transition:opacity .3s}
-  #fps{position:fixed;right:14px;bottom:14px;z-index:1;font-size:10px;color:var(--faint);
-    font-variant-numeric:tabular-nums}
-
-  /* landing-zone breakdown */
-  .zrow{margin:7px 0}
-  .zhead{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px}
-  .zhead b{font-weight:600}
-  .zbar{display:flex;height:9px;border-radius:5px;overflow:hidden;background:rgba(255,255,255,.07)}
-  .zbar i{display:block;height:100%}
-  .zsub{font-size:9.5px;color:var(--faint);margin-top:2px;letter-spacing:.02em}
-  .zkey{display:flex;flex-wrap:wrap;gap:8px;font-size:9.5px;color:var(--faint);margin-top:8px}
-  .zkey span{display:flex;align-items:center;gap:4px}
-  .zkey i{width:8px;height:8px;border-radius:2px;display:block}
-
-  /* scorecard */
-  #done{position:fixed;inset:0;z-index:9;display:none;place-items:center;
-    background:rgba(4,7,6,.62);backdrop-filter:blur(4px)}
-  #done.on{display:grid}
-  #doneCard{width:min(420px,92vw);text-align:center;padding:26px 24px 20px}
-  #doneScore{font-size:64px;font-weight:200;color:var(--gold);line-height:1}
-  #doneName{font-size:15px;letter-spacing:.2em;text-transform:uppercase;margin:4px 0 14px}
-  #doneList{text-align:left;font-size:11.5px;color:var(--dim);margin:0 0 16px}
-  #doneList div{display:flex;justify-content:space-between;gap:10px;padding:3px 0;
-    border-bottom:1px solid rgba(255,255,255,.05)}
-
-  /* loading */
-  #load{position:fixed;inset:0;z-index:20;background:#0a0e0c;display:grid;place-items:center;
-    transition:opacity .5s}
-  #load.done{opacity:0;pointer-events:none}
-  #lw{width:min(420px,86vw);text-align:center}
-  #lTitle{font-size:15px;letter-spacing:.04em;margin-bottom:3px}
-  #lTitle em{color:var(--gold);font-style:normal}
-  #lSub{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin-bottom:20px}
-  #bar{height:2px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
-  #bar div{height:100%;width:0;background:var(--gold);transition:width .3s}
-  #loadMsg{font-size:11px;color:var(--dim);margin-top:9px;letter-spacing:.06em}
-  #err{margin-top:14px;font-size:11.5px;color:#e5a89f;white-space:pre-wrap;display:none;text-align:left}
-  #err code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;
-    background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:4px;
-    padding:1px 5px;color:var(--gold);white-space:nowrap}
-
-  #note{position:fixed;left:14px;bottom:14px;z-index:1;max-width:288px;font-size:9.5px;
-    color:var(--faint);line-height:1.5;display:none}
-
-  /* hole transition veil: the rebuild is a few hundred milliseconds of frozen
-     frame, and a deliberate dip to black reads as a cut rather than a stall */
-  #veil{position:fixed;inset:0;background:#070a09;opacity:0;pointer-events:none;
-    z-index:8;transition:opacity .22s ease}
-  #veil.on{opacity:1}
-  #veilTxt{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:9;
-    color:var(--gold);font-size:12px;letter-spacing:.18em;text-transform:uppercase;
-    opacity:0;transition:opacity .22s;pointer-events:none}
-  #veilTxt.on{opacity:1}
-
-  /* hole strip */
-  /* Sized, not just capped: as a flex child of a centred column the strip
-     collapses to its content width and the eighteen cells crush together. */
-  #strip{display:flex;gap:0;overflow:hidden;border-radius:9px;width:min(92vw,600px)}
-  #strip button{flex:1 1 0;min-width:26px;background:var(--panel);
-    border:1px solid var(--line);border-right:0;color:var(--dim);
-    padding:4px 0 3px;font-size:10px;line-height:1.2;backdrop-filter:blur(12px)}
-  #strip button:first-child{border-radius:9px 0 0 9px}
-  #strip button:last-child{border-right:1px solid var(--line);border-radius:0 9px 9px 0}
-  #strip button.on{color:var(--gold);background:rgba(201,162,39,.16)}
-  #strip button b{display:block;font-size:10.5px;font-weight:600}
-  #strip button i{display:block;font-style:normal;font-size:8.5px;color:var(--faint)}
-  #strip button.done i{color:var(--ink)}
-  #strip button.under i{color:var(--good)}
-  #strip button.over i{color:var(--bad)}
-  #strip .sep{flex:0 0 1px;background:var(--line)}
-
-  /* landing-zone breakdown */
-  .zrow{margin:7px 0}
-  .zhead{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px}
-  .zhead b{font-weight:600}
-  .zbar{display:flex;height:9px;border-radius:5px;overflow:hidden;background:rgba(255,255,255,.07)}
-  .zbar i{display:block;height:100%}
-  .zsub{font-size:9.5px;color:var(--faint);margin-top:2px;letter-spacing:.02em}
-  .zkey{display:flex;flex-wrap:wrap;gap:8px;font-size:9.5px;color:var(--faint);margin-top:8px}
-  .zkey span{display:flex;align-items:center;gap:4px}
-  .zkey i{width:8px;height:8px;border-radius:2px;display:block}
-
-  /* scorecard */
-  #cardWrap{width:min(760px,94vw);padding:18px 18px 14px}
-  #sc{width:100%;border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums}
-  #sc th,#sc td{border:1px solid rgba(255,255,255,.08);padding:4px 2px;text-align:center}
-  #sc th{color:var(--faint);font-weight:500;font-size:9.5px;letter-spacing:.08em}
-  #sc td.lbl{text-align:left;padding-left:8px;color:var(--dim);white-space:nowrap}
-  #sc td.tot{background:rgba(255,255,255,.045);font-weight:600}
-  #sc td.under{color:var(--good)}
-  #sc td.over{color:var(--bad)}
-  #sc td.eagle{color:var(--good);font-weight:700}
-
-  @media (max-width:1180px){
-    #left,#right{width:255px}
-  }
-  @media (max-width:900px){
-    body:not(.phone) #left,body:not(.phone) #right{position:static;width:auto}
-    body:not(.phone) .hud{overflow-y:auto}
-  }
-
-  #sndBtn{position:fixed;right:14px;bottom:34px;z-index:5;width:38px;height:38px;border-radius:50%;
-    border:1px solid var(--line);background:var(--panel);backdrop-filter:blur(12px);font-size:16px;
-    line-height:1;padding:0;color:var(--ink)}
-  #sndBtn.off{opacity:.6}
-  body.phone #sndBtn{right:calc(10px + env(safe-area-inset-right));bottom:auto;
-    top:calc(var(--mrail,60px) + 8px);width:34px;height:34px;font-size:15px}
-  body.phone.msheet #sndBtn{display:none}
-
-  /* ---------------------------------------------------------------- phone
-   * poc/phone-poc.js sets body.phone on a small screen. The side panels go,
-   * a status rail and a thumb bar come in, and the panels are a sheet away
-   * under More. */
-  #mRail,#mBar,#mSheetDone{display:none}
-  body.phone{position:fixed;inset:0;overscroll-behavior:none;touch-action:manipulation;
-    -webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;
-    -webkit-user-select:none;user-select:none;-webkit-text-size-adjust:100%}
-  body.phone button{touch-action:manipulation}
-  body.phone #left,body.phone #right,body.phone #camBar,body.phone #fps,body.phone #note{display:none}
-  body.phone #bottom{bottom:calc(var(--mbar,190px) + 8px)}
-  body.phone #meter{width:calc(100vw - 20px);padding:8px 12px}
-  body.phone #flash{top:calc(var(--mrail,60px) + 8px);max-width:92vw;white-space:normal;text-align:center}
-  body.phone #gpuWarn{top:calc(var(--mrail,60px) + 8px)!important}
-
-  body.phone #mRail{display:flex;position:fixed;top:0;left:0;right:0;z-index:5;
-    padding:calc(6px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) 6px
-      calc(8px + env(safe-area-inset-left));
-    background:linear-gradient(180deg,rgba(6,9,8,.82),rgba(6,9,8,.35) 75%,transparent);
-    pointer-events:none}
-  #mRail .mc{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;
-    padding:5px 8px;background:var(--panel);border:1px solid var(--line);border-left:0;
-    backdrop-filter:blur(12px);min-width:0}
-  #mRail .mc:first-child{border-left:1px solid var(--line);border-radius:10px 0 0 10px}
-  #mRail .mc:last-child{border-radius:0 10px 10px 0}
-  #mRail .k{font-size:8px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
-  #mRail .v{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    font-variant-numeric:tabular-nums}
-  #mRail #mHole{color:var(--gold);font-size:16px}
-  #mRail small{font-size:10.5px;color:var(--dim);font-weight:400}
-  #mRail #mTot{color:var(--gold)}
-
-  body.phone #mBar{display:block;position:fixed;left:8px;right:8px;z-index:6;
-    bottom:calc(8px + env(safe-area-inset-bottom));
-    margin-left:env(safe-area-inset-left);margin-right:env(safe-area-inset-right);
-    padding:9px 10px 10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;
-    backdrop-filter:blur(16px) saturate(1.2);box-shadow:0 12px 34px rgba(0,0,0,.45)}
-  #mClubs{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;padding-bottom:7px}
-  #mClubs::-webkit-scrollbar{display:none}
-  .mClub{flex:none;padding:7px 12px;border-radius:9px;border:1px solid var(--line);
-    background:rgba(255,255,255,.05);color:var(--dim);font-size:12.5px;white-space:nowrap}
-  .mClub.on{background:linear-gradient(#d8b23a,#b4901e);color:#1a1508;border-color:transparent;font-weight:700}
-  #mCad{font-size:12px;color:var(--dim);text-align:center;min-height:17px;margin-bottom:7px;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #mCad b{color:var(--gold)}
-  #mActs{display:flex;gap:7px}
-  #mGo{flex:1;border:0;border-radius:11px;padding:14px 10px;font-size:17px;font-weight:700;
-    letter-spacing:.03em;background:linear-gradient(#d8b23a,#b4901e);color:#1a1508;
-    box-shadow:0 4px 16px rgba(201,162,39,.25)}
-  #mGo:active{transform:translateY(1px)}
-  #mGo.wait{background:rgba(255,255,255,.09);color:var(--dim);box-shadow:none}
-  .mAim{flex:none;width:52px;border-radius:11px;border:1px solid rgba(255,255,255,.16);
-    background:rgba(255,255,255,.07);color:var(--ink);font-size:16px}
-  .mAim:active{background:rgba(255,255,255,.18)}
-  #mMore{display:flex;gap:6px;margin-top:7px}
-  #mMore button{flex:1;padding:8px 2px;border-radius:9px;border:1px solid var(--line);
-    background:rgba(255,255,255,.05);color:var(--dim);font-size:12px}
-  #mMore button.on{border-color:var(--gold);color:var(--gold)}
-
-  /* the hole map, floating under the rail */
-  body.phone.mmap #left{display:flex;position:fixed;top:calc(var(--mrail,60px) + 6px);left:8px;right:auto;
-    bottom:auto;width:min(56vw,250px);z-index:4}
-  body.phone.mmap #left > *:not(#mapWrap){display:none!important}
-  body.phone.mmap .hud,body.phone.msheet .hud{z-index:7}
-  body.phone.msheet #mBar,body.phone.msheet #bottom{display:none}
-  body.phone.mmap #map,body.phone.mmap #book{height:min(34vh,210px)}
-
-  /* everything else, as a sheet */
-  body.phone.msheet #right{display:flex;position:fixed;left:0;right:0;top:auto;bottom:0;width:auto;
-    max-height:74vh;z-index:8;overflow-y:auto;-webkit-overflow-scrolling:touch;
-    padding:52px 10px calc(14px + env(safe-area-inset-bottom));
-    background:rgba(8,11,10,.94);border-top:1px solid var(--line);border-radius:16px 16px 0 0;
-    box-shadow:0 -20px 50px rgba(0,0,0,.5)}
-  body.phone.msheet #mSheetDone{display:block;position:fixed;right:14px;bottom:calc(74vh - 46px);z-index:9;
-    background:linear-gradient(#d8b23a,#b4901e);color:#1a1508;border:0;border-radius:8px;
-    padding:8px 16px;font-weight:700}
-  body.phone #mStripSlot #strip{width:100%;margin-bottom:2px}
-  body.phone #mStripSlot #strip button{padding:7px 0 6px}
-  body.phone #right .btn2{padding:10px 10px}
-  body.phone select{font-size:16px}       /* under 16px and iOS zooms the page */
-
-  @media (max-height:520px) and (orientation:landscape){
-    body.phone #mBar{left:auto;right:8px;width:min(400px,44vw);padding:7px 9px 8px}
-    body.phone #mCad{margin-bottom:5px}
-    body.phone #mGo{padding:10px}
-    body.phone #mMore{margin-top:5px}
-    body.phone #mMore button{padding:6px 2px}
-    body.phone #mRail .mc{padding:3px 7px}
-    body.phone #bottom{left:auto;right:8px;transform:none}
-    body.phone #meter{width:min(400px,44vw)}
+  @media (max-width:520px){
+    .wrap{padding:0 14px}
+    .grid{grid-template-columns:1fr}
+    .top{padding:12px 0 2px}
+    .hero{padding:8px 0 16px}
+    .hero h1{font-size:24px}
+    .hero p{font-size:13.5px;line-height:1.45}
+    #cont{padding:12px 14px;margin-top:14px}
+    #install{margin-top:10px;padding:8px 12px;font-size:12.5px}
+    section{padding:20px 0 4px}
   }
 </style>
 </head>
 <body>
-<canvas id="gl"></canvas>
-<div id="labels"><div id="flash"></div></div>
-
-<div class="hud">
-  <!-- ------------------------------------------------------------- left -->
-  <div id="left">
-    <div class="panel" id="brand">
-      <div id="crest">CH</div>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div class="crest">D</div>
       <div>
-        <div class="t">Cog Hill · <em>Dubsdread</em></div>
-        <div class="s">Course No. 4 · <span id="bThru">18 holes</span></div>
+        <div class="brand">Dubsdread <em>Golf</em></div>
+        <div class="tag">Real courses · in your browser</div>
       </div>
     </div>
-
-    <div class="panel" id="card">
-      <div class="pb">
-        <div id="hNum">1</div>
-        <div style="flex:1">
-          <div id="hMeta">Par 4 · Stroke 9</div>
-          <div id="hYds">458 <span>yards</span></div>
+    <div class="hero">
+      <h1>Play real courses, shot for shot.</h1>
+      <p>Every course here is built from public map data and the U.S. Geological Survey's laser-scanned
+        terrain, so the fairways bend where they really bend and the greens break the way they really break.</p>
+      <div id="cont">
+        <div class="t">
+          <div class="k">Round in progress</div>
+          <b id="contName">—</b>
+          <div class="s" id="contMeta"></div>
         </div>
-        <div style="text-align:right">
-          <div id="hMeta2" style="font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint)">Score</div>
-          <div id="hScore" class="big" style="color:var(--gold)">—</div>
-          <div id="hTot" style="font-size:10.5px;color:var(--dim);cursor:pointer"
-               title="Open the scorecard">—</div>
-        </div>
+        <a class="btn" id="contGo" href="#">Continue</a>
+        <button class="ghost" id="contDrop">Discard</button>
       </div>
-      <div id="hDesc"></div>
-    </div>
-
-    <div class="panel" id="mapWrap">
-      <div id="mapTabs">
-        <button data-tab="map" class="on">Hole</button>
-        <button data-tab="book">Green book</button>
-      </div>
-      <canvas id="map"></canvas>
-      <canvas id="book"></canvas>
-    </div>
-
-    <div class="panel" id="shotsPanel" style="display:flex;flex-direction:column;min-height:0">
-      <div class="ph"><b>Shots</b><span id="shotSum"></span></div>
-      <div id="shots" class="pb" style="padding:4px 8px"><table><tbody id="shotBody"></tbody></table></div>
+      <div id="install">Add this to your home screen to play it like an app: tap <b>Share</b>, then
+        <b>Add to Home Screen</b>.</div>
     </div>
   </div>
+</header>
 
-  <!-- ------------------------------------------------------------ right -->
-  <div id="right">
-    <div class="panel" id="caddiePanel">
-      <div class="ph"><b>Caddie</b><span id="lieChip" class="chip">Tee</span></div>
-      <div class="pb">
-        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px">
-          <div>
-            <div class="big" id="cPin">—<small> yds to pin</small></div>
-            <div style="font-size:11px;color:var(--dim)" id="cPlays"></div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)">Club</div>
-            <div style="font-size:15px;color:var(--gold)" id="cRec">—</div>
-          </div>
-        </div>
-        <hr class="sep">
-        <div class="row"><span class="k">Wind</span><span class="v" id="cWind">Calm</span></div>
-        <div class="row"><span class="k">Elevation</span><span class="v" id="cElev">—</span></div>
-        <div class="row"><span class="k">Green</span><span class="v" id="cGreen">—</span></div>
-        <div id="cCarries" style="font-size:11px;color:var(--dim);margin-top:6px"></div>
-        <div id="cLieNote" style="font-size:11px;color:var(--warn);margin-top:4px"></div>
-      </div>
-    </div>
+<main class="wrap">
+  <section>
+    <h2>Courses</h2>
+    <div class="grid" id="courses"></div>
+  </section>
 
-    <div class="panel" id="shotPanel">
-      <div class="ph"><b>Shot</b><span id="strokeTag">Stroke 1</span></div>
-      <div class="pb">
-        <div id="fullControls">
-          <select id="club"></select>
-          <div class="row" style="margin-top:6px"><span class="k">Shape</span><span class="v" id="shapeVal">Straight</span></div>
-          <input type="range" id="shape" min="-100" max="100" value="0">
-          <div class="row"><span class="k">Aim</span>
-            <span><button class="btn2" id="aimL" style="padding:3px 9px">◀</button>
-                  <button class="btn2" id="aimR" style="padding:3px 9px">▶</button></span></div>
-        </div>
-        <div id="puttControls" style="display:none">
-          <div class="row"><span class="k">Read</span><span class="v" id="pRead">—</span></div>
-          <div class="row"><span class="k">Pace</span><span class="v" id="pPaceVal">Read pace</span></div>
-          <input type="range" id="pPace" min="60" max="145" value="100">
-          <div class="row"><span class="k">Aim</span>
-            <span><button class="btn2" id="paimL" style="padding:3px 9px">◀</button>
-                  <button class="btn2" id="paimR" style="padding:3px 9px">▶</button></span></div>
-        </div>
-        <button class="btn" id="swing" style="margin-top:9px">Swing <small style="opacity:.65">space</small></button>
-        <div class="grid3" style="margin-top:6px">
-          <button class="btn2" id="autoBtn">Auto</button>
-          <button class="btn2" id="restart" title="Back to the tee on this hole (R)">Restart hole</button>
-          <button class="btn2" id="cardBtn">Card</button>
-        </div>
-        <hr class="sep">
-        <div class="row"><span class="k">You play as</span><span class="v" id="skillName">Tour</span></div>
-        <select id="profileSel"></select>
-        <div class="row" style="margin-top:6px"><span class="k">Tees</span><span class="v" id="teeName">—</span></div>
-        <select id="teeSel"></select>
-      </div>
-    </div>
+  <section id="rounds">
+    <h2>Your rounds</h2>
+    <div id="roundList"></div>
+  </section>
 
-    <div class="panel" id="zonePanel">
-      <div class="ph"><b>Landing zones</b><span id="zoneTag">off</span></div>
-      <div class="pb">
-        <div style="font-size:11px;color:var(--dim);margin-bottom:6px">
-          Where this shot actually finishes, sampled from the same flight model —
-          trees, wind and roll included.
-        </div>
-        <button class="btn2" id="zoneBtn" style="width:100%">Show landing zones</button>
-        <div id="zoneOut" style="margin-top:8px"></div>
-      </div>
-    </div>
-
-    <div class="panel" id="condPanel">
-      <div class="ph"><b>Conditions</b><span id="sunTag"></span></div>
-      <div class="pb">
-        <div class="row"><span class="k">Sky</span><span class="v"></span></div>
-        <select id="skySel">
-          <option value="day">Real sky — sunny afternoon</option>
-          <option value="evening">Real sky — golden hour</option>
-          <option value="">Simulated — set the time below</option>
+  <section>
+    <h2>Settings</h2>
+    <div class="set">
+      <label>You play as
+        <select id="sProfile">
+          <option value="tour">Tour professional — 113 mph driver</option>
+          <option value="low">Low handicap — 104 mph</option>
+          <option value="mid">Mid handicap — 95 mph</option>
+          <option value="senior">Senior / ladies — 85 mph</option>
         </select>
-        <div class="row" style="margin-top:6px"><span class="k">Time</span><span class="v" id="tVal">17:30</span></div>
-        <input type="range" id="clock" min="240" max="1320" value="1050">
-        <div class="row"><span class="k">Cloud</span><span class="v" id="cvVal">36%</span></div>
-        <input type="range" id="cover" min="0" max="100" value="36">
-        <div class="row"><span class="k">Haze</span><span class="v" id="tbVal">2.4</span></div>
-        <input type="range" id="turb" min="10" max="70" value="24">
-        <div class="row"><span class="k">Wind</span><span class="v" id="wVal">Calm</span></div>
-        <input type="range" id="wind" min="0" max="16" step="0.5" value="0">
-        <input type="range" id="wdir" min="0" max="359" value="200">
-        <div class="row"><span class="k">Temperature</span><span class="v" id="tmpVal">22 °C</span></div>
-        <input type="range" id="temp" min="2" max="38" value="22">
-        <div class="row"><span class="k">Green speed</span><span class="v" id="stVal">11.0 ft</span></div>
-        <input type="range" id="stimp" min="80" max="140" value="110">
-      </div>
+        <span class="hint">Sets how far and how straight your shots go.</span>
+      </label>
+      <label>Graphics
+        <select id="sQuality">
+          <option value="auto">Automatic (recommended)</option>
+          <option value="high">High — fast computers</option>
+          <option value="fast">Fast</option>
+          <option value="mobile">Phone</option>
+          <option value="low">Low</option>
+          <option value="min">Minimum</option>
+        </select>
+        <span class="hint">Automatic picks for your device and steps down if it struggles.</span>
+      </label>
+      <label>Version
+        <select id="sBuild">
+          <option value="3d">Full 3D (recommended)</option>
+          <option value="flat">Simple — for devices without 3D graphics</option>
+        </select>
+        <span class="hint">The 3D version switches to Simple by itself if it has to.</span>
+      </label>
+      <label>Sound
+        <select id="sSound">
+          <option value="on">On</option>
+          <option value="off">Off</option>
+        </select>
+        <span class="hint">Strikes, landings, the cup, applause, birds.</span>
+      </label>
     </div>
+  </section>
 
-    <div class="panel" id="lookPanel">
-      <div class="ph"><b>Rendering</b><span id="renderTag"></span></div>
-      <div class="pb">
-        <div class="toggle"><span>Atmosphere &amp; cloud shadows</span><div class="sw on" id="swCloud"><i></i></div></div>
-        <div class="toggle"><span>Ambient occlusion</span><div class="sw on" id="swAO"><i></i></div></div>
-        <div class="toggle"><span>Depth of field</span><div class="sw on" id="swDof"><i></i></div></div>
-        <div class="toggle"><span>Sun shafts</span><div class="sw on" id="swShaft"><i></i></div></div>
-        <div class="toggle"><span>AgX tonemap <small style="color:var(--faint)">vs ACES</small></span><div class="sw on" id="swAgx"><i></i></div></div>
-        <div class="toggle"><span>Grass detail</span><div class="sw on" id="swGrass"><i></i></div></div>
-        <hr class="sep">
-        <div class="row"><span class="k">Aperture</span><span class="v" id="apVal">f/5.6</span></div>
-        <input type="range" id="ap" min="0" max="8" value="4">
-        <div class="row"><span class="k">Quality</span>
-          <span><button class="btn2" data-q="min" style="padding:3px 7px">Min</button>
-                <button class="btn2" data-q="low" style="padding:3px 7px">Low</button>
-                <button class="btn2" data-q="fast" style="padding:3px 7px">Fast</button>
-                <button class="btn2 on" data-q="high" style="padding:3px 7px">High</button></span></div>
-        <div class="grid2" style="margin-top:8px">
-          <button class="btn2" id="abBtn">Hold to compare</button>
-          <button class="btn2" id="photoBtn">Photo mode</button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <section>
+    <h2>How to play</h2>
+    <details open>
+      <summary>Hitting a shot</summary>
+      <ul>
+        <li>Your caddie picks the club and shows the distance; pick a different chip to change it.</li>
+        <li>Aim with ◀ ▶ (or A / D), or tap the spot on the course you want to hit to.</li>
+        <li>Tap <b>Swing</b> (or press space) to start the power needle, again to set the power — the
+          green mark is the caddie's number — and once more in the green band for a square face.</li>
+      </ul>
+    </details>
+    <details>
+      <summary>Putting</summary>
+      <ul>
+        <li>On the green you have the putter. The caddie gives the break in cups: aim that much to the side.</li>
+        <li>Tap <b>Putt</b> to start the needle and tap again on the green mark for the right pace.
+          Past it is firm, short of it is soft.</li>
+      </ul>
+    </details>
+    <details>
+      <summary>Views and more</summary>
+      <ul>
+        <li>Shots are filmed like television: from behind as the ball climbs, then from beside where it lands.</li>
+        <li>View cycles cameras; Map shows the hole from above; Zones shows where shots like yours finish.</li>
+        <li>More has every hole, the tees, the weather, the sky and the graphics settings.</li>
+        <li>Your round is saved after every hole, so you can close the app and pick it up later.</li>
+      </ul>
+    </details>
+  </section>
 
-  <!-- ----------------------------------------------------------- bottom -->
-  <div id="bottom">
-    <div class="panel" id="meter">
-      <div class="mlabel"><span id="mL">Power</span><span id="mR"></span></div>
-      <div class="bar" id="barPower"><div class="over"></div><div class="mark" style="left:89.3%"></div><div class="fill"></div><div class="needle"></div></div>
-      <div class="bar" id="barStrike" style="display:none"><div class="zone"></div><div class="needle"></div></div>
-      <div id="mHint">Click or press space to set the power</div>
-    </div>
-    <div id="camBar"></div>
-    <div id="strip"></div>
-  </div>
-</div>
+  <footer>
+    Course geometry © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ODbL.
+    Terrain from the USGS <a href="https://www.usgs.gov/3d-elevation-program">3D Elevation Program</a>.
+    Photo materials and skies from <a href="https://polyhaven.com">Poly Haven</a> and
+    <a href="https://ambientcg.com">ambientCG</a> (CC0).
+    Course names belong to their clubs; this is an unofficial fan project and is not affiliated with any of them.
+  </footer>
+</main>
 
-<div id="veil"></div>
-<div id="veilTxt">Walking to the next tee</div>
+<script src="courses/index.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var get = function (k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+  var put = function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var list = window.COURSES || [];
+  var byId = {}; list.forEach(function (c) { byId[c.id] = c; });
+  var toPar = function (n) { return n === 0 ? 'E' : (n > 0 ? '+' + n : '−' + Math.abs(n)); };
 
-<div id="fps"></div>
-<div id="note"></div>
+  /* Which page plays a round: the 3D build, unless this device has no WebGL 2
+     or the player asked for the simple one. */
+  var hasGL = (function () { try { return !!document.createElement('canvas').getContext('webgl2'); } catch (e) { return false; } })();
+  var page = function () { return (get('dubsdread.build') === 'flat' || !hasGL) ? 'flat.html' : 'play.html'; };
 
-<div id="done"><div class="panel" id="doneCard">
-  <div id="doneScore">4</div>
-  <div id="doneName">Par</div>
-  <div id="doneTot" style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;
-       color:var(--faint);margin:-8px 0 14px"></div>
-  <div id="doneList"></div>
-  <button class="btn" id="nextBtn">Next hole</button>
-  <div class="grid2" style="margin-top:6px">
-    <button class="btn2" id="againBtn">Restart hole</button>
-    <button class="btn2" id="cardBtn2">Scorecard</button>
-  </div>
-</div></div>
+  /* --- settings --------------------------------------------------------- */
+  var bind = function (id, key, dflt) {
+    var el = $(id);
+    el.value = get(key) || dflt;
+    el.onchange = function () { put(key, el.value); };
+  };
+  bind('sProfile', 'dubsdread.profile', 'tour');
+  bind('sQuality', 'dubsdread.quality', 'auto');
+  bind('sBuild', 'dubsdread.build', '3d');
+  var snd = $('sSound');
+  try { snd.value = localStorage.getItem('dubsdread.sound') === 'off' ? 'off' : 'on'; } catch (e) {}
+  snd.onchange = function () { try { localStorage.setItem('dubsdread.sound', snd.value); } catch (e) {} };
+  if (!hasGL) { $('sBuild').value = 'flat'; $('sBuild').disabled = true; }
 
-<div id="cardModal" style="position:fixed;inset:0;z-index:10;display:none;place-items:center;
-     background:rgba(4,7,6,.66);backdrop-filter:blur(4px)">
-  <div class="panel" id="cardWrap">
-    <div class="ph" style="margin:-18px -18px 12px"><b>Scorecard</b><span id="scTot"></span></div>
-    <div style="overflow-x:auto"><table id="sc"></table></div>
-    <div class="grid2" style="margin-top:12px">
-      <button class="btn2" id="scClose">Close</button>
-      <button class="btn2" id="scNew">New round</button>
-    </div>
-  </div>
-</div>
+  /* --- history ---------------------------------------------------------- */
+  var hist = get('dubsdread.history') || [];
+  var best = {};
+  hist.forEach(function (r) { if (best[r.course] == null || r.gross < best[r.course].gross) best[r.course] = r; });
 
-<div id="load"><div id="lw">
-  <div id="lTitle">Cog Hill No. 4 · <em>Dubsdread</em></div>
-  <div id="lSub">Hole 1 — rendering &amp; play proof of concept</div>
-  <div id="bar"><div></div></div>
-  <div id="loadMsg">Starting…</div>
-  <div id="err"></div>
-  <div id="lStuck" style="display:none;margin-top:18px;font-size:11.5px;color:var(--dim);
-       line-height:1.7;text-align:left">
-    Still going. Startup builds the course, the tree line and a dozen shader
-    programs before the first frame, and on a slow machine that is a minute.<br>
-    If it never finishes:
-    <a href="check.html" style="color:var(--gold)">run the check page</a> ·
-    <a href="?q=min" style="color:var(--gold)">try the lightest build</a> ·
-    <a href="flat.html?stay=1" style="color:var(--gold)">play without a GPU</a>
-  </div>
-</div></div>
+  /* --- courses ---------------------------------------------------------- */
+  var grid = $('courses');
+  list.forEach(function (c) {
+    var el = document.createElement('div');
+    el.className = 'course';
+    var b = best[c.id];
+    var tees = (c.tees || []).map(function (t, i) {
+      return '<option value="' + i + '">' + esc(t.name) + ' — ' + t.yards.toLocaleString() + ' yds</option>';
+    }).join('');
+    el.innerHTML =
+      '<div class="thumb" style="background-image:url(' + esc(c.file.replace(/\.js$/, '.jpg')) + ')">' +
+        (b ? '<span class="best">Best ' + b.gross + ' (' + toPar(b.toPar) + ')</span>' : '') +
+        '<div class="nm"><b>' + esc(c.name || c.course) + '</b><span>' + esc(c.sub || c.club) + ' · ' + esc(c.city) + '</span></div>' +
+      '</div>' +
+      '<div class="body">' +
+        '<div class="facts"><span>Par <b>' + c.par + '</b></span><span><b>' + Number(c.yards).toLocaleString() + '</b> yds</span>' +
+          (c.rating ? '<span>Rating <b>' + c.rating + '</b> / <b>' + c.slope + '</b></span>' : '') +
+          '<span><b>' + (c.holes || 18) + '</b> holes</span></div>' +
+        (c.blurb ? '<p class="blurb">' + esc(c.blurb) + '</p>' : '<p class="blurb"></p>') +
+        '<div class="row">' + (tees ? '<select aria-label="Tees">' + tees + '</select>' : '') +
+          '<a class="btn" href="#">Play</a></div>' +
+      '</div>';
+    var sel = el.querySelector('select');
+    var lastTee = get('dubsdread.tee.' + c.id);
+    if (sel && lastTee != null) sel.value = String(lastTee);
+    el.querySelector('.btn').onclick = function (e) {
+      e.preventDefault();
+      var tee = sel ? +sel.value : 0;
+      put('dubsdread.tee.' + c.id, tee);
+      location.href = page() + '?course=' + encodeURIComponent(c.id) + '&tee=' + tee + '&hole=1';
+    };
+    grid.appendChild(el);
+  });
 
-<script src="course-data.js"></script>
-<script src="branding.js"></script>
-<script src="js/math.js"></script>
-<script src="js/gl.js"></script>
-<script src="js/shaders.js"></script>
-<script src="js/field.js"></script>
-<script src="js/terrain.js"></script>
-<script src="js/foliage.js"></script>
-<script src="js/shot.js"></script>
-<script src="js/app.js"></script>
-<script src="poc/sky-model.js"></script>
-<script src="poc/foliage-poc.js"></script>
-<script src="poc/shaders-poc.js"></script>
-<script src="poc/render-poc.js"></script>
-<script src="poc/assets-poc.js"></script>
-<script src="poc/shot-poc.js"></script>
-<script src="poc/play.js"></script>
-<script src="poc/ui-poc.js"></script>
-<script src="poc/audio-poc.js"></script>
-<script src="poc/phone-poc.js"></script>
+  /* --- continue --------------------------------------------------------- */
+  var s = get('dubsdread.round');
+  if (s && byId[s.course]) {
+    var c = byId[s.course];
+    $('contName').textContent = (c.name || c.course) + ' — hole ' + s.hole;
+    $('contMeta').textContent = (s.label || '') + ' · ' + new Date(s.updated).toLocaleString();
+    $('contGo').href = page() + '?course=' + encodeURIComponent(s.course) + '&tee=' + (s.tee || 0) +
+                       '&hole=' + s.hole + '&resume=1';
+    $('contDrop').onclick = function () {
+      try { localStorage.removeItem('dubsdread.round'); } catch (e) {}
+      $('cont').classList.remove('on');
+    };
+    $('cont').classList.add('on');
+  }
+
+  /* --- rounds list ------------------------------------------------------ */
+  var rl = $('roundList');
+  if (!hist.length) {
+    rl.innerHTML = '<div class="empty">Finished rounds show up here, with your best on each course.</div>';
+  } else {
+    rl.innerHTML = hist.slice(0, 12).map(function (r) {
+      var c = byId[r.course] || {};
+      return '<div class="r"><div><div class="c">' + esc(c.name || r.name || r.course) + '</div>' +
+        '<div class="d">' + new Date(r.finished).toLocaleDateString() + (c.sub ? ' · ' + esc(c.sub) : '') + '</div></div>' +
+        '<div class="g">' + r.gross + '</div>' +
+        '<div class="p ' + (r.toPar < 0 ? 'under' : r.toPar > 0 ? 'over' : '') + '">' + toPar(r.toPar) + '</div></div>';
+    }).join('');
+  }
+
+  /* --- install hint on iPhone Safari ----------------------------------- */
+  var ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  var standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+  if (ios && !standalone) $('install').classList.add('on');
+
+  /* --- offline ---------------------------------------------------------- */
+  if ('serviceWorker' in navigator) {
+    addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+  }
+})();
+</script>
 </body>
 </html>

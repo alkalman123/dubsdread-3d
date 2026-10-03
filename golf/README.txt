@@ -1,22 +1,31 @@
-Dubsdread — Cog Hill No. 4
-==========================
+Dubsdread Golf
+==============
 
-Static site. No build step, no server, nothing fetched at runtime.
+Static site. No build step, no server.
 
-  index.html     the round, in full 3D (WebGL 2) — desktop and phone layouts
+  index.html     home: pick a course and tees, continue a saved round, your
+                 rounds and bests, settings, how to play
+  play.html      the round, in full 3D (WebGL 2) — desktop and phone layouts
   flat.html      the same round drawn in software, for browsers without WebGL 2;
-                 index.html sends those browsers here by itself
-  webgl.html     old address; forwards to index.html
-  check.html     what this browser can do, probe by probe
-  preview.html   the original 18-hole preview, unchanged, for comparison
+                 play.html sends those browsers here by itself
+  courses/       one data file per course, plus index.js (the list) and a map
+                 thumbnail each; built by tools/build_any_course.py from
+                 OpenStreetMap and USGS 3DEP lidar elevation
+  sw.js          offline support: network first, cached copy when offline
+  webgl.html     old address; forwards to play.html
+
+Courses: Dubsdread (Cog Hill No. 4), Pebble Beach Golf Links, Spyglass Hill,
+Torrey Pines South, Chambers Bay, Whistling Straits, Harbour Town Golf Links,
+the Ocean Course at Kiawah Island, Erin Hills and Cog Hill No. 2. Course names
+belong to their clubs; this is an unofficial fan project.
 
 Where it lives
 --------------
 https://alkalman123.github.io/dubsdread-3d/
 
 GitHub Pages, published by .github/workflows/deploy-crux-pages.yml whenever
-this folder changes on master. Add ?hole=2 (or any 1-18) to start on that hole,
-and ?tee=1 for a forward tee.
+this folder changes on master. To link straight into a round:
+play.html?course=pebble-beach&hole=7&tee=0 (course ids are in courses/index.js).
 
 On an iPhone
 ------------
