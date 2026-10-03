@@ -1,4 +1,4 @@
-name: Build courses from OSM + USGS 3DEP (temporary)
+name: Build courses from OSM + USGS 3DEP, pass 2 (temporary)
 on:
   push:
     branches: [claude/golf-hole-poc-realistic-0lfn8x]
@@ -16,11 +16,11 @@ jobs:
       - name: Build
         run: |
           set -o pipefail
-          python3 -u tools/build_any_course.py 2>&1 | tee build.log
+          python3 -u tools/build_any_course.py pebble-beach spyglass-hill bethpage-black tpc-sawgrass whistling-straits pacific-dunes 2>&1 | tee build.log
           grep -E "^==|wrote|failed|found|terrain" build.log | sed 's/^/::notice::/'
       - name: Thumbnails
         run: |
-          for f in golf/courses/*.js; do case "$f" in *index.js|*cog-hill-4.js) ;; *) python3 tools/course_thumb.py "$f";; esac; done
+          for f in golf/courses/*.js; do case "$f" in *index.js|*cog-hill-4.js) ;; *) [ -f "${f%.js}.jpg" ] || python3 tools/course_thumb.py "$f";; esac; done
       - name: Commit
         run: |
           git config user.name course-builder; git config user.email actions@users.noreply.github.com

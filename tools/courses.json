@@ -1,25 +1,33 @@
 [
  {
   "id": "pebble-beach",
-  "query": "Pebble Beach Golf Links",
   "name": "Pebble Beach Golf Links",
   "sub": "Pebble Beach Resorts",
   "club": "Pebble Beach Golf Links",
   "course": "Pebble Beach Golf Links",
   "city": "Pebble Beach, California",
   "tz": -7,
-  "blurb": "Jack Neville and Douglas Grant’s 1919 links on the cliffs above Carmel Bay — the small greens of the 7th and the long 18th along the shore."
+  "blurb": "Jack Neville and Douglas Grant’s 1919 links on the cliffs above Carmel Bay — the small greens of the 7th and the long 18th along the shore.",
+  "near": [
+   36.5686,
+   -121.9495
+  ],
+  "nameRe": "pebble beach"
  },
  {
   "id": "spyglass-hill",
-  "query": "Spyglass Hill Golf Course",
   "name": "Spyglass Hill",
   "sub": "Pebble Beach Resorts",
   "club": "Spyglass Hill Golf Course",
   "course": "Spyglass Hill",
   "city": "Pebble Beach, California",
   "tz": -7,
-  "blurb": "Robert Trent Jones Sr., 1966: five holes in the sand dunes by the ocean, then up into the Del Monte Forest."
+  "blurb": "Robert Trent Jones Sr., 1966: five holes in the sand dunes by the ocean, then up into the Del Monte Forest.",
+  "near": [
+   36.5838,
+   -121.9535
+  ],
+  "nameRe": "spyglass"
  },
  {
   "id": "torrey-pines-south",
@@ -34,25 +42,33 @@
  },
  {
   "id": "bethpage-black",
-  "query": "Bethpage Black Course",
   "name": "Bethpage Black",
   "sub": "Bethpage State Park",
   "club": "Bethpage State Park",
   "course": "Black Course",
   "city": "Farmingdale, New York",
   "tz": -4,
-  "blurb": "A.W. Tillinghast’s public-course brute; the sign at the first tee warns that it is recommended only for highly skilled golfers."
+  "blurb": "A.W. Tillinghast’s public-course brute; the sign at the first tee warns that it is recommended only for highly skilled golfers.",
+  "near": [
+   40.744,
+   -73.456
+  ],
+  "nameRe": "black"
  },
  {
   "id": "tpc-sawgrass",
-  "query": "TPC Sawgrass Stadium Course",
   "name": "TPC Sawgrass Stadium",
   "sub": "TPC Sawgrass",
   "club": "TPC Sawgrass",
   "course": "THE PLAYERS Stadium Course",
   "city": "Ponte Vedra Beach, Florida",
   "tz": -4,
-  "blurb": "Pete Dye’s 1980 stadium course, built for spectators — and for the island green at the 17th."
+  "blurb": "Pete Dye’s 1980 stadium course, built for spectators — and for the island green at the 17th.",
+  "near": [
+   30.1975,
+   -81.3948
+  ],
+  "nameRe": "stadium|players"
  },
  {
   "id": "chambers-bay",
@@ -67,14 +83,18 @@
  },
  {
   "id": "whistling-straits",
-  "query": "Whistling Straits Straits Course",
   "name": "Whistling Straits",
   "sub": "The Straits Course",
   "club": "Whistling Straits",
   "course": "The Straits Course",
   "city": "Haven, Wisconsin",
   "tz": -5,
-  "blurb": "Pete Dye’s shaped links along two miles of Lake Michigan shoreline, with bunkers beyond counting."
+  "blurb": "Pete Dye’s shaped links along two miles of Lake Michigan shoreline, with bunkers beyond counting.",
+  "near": [
+   43.8505,
+   -87.734
+  ],
+  "nameRe": "straits"
  },
  {
   "id": "pinehurst-2",
@@ -122,14 +142,18 @@
  },
  {
   "id": "pacific-dunes",
-  "query": "Pacific Dunes",
   "name": "Pacific Dunes",
   "sub": "Bandon Dunes Golf Resort",
   "club": "Bandon Dunes Golf Resort",
   "course": "Pacific Dunes",
   "city": "Bandon, Oregon",
   "tz": -7,
-  "blurb": "Tom Doak’s routing through the dunes above the Pacific."
+  "blurb": "Tom Doak’s routing through the dunes above the Pacific.",
+  "near": [
+   43.187,
+   -124.389
+  ],
+  "nameRe": "pacific"
  },
  {
   "id": "erin-hills",

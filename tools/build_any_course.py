@@ -163,6 +163,18 @@ def build(cfg):
     print('==', cid, flush=True)
     if cfg.get('osm'):
         t, oid = cfg['osm'].split('/')
+    elif cfg.get('near'):
+        # by location: the golf_course outline near a known point whose name matches
+        lat, lon = cfg['near']
+        near = osm_fetch.area(lat - 0.02, lon - 0.026, lat + 0.02, lon + 0.026)
+        rx = re.compile(cfg.get('nameRe', re.escape(cfg['name'])), re.I)
+        cand = [e for e in near if e.get('tags', {}).get('leisure') == 'golf_course'
+                and rx.search(e['tags'].get('name', ''))]
+        if not cand: raise RuntimeError('no golf_course matching /%s/ near %s' % (rx.pattern, cfg['near']))
+        size = lambda e: sum(len(r) for r in rings(e))
+        best = max(cand, key=size)
+        t, oid = best['type'], best['id']
+        print('   near: %s/%s %s' % (t, oid, best['tags'].get('name')), flush=True)
     else:
         hits = [h for h in osm_fetch.nominatim(cfg['query']) if h['type'] == 'golf_course'
                 and h['osm_type'] in ('way', 'relation')]
@@ -360,7 +372,11 @@ def build(cfg):
     lat_n, lat_s = LAT0 - Z0 / MLAT, LAT0 - Z1 / MLAT
     lon_w, lon_e = LON0 + X0 / MLON, LON0 + X1 / MLON
     N = 256
-    g = dep_grid(lat_s, lon_w, lat_n, lon_e, N, N)
+    try:
+        g = dep_grid(lat_s, lon_w, lat_n, lon_e, N, N)
+    except RuntimeError:
+        N = 192
+        g = dep_grid(lat_s, lon_w, lat_n, lon_e, N, N)
     base = float(g.min())
     out['dem'] = dict(n=N, x0=R2(X0), x1=R2(X1), z0=R2(Z0), z1=R2(Z1), base=round(base, 2),
                       h=[round(float(v), 2) for v in g.flatten()], rowsNorthUp=True, lidar=True)
@@ -370,9 +386,13 @@ def build(cfg):
         gx0, gx1 = min(p[0] for p in r) - 8, max(p[0] for p in r) + 8
         gz0, gz1 = min(p[1] for p in r) - 8, max(p[1] for p in r) + 8
         nx = int(min(96, max(24, (gx1 - gx0) / 0.7))); nz = int(min(96, max(24, (gz1 - gz0) / 0.7)))
-        pg = dep_grid(LAT0 - gz1 / MLAT, LON0 + gx0 / MLON, LAT0 - gz0 / MLAT, LON0 + gx1 / MLON, nx, nz)
+        try:
+            pg = dep_grid(LAT0 - gz1 / MLAT, LON0 + gx0 / MLON, LAT0 - gz0 / MLAT, LON0 + gx1 / MLON, nx, nz)
+        except RuntimeError as e:
+            print('   green %d: no fine terrain (%s)' % (h['num'], e), flush=True)
+            continue
         patches.append(dict(hole=h['num'], x0=R2(gx0), x1=R2(gx1), z0=R2(gz0), z1=R2(gz1), nx=nx, nz=nz,
-                            h=[round(float(v), 3) for v in pg.flatten()]))
+                            h=[round(float(v), 2) for v in pg.flatten()]))
         time.sleep(0.5)
     out['dem']['patches'] = patches
     print('   terrain %.1f..%.1f m, %d green patches' % (g.min(), g.max(), len(patches)), flush=True)
@@ -402,4 +422,7 @@ if __name__ == '__main__':
             done.append(build(cfgs[i]))
         except Exception as e:
             print('!! %s failed: %s' % (i, e), flush=True)
-    json.dump(done, open(os.path.join(OUT, 'built.json'), 'w'), indent=1)
+    bj = os.path.join(OUT, 'built.json')
+    prev = json.load(open(bj)) if os.path.exists(bj) else []
+    ids_done = {d['id'] for d in done}
+    json.dump([p for p in prev if p['id'] not in ids_done] + done, open(bj, 'w'), indent=1)
