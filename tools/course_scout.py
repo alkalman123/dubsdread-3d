@@ -11,15 +11,19 @@ EPS = ['https://overpass-api.de/api/interpreter',
        'https://overpass.private.coffee/api/interpreter']
 
 def q(ql):
-    for ep in EPS:
-        for _ in range(3):
+    for _ in range(2):
+        for ep in EPS:
+            t0 = time.time()
             try:
                 req = urllib.request.Request(ep, data=urllib.parse.urlencode({'data': ql}).encode(),
                                              headers={'User-Agent': 'dubsdread-course-scout'})
-                with urllib.request.urlopen(req, timeout=200) as r:
-                    return json.load(r)
+                with urllib.request.urlopen(req, timeout=45) as r:
+                    out = json.load(r)
+                print('  ok %s %.1fs' % (ep.split('/')[2], time.time() - t0), flush=True)
+                return out
             except Exception as e:
-                print('  retry', ep, e, file=sys.stderr); time.sleep(5)
+                print('  retry %s %.1fs %s' % (ep.split('/')[2], time.time() - t0, e), flush=True)
+                time.sleep(2)
     raise RuntimeError('overpass failed')
 
 CANDS = sys.argv[1:] or [
@@ -33,7 +37,7 @@ for name in CANDS:
     try:
         r = q('[out:json][timeout:120];nwr["leisure"="golf_course"]["name"~"%s",i];out tags bb;' % name)
     except Exception as e:
-        print(name, 'FAILED', e); continue
+        print('::warning::%s FAILED %s' % (name, e)); continue
     for e in r['elements']:
         b = e.get('bounds')
         if not b: continue
@@ -49,6 +53,7 @@ for name in CANDS:
                    refs=refs[:60], website=t.get('website'), city=t.get('addr:city'),
                    state=t.get('addr:state'))
         print(json.dumps(rec)); out.append(rec)
+        print('::notice::%d holes (%d with par) %s | %s | %s,%s | bbox %s' % (rec['holes'], rec['withPar'], rec['name'], rec['id'], rec['city'], rec['state'], ','.join('%.4f' % v for v in bbox)), flush=True)
         time.sleep(2)
     time.sleep(2)
 json.dump(out, open('course-scout.json', 'w'), indent=1)
