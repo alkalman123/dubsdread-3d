@@ -1,0 +1,18 @@
+Photographic materials and skies used by the 3D round. All are CC0 (public
+domain): free to use for any purpose, no attribution required. Credited anyway.
+
+Poly Haven (polyhaven.com) — CC0
+  kloofendal_48d_partly_cloudy_puresky   sky-day.jpg        Greg Zaal
+  kloppenheim_06_puresky                 sky-evening.jpg    Greg Zaal
+  forrest_ground_01                      woodland floor     Rob Tuytel
+  asphalt_02                             cart paths         Rob Tuytel
+  bark_brown_02                          bark.jpg           Rob Tuytel
+
+ambientCG (ambientcg.com) — CC0
+  Grass005 (fairway, tee)  Grass008 (green)  Grass004 (rough)
+  Ground101 (bunker sand)
+  LeafSet016 (oak)  LeafSet010 (maple)  LeafSet005, LeafSet009 (elm, round)
+
+Processing: resized, the six ground layers stacked into ground-color.jpg and
+ground-normal.jpg, leaves cut out of their scans into leaves.png, and the two
+skies converted from HDR to an 8-bit sky dome normalised by elevation.

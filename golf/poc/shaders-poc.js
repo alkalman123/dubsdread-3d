@@ -381,6 +381,11 @@ precision highp float;
 in vec2 vNdc;
 out vec4 frag;
 uniform mat4 uInvViewProj;
+/* A photographed sky: equirectangular, zenith at the top, 8 degrees below the
+   horizon at the bottom, stored relative to the mean brightness of its own row (x8). */
+uniform sampler2D uSkyTex;
+uniform float uSkyOn;
+uniform float uSkyRot;
 ${NOISE}
 ${ATMOS}
 ${CLOUDS}
@@ -390,15 +395,33 @@ void main(){
   vec3 dir = normalize(p1.xyz / p1.w - p0.xyz / p0.w);
 
   vec3 col = skyRadiance(dir);
+  vec3 disc = sunDisc(dir);
+  if (uSkyOn > 0.5){
+    /* The photo's colour, at the sky model's brightness: scaled by the model's
+       zenith luminance so exposure, bloom and the light on the course all stay
+       in step with what is in the picture. */
+    float el = asin(clamp(dir.y, -1.0, 1.0)) * 57.29578;
+    float v = clamp((90.0 - el) / 98.0, 0.0, 1.0);
+    float u = fract(atan(dir.z, dir.x) / 6.2831853 + uSkyRot);
+    vec3 ph = texture(uSkyTex, vec2(u, v)).rgb * 8.0;
+    // the model's brightness at this height, read side-on to the sun so the
+    // glow around the sun is the photo's and is not counted twice
+    vec2 side = normalize(vec2(-uSunDir.z, uSunDir.x) + 1e-5);
+    float ce = sqrt(max(1.0 - dir.y * dir.y, 0.0));
+    vec3 dp = normalize(vec3(side.x * ce, max(dir.y, 0.004), side.y * ce));
+    float lv = dot(skyRadiance(dp), vec3(0.2126, 0.7152, 0.0722));
+    col = mix(col, ph * lv, smoothstep(-0.13, -0.03, dir.y));
+    col += disc * 0.35;
+  } else {
+    vec4 cl = clouds(dir);
+    col = mix(col, cl.rgb, cl.a);
+    col += disc * (1.0 - cl.a * 0.88);
+  }
   // ground haze below the horizon so the world does not end at a hard line
   if (dir.y < 0.0){
     vec3 g = uGroundTint * 2.6 + skyRadiance(vec3(dir.x, 0.02, dir.z)) * 0.55;
     col = mix(col, g, clamp(-dir.y * 5.0, 0.0, 0.92));
   }
-  vec3 disc = sunDisc(dir);
-  vec4 cl = clouds(dir);
-  col = mix(col, cl.rgb, cl.a);
-  col += disc * (1.0 - cl.a * 0.88);
   frag = vec4(col * uExposure, 1.0);
 }`;
 
@@ -577,6 +600,16 @@ uniform float uDetail;        // 1 = near field, 0 = distant context
 uniform float uDew;           // 0..1, dawn moisture on the turf
 uniform vec4  uCup;           // the hole: centre xyz, radius (0 = none)
 
+/* Photographed materials (poc/assets-poc.js): six layers — fairway, green,
+   rough, sand, woodland floor, path — and each layer's mean linear colour, so
+   a photo can be applied as detail around the palette rather than replacing
+   it. uPhoto is 0 until they have loaded. */
+precision mediump sampler2DArray;
+uniform sampler2DArray uGround;
+uniform sampler2DArray uGroundN;
+uniform float uPhoto;
+uniform vec3 uMean[6];
+
 /* Divots, pitch marks and foot traffic the game paints as it is played. */
 uniform sampler2D uScar;
 uniform vec4  uScarRect;
@@ -588,6 +621,23 @@ ${CLOUDS}
 ${SHADOW}
 ${AOTEX}
 ${AERIAL}
+
+/* One photographed layer at this point, as detail around its own mean.
+   Sampled twice — at the tile size, and larger and turned — and crossfaded by
+   a slow noise, which is what stops a photo from reading as a repeating tile
+   across a fairway sixty metres wide. */
+vec3 photoLayer(float layer, vec3 mean, vec2 xz, float tile, float mask, float amt, inout vec2 nrm, float nAmt){
+  vec2 uv1 = xz / tile;
+  vec2 uv2 = mat2(0.80, -0.60, 0.60, 0.80) * xz / (tile * 1.73) + vec2(0.37, 0.71);
+  vec3 c = mix(texture(uGround, vec3(uv1, layer)).rgb, texture(uGround, vec3(uv2, layer)).rgb, mask);
+  vec2 n = mix(texture(uGroundN, vec3(uv1, layer)).xy, texture(uGroundN, vec3(uv2, layer)).xy, mask) * 2.0 - 1.0;
+  nrm += n * nAmt;
+  const vec3 LW = vec3(0.2126, 0.7152, 0.0722);
+  float rl = dot(c, LW) / max(dot(mean, LW), 1e-3);
+  vec3 r = c / max(mean, vec3(1e-3));
+  vec3 d = clamp(mix(vec3(rl), r, 0.45), vec3(0.25), vec3(2.6));
+  return mix(vec3(1.0), d, amt);
+}
 
 vec4 fieldA(vec2 xz){ return texture(uFieldA, (xz - uFieldRect.xy) * uFieldRect.w); }
 vec4 fieldB(vec2 xz){ return texture(uFieldB, (xz - uFieldRect.xy) * uFieldRect.w); }
@@ -792,6 +842,37 @@ void main(){
     albedo = mix(albedo, floorCol, clamp(litter * 1.35, 0.0, 0.92));
   }
 
+  /* ---- photographed detail ---------------------------------------------
+   * Replays the albedo blend above as weights — the same mixes in the same
+   * order — so each photo goes exactly where its surface is, and a pixel only
+   * pays for the one or two layers it actually shows. */
+  vec2 photoN = vec2(0.0);
+  if (uPhoto > 0.5){
+    vec3 wa = vec3(0.0, 0.0, 1.0);   // fairway, green, rough (native uses rough)
+    vec3 wb = vec3(0.0);             // sand, floor, path
+    #define MIXW(t, ta, tb) { float t_ = (t); wa = wa * (1.0 - t_) + (ta) * t_; wb = wb * (1.0 - t_) + (tb) * t_; }
+    MIXW(wRough,  vec3(0.0, 0.0, 1.0), vec3(0.0));
+    MIXW(wCut,    vec3(0.45, 0.0, 0.55), vec3(0.0));
+    MIXW(wFw,     vec3(1.0, 0.0, 0.0), vec3(0.0));
+    MIXW(wTee,    vec3(1.0, 0.0, 0.0), vec3(0.0));
+    MIXW(wFringe, vec3(0.35, 0.65, 0.0), vec3(0.0));
+    MIXW(wGreen,  vec3(0.0, 1.0, 0.0), vec3(0.0));
+    MIXW(wPath,   vec3(0.0), vec3(0.0, 0.0, 1.0));
+    MIXW(wSand,   vec3(0.0), vec3(1.0, 0.0, 0.0));
+    MIXW(clamp(litter * 1.35, 0.0, 0.92), vec3(0.0), vec3(0.0, 1.0, 0.0));
+    float mask = smoothstep(0.30, 0.70, vnoise(xz * 0.17 + 3.1));
+    vec3 det = vec3(0.0);
+    float wsum = 0.0;
+    if (wa.x > 0.01) { det += wa.x * photoLayer(0.0, uMean[0], xz, 2.6, mask, 0.90, photoN, wa.x * 0.32); wsum += wa.x; }
+    if (wa.y > 0.01) { det += wa.y * photoLayer(1.0, uMean[1], xz, 1.9, mask, 0.55, photoN, wa.y * 0.12); wsum += wa.y; }
+    if (wa.z > 0.01) { det += wa.z * photoLayer(2.0, uMean[2], xz, 2.2, mask, 1.00, photoN, wa.z * 0.45); wsum += wa.z; }
+    if (wb.x > 0.01) { det += wb.x * photoLayer(3.0, uMean[3], xz, 3.0, mask, 0.90, photoN, wb.x * 0.55); wsum += wb.x; }
+    if (wb.y > 0.01) { det += wb.y * photoLayer(4.0, uMean[4], xz, 3.4, mask, 1.00, photoN, wb.y * 0.60); wsum += wb.y; }
+    if (wb.z > 0.01) { det += wb.z * photoLayer(5.0, uMean[5], xz, 3.0, mask, 0.80, photoN, wb.z * 0.40); wsum += wb.z; }
+    det += vec3(1.0) * max(0.0, 1.0 - wsum);
+    albedo *= det;
+  }
+
   /* ---- scars: divots, pitch marks, wear -------------------------------- */
   float dent = 0.0;
   if (uScarOn > 0.5 && uDetail > 0.5){
@@ -827,13 +908,15 @@ void main(){
     bladeGrain(xz, mix(9.0, 26.0, wGreen), g);
     // a green is cut to three millimetres and rolled: from standing height it
     // is velvet, not grain, and a grainy normal there sparkles under the sheen
-    float amp = mix(0.36, 0.045, wGreen) * mix(1.0, 2.6, wRough) * lodBlade * wTurf;
+    float amp = mix(0.36, 0.045, wGreen) * mix(1.0, 2.6, wRough) * lodBlade * wTurf
+              * (1.0 - 0.65 * uPhoto);     // the photo carries the grain once it is here
     Nb = normalize(Nb + vec3(-g.x, 0.0, -g.y) * amp);
   }
   if (dent > 0.001){
     vec2 g; bladeGrain(xz, 40.0, g);
     Nb = normalize(Nb + vec3(-g.x, 0.0, -g.y) * dent * 1.2);
   }
+  if (uPhoto > 0.5) Nb = normalize(Nb + vec3(photoN.x, 0.0, photoN.y));
   Nb = normalize(Nb + vec3(grainDir.x, 0.0, grainDir.y) * stripeAmt * stripeMask * 0.46);
 
   /* ---- lighting -------------------------------------------------------- */
@@ -962,6 +1045,9 @@ out vec4 frag;
 uniform float uAlphaCut;
 uniform float uSeason;      // 0 high summer .. 1 early autumn
 uniform sampler2D uLeaf;    // R brightness, G yellowing, B thickness, A coverage
+uniform sampler2D uBark;    // photographed bark, applied as detail
+uniform float uBarkOn;
+uniform vec3 uBarkMean;
 
 ${NOISE}
 ${ATMOS}
@@ -1048,9 +1134,17 @@ void main(){
     // ambient term reads as a black stick rather than as wood.
     float g = vnoise3(vWorld * vec3(2.6, 0.5, 2.6));
     vec3 base = mix(vec3(0.196,0.156,0.124), vec3(0.310,0.256,0.206), g);
-    base *= 0.84 + 0.32 * vnoise3(vWorld * vec3(9.0, 1.4, 9.0));
-    // vertical fissures, which is most of what reads as bark at any distance
-    base *= 0.86 + 0.28 * vnoise3(vWorld * vec3(26.0, 1.1, 26.0));
+    if (uBarkOn > 0.5){
+      // wrapped round the trunk by angle, a metre or so of bark per repeat
+      vec2 buv = vec2(atan(vLocal.z, vLocal.x) / 6.2831853 * 2.0 + vPhase, vWorld.y * 0.85);
+      vec3 b = texture(uBark, buv).rgb;
+      vec3 r = clamp(b / max(uBarkMean, vec3(1e-3)), vec3(0.15), vec3(2.8));
+      base *= mix(vec3(dot(r, vec3(0.2126, 0.7152, 0.0722))), r, 0.6);
+    } else {
+      base *= 0.84 + 0.32 * vnoise3(vWorld * vec3(9.0, 1.4, 9.0));
+      // vertical fissures, which is most of what reads as bark at any distance
+      base *= 0.86 + 0.28 * vnoise3(vWorld * vec3(26.0, 1.1, 26.0));
+    }
     float ndl = dot(N, uSunDir);
     float diff = clamp((ndl + 0.25) / 1.25, 0.0, 1.0);
     float sh = sunVisibility(vWorld, max(ndl,0.0), viewDist);

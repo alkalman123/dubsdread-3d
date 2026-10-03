@@ -30,6 +30,17 @@ second stops it, and the green mark is the pace the caddie reads. View, Map,
 Zones and Card are underneath; More opens everything else — every hole, the
 conditions, the rendering settings — as a sheet.
 
+Photographs, sound and television
+---------------------------------
+The ground, the bark and the leaves are photo scans, and the sky is a
+photographed sky with the sunlight matched to the sun in it (all CC0 — see
+assets/CREDITS.txt). More -> Conditions -> Sky picks a sunny afternoon, golden
+hour, or the simulated sky that follows the clock. Full shots are filmed the
+way golf is on television: from behind the player as the ball climbs, then a
+cut to a camera beside the landing area. Sound is made in the browser — the
+strike for each club, the landing on each surface, the cup, the applause, wind
+and birds — and the speaker button turns it off.
+
 Graphics pick themselves: a phone gets a tier built for it (shadows, HDR light
 and bloom at 1.5x resolution), a computer starts at "fast", and either one
 steps down by itself if it cannot hold about 24 frames a second.

@@ -244,7 +244,7 @@
       const vb = document.querySelector('#mMore [data-m="view"]');
       const cur = VIEWS.find(v => v[0] === App.camMode);
       vb.textContent = App.camMode === 'putt' || App.camMode === 'play' ? 'Behind'
-        : cur ? cur[1] : App.camMode === 'follow' ? 'Follow' : 'Free';
+        : cur ? cur[1] : App.camMode === 'follow' ? 'Follow' : App.camMode === 'broadcast' ? 'TV' : 'Free';
       document.querySelector('#mMore [data-m="zones"]').classList.toggle('on', !!UI.zones);
     }
   };

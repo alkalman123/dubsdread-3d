@@ -266,6 +266,14 @@
     body:not(.phone) .hud{overflow-y:auto}
   }
 
+  #sndBtn{position:fixed;right:14px;bottom:34px;z-index:5;width:38px;height:38px;border-radius:50%;
+    border:1px solid var(--line);background:var(--panel);backdrop-filter:blur(12px);font-size:16px;
+    line-height:1;padding:0;color:var(--ink)}
+  #sndBtn.off{opacity:.6}
+  body.phone #sndBtn{right:calc(10px + env(safe-area-inset-right));bottom:auto;
+    top:calc(var(--mrail,60px) + 8px);width:34px;height:34px;font-size:15px}
+  body.phone.msheet #sndBtn{display:none}
+
   /* ---------------------------------------------------------------- phone
    * poc/phone-poc.js sets body.phone on a small screen. The side panels go,
    * a status rail and a thumb bar come in, and the panels are a sheet away
@@ -478,7 +486,13 @@
     <div class="panel" id="condPanel">
       <div class="ph"><b>Conditions</b><span id="sunTag"></span></div>
       <div class="pb">
-        <div class="row"><span class="k">Time</span><span class="v" id="tVal">17:30</span></div>
+        <div class="row"><span class="k">Sky</span><span class="v"></span></div>
+        <select id="skySel">
+          <option value="day">Real sky — sunny afternoon</option>
+          <option value="evening">Real sky — golden hour</option>
+          <option value="">Simulated — set the time below</option>
+        </select>
+        <div class="row" style="margin-top:6px"><span class="k">Time</span><span class="v" id="tVal">17:30</span></div>
         <input type="range" id="clock" min="240" max="1320" value="1050">
         <div class="row"><span class="k">Cloud</span><span class="v" id="cvVal">36%</span></div>
         <input type="range" id="cover" min="0" max="100" value="36">
@@ -594,9 +608,11 @@
 <script src="poc/foliage-poc.js"></script>
 <script src="poc/shaders-poc.js"></script>
 <script src="poc/render-poc.js"></script>
+<script src="poc/assets-poc.js"></script>
 <script src="poc/shot-poc.js"></script>
 <script src="poc/play.js"></script>
 <script src="poc/ui-poc.js"></script>
+<script src="poc/audio-poc.js"></script>
 <script src="poc/phone-poc.js"></script>
 </body>
 </html>
