@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dubsdread · Cog Hill No. 4 — Interactive Course Preview</title>
+<meta name="description" content="Interactive 3D flyover and shot visualiser for Cog Hill Golf &amp; Country Club, Course No. 4 (Dubsdread), Lemont, Illinois.">
+<style>
+  :root{
+    --ink:#0d0f0e;
+    --panel:rgba(14,18,17,.80);
+    --panel-solid:#121615;
+    --line:rgba(255,255,255,.10);
+    --line-2:rgba(255,255,255,.18);
+    --text:#eef1ee;
+    --muted:#9aa6a0;
+    --gold:#c9a227;
+    --gold-dim:#8f7420;
+    --green:#4f8f3f;
+    --radius:12px;
+    --shadow:0 18px 48px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.35);
+    --ff: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --fs: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:#050706; color:var(--text);
+    font-family:var(--ff); font-size:14px; line-height:1.45;
+    overflow:hidden; -webkit-font-smoothing:antialiased;
+  }
+  canvas#gl{position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; cursor:grab}
+  canvas#gl.dragging{cursor:grabbing}
+  canvas#gl.aiming{cursor:crosshair}
+
+  /* scrims: keep the chrome legible over a bright sky or a dark tree line */
+  .hud::before{
+    content:''; position:absolute; inset:0 0 auto 0; height:130px; pointer-events:none;
+    background:linear-gradient(to bottom, rgba(4,8,6,.52), rgba(4,8,6,0));
+  }
+  .hud::after{
+    content:''; position:absolute; inset:auto 0 0 0; height:170px; pointer-events:none;
+    background:linear-gradient(to top, rgba(4,8,6,.46), rgba(4,8,6,0));
+  }
+  .hud{position:fixed; inset:0; pointer-events:none; z-index:5}
+  .hud > *{pointer-events:auto}
+  /* Anything in the HUD that is read-only must not intercept clicks. These
+     layers sit over the controls and the canvas; left interactive they block
+     buttons and canvas drags without any visual clue that they are doing it. */
+  .brand, #credit, #fps, #labels{pointer-events:none}
+
+  /* ---------------------------------------------------------- brand */
+  .brand{
+    position:absolute; left:20px; top:18px; max-width:min(38vw, 420px);
+    display:flex; align-items:center; gap:14px;
+    text-shadow:0 2px 14px rgba(0,0,0,.7);
+  }
+  .crest{
+    width:46px;height:46px;border-radius:50%;
+    border:1.5px solid var(--gold);
+    display:grid;place-items:center;
+    background:linear-gradient(160deg,rgba(201,162,39,.24),rgba(0,0,0,.28));
+    font-family:var(--fs); font-size:17px; color:var(--gold); letter-spacing:.5px;
+    box-shadow:inset 0 0 18px rgba(201,162,39,.18);
+  }
+  .brand h1{
+    margin:0; font-family:var(--fs); font-weight:500;
+    font-size:19px; letter-spacing:.02em; line-height:1.1;
+  }
+  .brand h1 em{font-style:normal; color:var(--gold)}
+  .brand p{
+    margin:2px 0 0; font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--muted); white-space:nowrap;
+  }
+  @media (max-width: 780px){ .bLoc{display:none} }
+
+  /* ---------------------------------------------------------- panels */
+  .panel{
+    background:var(--panel);
+    backdrop-filter:blur(16px) saturate(1.2);
+    -webkit-backdrop-filter:blur(16px) saturate(1.2);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+  }
+  .panel h2{
+    margin:0; padding:11px 14px 9px;
+    font-size:10.5px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--muted); border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+  }
+  .panel .body{padding:12px 14px}
+
+  /* ------------------------------------------------------ hole card */
+  #holeCard{position:absolute; left:20px; top:86px; width:286px}
+  .hole-head{display:flex; align-items:flex-end; gap:12px; padding:14px 14px 10px}
+  .hole-num{
+    font-family:var(--fs); font-size:52px; line-height:.82; color:var(--gold);
+    letter-spacing:-.02em;
+  }
+  .hole-meta{flex:1; padding-bottom:4px}
+  .hole-meta .par{font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted)}
+  .hole-meta .yds{font-family:var(--fs); font-size:25px; line-height:1.1}
+  .hole-meta .yds small{font-size:12px; color:var(--muted); font-family:var(--ff); letter-spacing:.1em}
+
+  #map{display:block; width:100%; height:172px; border-top:1px solid var(--line); border-bottom:1px solid var(--line); background:#0a0d0c}
+  .hole-desc{padding:11px 14px 13px; font-size:12.5px; color:#c8d1cb; line-height:1.5}
+  .stat-row{display:flex; gap:0; border-top:1px solid var(--line)}
+  .stat{flex:1; padding:9px 10px; text-align:center; border-right:1px solid var(--line)}
+  .stat:last-child{border-right:0}
+  .stat b{display:block; font-family:var(--fs); font-size:17px; color:var(--text)}
+  .stat span{font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
+
+  /* ------------------------------------------------------ tee select */
+  .tees{display:flex; flex-wrap:wrap; gap:5px; padding:10px 14px 13px}
+  .tee{
+    flex:1 1 auto; min-width:56px; padding:5px 7px; border-radius:7px; cursor:pointer;
+    border:1px solid var(--line); background:rgba(255,255,255,.03);
+    font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted);
+    display:flex; align-items:center; gap:6px; justify-content:center; transition:.16s;
+  }
+  .tee .dot{width:8px;height:8px;border-radius:50%;flex:none;box-shadow:0 0 0 1px rgba(0,0,0,.5) inset}
+  .tee b{color:var(--text); font-size:11px; font-weight:600}
+  .tee:hover{border-color:var(--line-2); background:rgba(255,255,255,.07)}
+  .tee.on{border-color:var(--gold); background:rgba(201,162,39,.14); color:#e8dcb8}
+
+  /* ------------------------------------------------------- right col */
+  #tools{position:absolute; right:20px; top:86px; width:274px; display:flex; flex-direction:column; gap:12px; max-height:calc(100vh - 190px); overflow-y:auto; scrollbar-width:thin}
+  #tools::-webkit-scrollbar{width:6px}
+  #tools::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14); border-radius:3px}
+
+  .field{margin-bottom:11px}
+  .field:last-child{margin-bottom:0}
+  .field label{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-bottom:5px;
+  }
+  .field label b{color:var(--text); letter-spacing:.02em; font-size:12px; text-transform:none}
+  select, input[type=range]{width:100%}
+  select{
+    appearance:none; background:rgba(255,255,255,.05) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%239aa6a0'/></svg>") no-repeat right 10px center;
+    border:1px solid var(--line); color:var(--text); border-radius:8px;
+    padding:7px 28px 7px 10px; font-size:12.5px; font-family:inherit; cursor:pointer;
+  }
+  select:focus{outline:none; border-color:var(--gold)}
+  select option{background:var(--panel-solid); color:var(--text)}
+  input[type=range]{
+    appearance:none; height:20px; background:transparent; cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-runnable-track{height:3px; background:rgba(255,255,255,.16); border-radius:2px}
+  input[type=range]::-webkit-slider-thumb{
+    appearance:none; width:14px; height:14px; margin-top:-5.5px; border-radius:50%;
+    background:var(--gold); border:2px solid #1a1a16; box-shadow:0 1px 4px rgba(0,0,0,.6);
+  }
+  input[type=range]::-moz-range-track{height:3px; background:rgba(255,255,255,.16); border-radius:2px}
+  input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--gold);border:2px solid #1a1a16}
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:7px;
+    padding:9px 12px; border-radius:8px; cursor:pointer; border:1px solid var(--line);
+    background:rgba(255,255,255,.05); color:var(--text); font-size:12px; font-family:inherit;
+    letter-spacing:.04em; transition:.16s; width:100%;
+  }
+  .btn:hover{background:rgba(255,255,255,.11); border-color:var(--line-2)}
+  .btn.primary{
+    background:linear-gradient(180deg, #d3ac2c, #a8811a); color:#1a1508;
+    border-color:#e0bb42; font-weight:650; letter-spacing:.06em;
+  }
+  .btn.primary:hover{background:linear-gradient(180deg,#e2ba36,#b78e1e)}
+  .btn.ghost{background:transparent}
+  .btn-row{display:flex; gap:7px}
+
+  .readout{border-top:1px solid var(--line); padding:10px 14px 12px; display:none}
+  .readout.on{display:block}
+  .rgrid{display:grid; grid-template-columns:1fr 1fr; gap:8px 10px}
+  .rgrid div{display:flex; justify-content:space-between; align-items:baseline; gap:6px;
+    font-size:11px; color:var(--muted); border-bottom:1px dotted rgba(255,255,255,.10); padding-bottom:3px}
+  .rgrid div b{color:var(--text); font-family:var(--fs); font-size:14px}
+  .result{
+    margin-top:10px; padding:8px 10px; border-radius:7px; font-size:12px;
+    background:rgba(79,143,63,.16); border:1px solid rgba(79,143,63,.4);
+  }
+  .result.bad{background:rgba(180,60,45,.16); border-color:rgba(200,80,60,.42)}
+  .result.warn{background:rgba(190,150,40,.14); border-color:rgba(210,170,50,.4)}
+
+  /* ------------------------------------------------------ hole strip */
+  #strip{
+    position:absolute; left:50%; bottom:14px; transform:translateX(-50%);
+    display:flex; align-items:stretch; gap:0; padding:5px;
+    max-width:calc(100vw - 40px); overflow-x:auto; scrollbar-width:none;
+  }
+  #strip::-webkit-scrollbar{display:none}
+  .hbtn{
+    min-width:40px; padding:6px 4px 5px; border:0; background:transparent; cursor:pointer;
+    color:var(--muted); font-family:inherit; border-radius:8px; transition:.14s;
+    display:flex; flex-direction:column; align-items:center; gap:1px; position:relative;
+  }
+  .hbtn b{font-family:var(--fs); font-size:16px; color:var(--text); line-height:1}
+  .hbtn span{font-size:8.5px; letter-spacing:.1em; text-transform:uppercase}
+  .hbtn:hover{background:rgba(255,255,255,.07)}
+  .hbtn.on{background:rgba(201,162,39,.18)}
+  .hbtn.on b{color:var(--gold)}
+  .hbtn.on span{color:#d9c88c}
+  .strip-sep{width:1px; background:var(--line); margin:6px 6px}
+  .strip-tot{padding:6px 12px; display:flex; flex-direction:column; align-items:center; justify-content:center}
+  .strip-tot b{font-family:var(--fs); font-size:15px; color:var(--gold)}
+  .strip-tot span{font-size:8.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+
+  /* ------------------------------------------------------- top right */
+  #topRight{position:absolute; right:20px; top:18px; display:flex; gap:8px; align-items:center}
+  .seg{display:flex; background:var(--panel); border:1px solid var(--line); border-radius:9px; overflow:hidden; box-shadow:var(--shadow); backdrop-filter:blur(14px)}
+  .seg button{
+    border:0; background:transparent; color:var(--muted); cursor:pointer;
+    padding:7px 11px; font-size:11px; font-family:inherit; letter-spacing:.06em; transition:.14s;
+    border-right:1px solid var(--line);
+  }
+  .seg button:last-child{border-right:0}
+  .seg button:hover{background:rgba(255,255,255,.07); color:var(--text)}
+  .seg button.on{background:rgba(201,162,39,.2); color:#f0e2b4}
+
+  /* -------------------------------------------------------- cam bar */
+  #camBar{position:absolute; left:50%; transform:translateX(-50%); bottom:96px}
+
+  /* --------------------------------------------------------- labels */
+  /* The label layer covers the whole viewport. It inherits pointer-events:auto
+     from ".hud > *", and because it comes last in the HUD it paints on top of
+     every control — so without this it silently swallows every click on the
+     page, including drags on the canvas underneath. Labels are read-only. */
+  #labels{position:absolute; inset:0; overflow:hidden; pointer-events:none}
+  #labels > *{pointer-events:none}
+  .lbl{
+    position:absolute; transform:translate(-50%,-50%);
+    font-size:10.5px; letter-spacing:.08em; white-space:nowrap;
+    padding:3px 7px; border-radius:20px; color:#e9eee9;
+    background:rgba(8,12,10,.62); border:1px solid rgba(255,255,255,.16);
+    backdrop-filter:blur(6px); text-shadow:0 1px 4px rgba(0,0,0,.8);
+  }
+  .lbl.pin{border-color:rgba(201,162,39,.6); color:#f2e3b4; background:rgba(24,18,4,.7)}
+  .lbl.dist{font-family:var(--fs); font-size:13px}
+
+  /* -------------------------------------------------------- loading */
+  #load{
+    position:fixed; inset:0; z-index:50; display:grid; place-items:center;
+    background:radial-gradient(120% 90% at 50% 30%, #12211a 0%, #060a08 70%);
+    transition:opacity .7s ease; text-align:center;
+  }
+  #load.done{opacity:0; pointer-events:none}
+  #load .inner{max-width:440px; padding:0 24px}
+  #load .crest{width:70px;height:70px;font-size:25px;margin:0 auto 20px}
+  #load h1{font-family:var(--fs); font-weight:500; font-size:32px; margin:0 0 4px; letter-spacing:.01em}
+  #load h1 em{font-style:normal;color:var(--gold)}
+  #load .sub{font-size:11px; letter-spacing:.24em; text-transform:uppercase; color:var(--muted); margin-bottom:28px}
+  #bar{height:2px; background:rgba(255,255,255,.12); border-radius:2px; overflow:hidden; margin-bottom:12px}
+  #bar i{display:block; height:100%; width:0%; background:linear-gradient(90deg,var(--gold-dim),var(--gold)); transition:width .45s ease}
+  #loadMsg{font-size:11.5px; color:var(--muted); letter-spacing:.06em; min-height:18px}
+  #err{color:#ff9a8a; font-size:12.5px; margin-top:16px; white-space:pre-wrap; text-align:left; display:none}
+
+  /* --------------------------------------------------------- footer */
+  #credit{
+    position:absolute; left:20px; bottom:14px; font-size:9.5px; color:rgba(255,255,255,.34);
+    letter-spacing:.06em; max-width:min(260px, 22vw); line-height:1.5;
+  }
+  #fps{position:absolute; right:20px; bottom:16px; font-size:10px; color:rgba(255,255,255,.3); font-variant-numeric:tabular-nums}
+
+  .cta{
+    display:inline-flex; align-items:center; padding:8px 16px; border-radius:9px;
+    background:linear-gradient(180deg,#d3ac2c,#a8811a); color:#1a1508; font-size:12px;
+    font-weight:650; letter-spacing:.06em; text-decoration:none; border:1px solid #e0bb42;
+    box-shadow:var(--shadow); transition:.16s; white-space:nowrap;
+  }
+  .cta:hover{background:linear-gradient(180deg,#e2ba36,#b78e1e)}
+  [hidden]{display:none !important}
+
+  /* embedded in a club's page: drop the big brand block and the chrome that
+     only makes sense full-screen */
+  body.embed .brand, body.embed #fps{display:none}
+  body.embed #credit{
+    left:auto; right:14px; bottom:10px; max-width:none; text-align:right;
+    font-size:8.5px; color:rgba(255,255,255,.30);
+  }
+  body.embed #topRight{top:14px; right:14px}
+  body.embed .hud::before{height:80px}
+  #openFull{
+    position:absolute; left:16px; top:14px; display:none;
+    font-size:11px; letter-spacing:.08em; color:#e8dcb8; text-decoration:none;
+    background:rgba(8,12,10,.7); border:1px solid rgba(201,162,39,.4);
+    padding:6px 12px; border-radius:20px; backdrop-filter:blur(8px);
+  }
+  body.embed #openFull{display:inline-block}
+
+  body.kiosk #tools, body.kiosk #camBar, body.kiosk #topRight{display:none}
+  body.kiosk #strip{pointer-events:none; opacity:.9}
+
+  /* ------------------------------------------------- compact controls */
+  #mobileBar{
+    position:absolute; left:10px; right:10px; bottom:118px; display:none;
+    align-items:center; gap:7px; padding:7px 8px; border-radius:11px;
+    background:var(--panel); border:1px solid var(--line); box-shadow:var(--shadow);
+    backdrop-filter:blur(14px);
+  }
+  #mobileBar select{flex:1 1 auto; min-width:0; padding:8px 26px 8px 9px; font-size:12px}
+  #mobileBar button{
+    flex:none; padding:9px 14px; border-radius:8px; cursor:pointer; font-family:inherit;
+    font-size:12px; border:1px solid var(--line); background:rgba(255,255,255,.06); color:var(--text);
+  }
+  #mobileBar button.mprimary{
+    background:linear-gradient(180deg,#d3ac2c,#a8811a); color:#1a1508;
+    border-color:#e0bb42; font-weight:650;
+  }
+  #mLie{flex:none; font-size:10px; color:var(--muted); letter-spacing:.05em; white-space:nowrap}
+  body.kiosk #mobileBar, body.embed #mobileBar{display:none !important}
+
+  .hint{font-size:10.5px; color:var(--muted); line-height:1.5; padding:0 14px 12px}
+  kbd{
+    background:rgba(255,255,255,.10); border:1px solid var(--line-2); border-bottom-width:2px;
+    border-radius:4px; padding:0 4px; font-size:9.5px; font-family:ui-monospace,monospace;
+  }
+
+  @media (max-width: 1320px){
+    #holeCard{width:252px}
+    #tools{width:250px}
+    .brand h1{font-size:17px}
+  }
+  @media (max-width: 1080px){
+    #topRight{top:auto; bottom:14px; right:14px; flex-direction:column; align-items:flex-end}
+    #credit{display:none}
+  }
+  @media (max-width: 860px){
+    #holeCard, #tools{display:none}
+    #mobileBar{display:flex}
+    #camBar{bottom:74px; max-width:calc(100vw - 20px); overflow-x:auto; scrollbar-width:none}
+    #camBar::-webkit-scrollbar{display:none}
+    .seg button{padding:10px 13px; font-size:12px}
+    .hbtn{min-width:46px; padding:9px 6px 8px}
+    #strip{bottom:10px; padding:4px}
+    .brand h1{font-size:16px}
+    .brand p{font-size:10px}
+    .crest{width:38px;height:38px;font-size:14px}
+    #topRight{top:12px; bottom:auto; right:12px; flex-direction:row}
+    #qualSeg, #lightSeg{display:none}
+  }
+  @media (max-width: 620px){
+    #topRight .seg{display:none}
+    .cta{padding:9px 14px}
+    #mLie{display:none}
+  }
+  @media (max-height: 720px){
+    #holeCard{top:76px}
+    #tools{top:76px; max-height:calc(100vh - 170px)}
+    #map{height:132px}
+  }
+</style>
+</head>
+<body>
+
+<canvas id="gl"></canvas>
+
+<div class="hud">
+  <div class="brand">
+    <div class="crest" id="bCrest">CH</div>
+    <div>
+      <h1 id="bTitle">Cog Hill · <em>Dubsdread</em></h1>
+      <p id="bSub">Course No. 4 &nbsp;·&nbsp; Lemont, Illinois</p>
+    </div>
+  </div>
+
+  <div id="topRight">
+    <a id="cta" class="cta" href="#" target="_blank" rel="noopener" hidden>Book a tee time</a>
+    <div class="seg" id="lightSeg"></div>
+    <div class="seg" id="qualSeg">
+      <button data-q="high" class="on">High</button>
+      <button data-q="fast">Fast</button>
+    </div>
+    <div class="seg">
+      <button id="shareBtn" title="Copy a link to this exact view">Share view</button>
+      <button id="tourBtn" title="Hands-free tour of all 18 holes">Auto tour</button>
+    </div>
+  </div>
+
+  <!-- ---------------------------------------------------- hole card -->
+  <div id="holeCard" class="panel">
+    <div class="hole-head">
+      <div class="hole-num" id="hNum">1</div>
+      <div class="hole-meta">
+        <div class="par" id="hPar">Par 4 · Stroke 9</div>
+        <div class="yds"><span id="hYds">458</span> <small>yards</small></div>
+      </div>
+    </div>
+    <canvas id="map" width="572" height="344"></canvas>
+    <div class="hole-desc" id="hDesc"></div>
+    <div class="stat-row">
+      <div class="stat"><b id="sBunk">—</b><span>Bunkers</span></div>
+      <div class="stat"><b id="sGreen">—</b><span>Green ft²</span></div>
+      <div class="stat"><b id="sElev">—</b><span>Elev. Δ</span></div>
+    </div>
+    <div class="tees" id="teeList"></div>
+  </div>
+
+  <!-- -------------------------------------------------------- tools -->
+  <div id="tools">
+    <div class="panel">
+      <h2>Shot Visualiser <span id="lieTag" style="color:var(--gold);letter-spacing:.04em;text-transform:none;font-size:11px"></span></h2>
+      <div class="body">
+        <div class="field">
+          <label>Player <b id="profName">Tour Professional</b></label>
+          <select id="profile"></select>
+        </div>
+        <div class="field">
+          <label>Club <b id="clubName">Driver</b></label>
+          <select id="club"></select>
+        </div>
+        <div class="field">
+          <label>Shot shape <b id="shapeVal">Straight</b></label>
+          <input type="range" id="shape" min="-100" max="100" value="0">
+        </div>
+        <div class="field">
+          <label>Power <b id="powerVal">100%</b></label>
+          <input type="range" id="power" min="55" max="112" value="100">
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="hit">Hit shot</button>
+          <button class="btn ghost" id="reset" style="width:auto;padding:9px 12px">Reset</button>
+        </div>
+        <div class="hint" style="padding:9px 0 0">
+          Click the ground to aim. Drag to orbit, scroll to zoom.
+        </div>
+      </div>
+      <div class="readout" id="readout">
+        <div class="rgrid">
+          <div>Carry <b id="rCarry">—</b></div>
+          <div>Total <b id="rTotal">—</b></div>
+          <div>Apex <b id="rApex">—</b></div>
+          <div>Descent <b id="rDesc">—</b></div>
+          <div>Ball speed <b id="rBall">—</b></div>
+          <div>Spin <b id="rSpin">—</b></div>
+          <div>Hang time <b id="rHang">—</b></div>
+          <div>Roll <b id="rRoll">—</b></div>
+        </div>
+        <div class="result" id="rResult">—</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Conditions</h2>
+      <div class="body">
+        <div class="field">
+          <label>Wind speed <b id="windVal">Calm</b></label>
+          <input type="range" id="wind" min="0" max="18" value="0">
+        </div>
+        <div class="field">
+          <label>Wind direction <b id="windDir">—</b></label>
+          <input type="range" id="wdir" min="0" max="359" value="0">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label style="margin-bottom:8px">Detail grass <b id="grassVal">On</b></label>
+          <button class="btn" id="grassBtn">Toggle foreground turf</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ------------------------------------------------------- cam bar -->
+  <div id="camBar" class="seg"></div>
+
+  <!-- --------------------------------------------------- hole strip -->
+  <div id="strip" class="panel"></div>
+
+  <div id="mobileBar">
+    <select id="mClub" aria-label="Club"></select>
+    <button id="mHit" class="mprimary">Hit</button>
+    <button id="mReset">Reset</button>
+    <span id="mLie"></span>
+  </div>
+
+  <a id="openFull" href="#" target="_blank" rel="noopener">Open full screen &#8599;</a>
+  <div id="labels"></div>
+  <div id="credit"></div>
+  <div id="fps"></div>
+</div>
+
+<!-- ------------------------------------------------------- loading -->
+<div id="load">
+  <div class="inner">
+    <div class="crest" id="lCrest">CH</div>
+    <h1 id="lTitle">Cog Hill No. 4 · <em>Dubsdread</em></h1>
+    <div class="sub">Interactive Course Preview</div>
+    <div id="bar"><i></i></div>
+    <div id="loadMsg">Starting up…</div>
+    <div id="err"></div>
+  </div>
+</div>
+
+<script src="branding.js"></script>
+<script src="course-data.js"></script>
+<script src="js/math.js"></script>
+<script src="js/gl.js"></script>
+<script src="js/shaders.js"></script>
+<script src="js/field.js"></script>
+<script src="js/terrain.js"></script>
+<script src="js/foliage.js"></script>
+<script src="js/shot.js"></script>
+<script src="js/app.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>

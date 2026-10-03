@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dubsdread — Play the Round</title>
+<!-- The proof of concept grew from one hole to all eighteen and moved to
+     round.html. This stub keeps any link that was already handed out working. -->
+<script>
+  var q = location.search || '?hole=1';
+  location.replace('round.html' + q + (q.indexOf('hole=') < 0 ? '&hole=1' : ''));
+</script>
+<style>
+  html,body{margin:0;height:100%;background:#0a0e0c;color:#9aa39a;
+    font:13px ui-sans-serif,system-ui,sans-serif;display:grid;place-items:center}
+  a{color:#c9a227}
+</style>
+</head>
+<body>
+<p>This moved to <a href="round.html?hole=1">round.html</a> — all eighteen holes.</p>
+</body>
+</html>

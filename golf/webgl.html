@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Dubsdread — Play the Round · Realism &amp; Play Proof of Concept</title>
+<style>
+  :root{
+    --gold:#c9a227; --gold-dim:#907418;
+    --panel:rgba(12,16,15,.80); --panel-solid:#0d1211;
+    --line:rgba(255,255,255,.09);
+    --ink:#e8eae4; --dim:#9aa39a; --faint:#6d766e;
+    --good:#7fc46a; --warn:#e0a83c; --bad:#d1584f;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:#080b0a;color:var(--ink);
+    font:13px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  #gl{position:fixed;inset:0;width:100vw;height:100vh;display:block;touch-action:none;cursor:crosshair}
+  #gl.dragging{cursor:grabbing}
+
+  /* ------------------------------------------------------------- chrome */
+  .hud{position:fixed;inset:0;pointer-events:none;z-index:2}
+  .hud > *{pointer-events:auto}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:11px;
+    backdrop-filter:blur(14px) saturate(1.2);box-shadow:0 14px 40px rgba(0,0,0,.42)}
+  .ph{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:8px 12px;border-bottom:1px solid var(--line);
+    font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+  .ph b{color:var(--gold);font-weight:600;letter-spacing:.14em}
+  .pb{padding:10px 12px}
+
+  /* left column */
+  #left{position:fixed;left:14px;top:14px;bottom:14px;width:288px;display:flex;
+    flex-direction:column;gap:10px;z-index:3;pointer-events:none;overflow:hidden}
+  #left > *{pointer-events:auto}
+
+  #brand{display:flex;align-items:center;gap:10px;padding:9px 12px}
+  #crest{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--gold);
+    display:grid;place-items:center;font-size:11px;letter-spacing:.06em;color:var(--gold);flex:none}
+  #brand .t{font-size:13px;font-weight:600;letter-spacing:.02em}
+  #brand .t em{color:var(--gold);font-style:normal}
+  #brand .s{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
+
+  #card .pb{display:flex;gap:12px;align-items:flex-start}
+  #hNum{font-size:40px;line-height:.92;font-weight:300;color:var(--gold);font-variant-numeric:tabular-nums}
+  #hMeta{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint)}
+  #hYds{font-size:21px;font-weight:300}
+  #hYds span{font-size:11px;color:var(--dim)}
+  #hDesc{padding:0 12px 10px;font-size:11.5px;color:var(--dim);line-height:1.5}
+
+  #mapWrap{position:relative}
+  #map,#book{display:block;width:100%;height:186px;border-radius:0 0 10px 10px}
+  #book{display:none}
+  #mapTabs{display:flex;gap:0}
+  #mapTabs button{flex:1;background:none;border:0;border-bottom:1px solid var(--line);
+    color:var(--faint);font:inherit;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+    padding:7px 4px;cursor:pointer}
+  #mapTabs button.on{color:var(--gold);border-bottom-color:var(--gold)}
+
+  #shots{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin}
+  #shots table{width:100%;border-collapse:collapse;font-size:11px}
+  #shots td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+  #shots td.n{color:var(--gold);width:16px;font-variant-numeric:tabular-nums}
+  #shots td.d{color:var(--dim);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  #shots .note{color:var(--faint);font-size:10px}
+
+  /* right column */
+  #right{position:fixed;right:14px;top:14px;bottom:14px;width:296px;display:flex;
+    flex-direction:column;gap:10px;z-index:3;pointer-events:none;overflow-y:auto;
+    scrollbar-width:thin}
+  #right > *{pointer-events:auto;flex:none}
+
+  .row{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:4px 0;font-size:12px}
+  .row .k{color:var(--dim);font-size:11px}
+  .row .v{font-variant-numeric:tabular-nums}
+  .big{font-size:23px;font-weight:300;font-variant-numeric:tabular-nums;line-height:1.1}
+  .big small{font-size:11px;color:var(--dim);font-weight:400}
+  hr.sep{border:0;border-top:1px solid var(--line);margin:8px -12px}
+
+  .chip{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;
+    letter-spacing:.06em;border:1px solid var(--line);color:var(--dim)}
+  .chip.g{color:var(--good);border-color:rgba(127,196,106,.4)}
+  .chip.w{color:var(--warn);border-color:rgba(224,168,60,.4)}
+  .chip.b{color:var(--bad);border-color:rgba(209,88,79,.4)}
+
+  select,input[type=range]{width:100%;font:inherit}
+  select{background:#131816;color:var(--ink);border:1px solid var(--line);
+    border-radius:7px;padding:6px 8px;font-size:12px}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:20px;background:none;cursor:pointer}
+  input[type=range]::-webkit-slider-runnable-track{height:3px;background:rgba(255,255,255,.16);border-radius:2px}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;
+    margin-top:-5px;border-radius:50%;background:var(--gold);border:0;
+    box-shadow:0 0 0 3px rgba(201,162,39,.18)}
+  input[type=range]::-moz-range-track{height:3px;background:rgba(255,255,255,.16)}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:50%;background:var(--gold)}
+
+  button{font:inherit;cursor:pointer}
+  .btn{background:linear-gradient(#d8b23a,#b4901e);color:#1a1508;border:0;border-radius:8px;
+    padding:10px 14px;font-weight:600;letter-spacing:.05em;font-size:13px;width:100%}
+  .btn:disabled{opacity:.4;cursor:default}
+  .btn2{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--ink);
+    border-radius:8px;padding:8px 10px;font-size:12px}
+  .btn2:hover{background:rgba(255,255,255,.11)}
+  .btn2.on{border-color:var(--gold);color:var(--gold)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+
+  .toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:5px 0;font-size:11.5px}
+  .sw{width:34px;height:18px;border-radius:10px;background:rgba(255,255,255,.13);
+    position:relative;flex:none;cursor:pointer;transition:background .18s}
+  .sw i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#cfd3cc;transition:left .18s}
+  .sw.on{background:rgba(201,162,39,.5)}
+  .sw.on i{left:18px;background:var(--gold)}
+
+  /* bottom */
+  #bottom{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:4;
+    display:flex;flex-direction:column;align-items:center;gap:9px;pointer-events:none}
+  #bottom > *{pointer-events:auto}
+  #camBar{display:flex;gap:0;overflow:hidden;border-radius:9px}
+  #camBar button{background:var(--panel);border:1px solid var(--line);border-right:0;
+    color:var(--dim);padding:7px 13px;font-size:10.5px;letter-spacing:.11em;
+    text-transform:uppercase;backdrop-filter:blur(12px)}
+  #camBar button:first-child{border-radius:9px 0 0 9px}
+  #camBar button:last-child{border-right:1px solid var(--line);border-radius:0 9px 9px 0}
+  #camBar button.on{color:var(--gold);background:rgba(201,162,39,.14)}
+
+  #meter{width:min(560px,86vw);padding:11px 14px;display:none}
+  #meter.on{display:block}
+  .bar{position:relative;height:12px;border-radius:6px;background:rgba(255,255,255,.08);
+    overflow:hidden;margin:5px 0 2px}
+  .bar .fill{position:absolute;inset:0 auto 0 0;width:0;
+    background:linear-gradient(90deg,#5aa04a,#c9a227 78%,#d1584f)}
+  .bar .over{position:absolute;top:0;bottom:0;left:89.3%;right:0;background:rgba(209,88,79,.28)}
+  .bar .needle{position:absolute;top:-3px;bottom:-3px;width:2px;background:#fff;
+    box-shadow:0 0 6px rgba(255,255,255,.8)}
+  .bar .zone{position:absolute;top:0;bottom:0;left:46.4%;width:7.2%;background:rgba(127,196,106,.35)}
+  .bar .mark{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,.35)}
+  .mlabel{display:flex;justify-content:space-between;font-size:9.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--faint)}
+  #mHint{text-align:center;font-size:11px;color:var(--gold);margin-top:6px;letter-spacing:.04em}
+
+  /* labels / flash */
+  #labels{position:fixed;inset:0;pointer-events:none;z-index:3}
+  .lbl{position:absolute;transform:translate(-50%,-100%);white-space:nowrap;
+    padding:2px 7px;border-radius:5px;font-size:10.5px;letter-spacing:.05em;
+    background:rgba(8,12,10,.62);border:1px solid rgba(255,255,255,.12);color:#dfe4dc;
+    text-shadow:0 1px 3px rgba(0,0,0,.8)}
+  .lbl.pin{color:#f0d878;border-color:rgba(201,162,39,.5)}
+  .lbl.dist{color:#fff}
+  #flash{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:6;
+    background:rgba(8,12,10,.8);border:1px solid rgba(201,162,39,.42);color:#f0e2b4;
+    padding:6px 15px;border-radius:20px;font-size:11.5px;letter-spacing:.05em;
+    backdrop-filter:blur(8px);pointer-events:none;opacity:0;transition:opacity .3s}
+  #fps{position:fixed;right:14px;bottom:14px;z-index:1;font-size:10px;color:var(--faint);
+    font-variant-numeric:tabular-nums}
+
+  /* landing-zone breakdown */
+  .zrow{margin:7px 0}
+  .zhead{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px}
+  .zhead b{font-weight:600}
+  .zbar{display:flex;height:9px;border-radius:5px;overflow:hidden;background:rgba(255,255,255,.07)}
+  .zbar i{display:block;height:100%}
+  .zsub{font-size:9.5px;color:var(--faint);margin-top:2px;letter-spacing:.02em}
+  .zkey{display:flex;flex-wrap:wrap;gap:8px;font-size:9.5px;color:var(--faint);margin-top:8px}
+  .zkey span{display:flex;align-items:center;gap:4px}
+  .zkey i{width:8px;height:8px;border-radius:2px;display:block}
+
+  /* scorecard */
+  #done{position:fixed;inset:0;z-index:9;display:none;place-items:center;
+    background:rgba(4,7,6,.62);backdrop-filter:blur(4px)}
+  #done.on{display:grid}
+  #doneCard{width:min(420px,92vw);text-align:center;padding:26px 24px 20px}
+  #doneScore{font-size:64px;font-weight:200;color:var(--gold);line-height:1}
+  #doneName{font-size:15px;letter-spacing:.2em;text-transform:uppercase;margin:4px 0 14px}
+  #doneList{text-align:left;font-size:11.5px;color:var(--dim);margin:0 0 16px}
+  #doneList div{display:flex;justify-content:space-between;gap:10px;padding:3px 0;
+    border-bottom:1px solid rgba(255,255,255,.05)}
+
+  /* loading */
+  #load{position:fixed;inset:0;z-index:20;background:#0a0e0c;display:grid;place-items:center;
+    transition:opacity .5s}
+  #load.done{opacity:0;pointer-events:none}
+  #lw{width:min(420px,86vw);text-align:center}
+  #lTitle{font-size:15px;letter-spacing:.04em;margin-bottom:3px}
+  #lTitle em{color:var(--gold);font-style:normal}
+  #lSub{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin-bottom:20px}
+  #bar{height:2px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
+  #bar div{height:100%;width:0;background:var(--gold);transition:width .3s}
+  #loadMsg{font-size:11px;color:var(--dim);margin-top:9px;letter-spacing:.06em}
+  #err{margin-top:14px;font-size:11.5px;color:#e5a89f;white-space:pre-wrap;display:none;text-align:left}
+  #err code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;
+    background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:4px;
+    padding:1px 5px;color:var(--gold);white-space:nowrap}
+
+  #note{position:fixed;left:14px;bottom:14px;z-index:1;max-width:288px;font-size:9.5px;
+    color:var(--faint);line-height:1.5;display:none}
+
+  /* hole transition veil: the rebuild is a few hundred milliseconds of frozen
+     frame, and a deliberate dip to black reads as a cut rather than a stall */
+  #veil{position:fixed;inset:0;background:#070a09;opacity:0;pointer-events:none;
+    z-index:8;transition:opacity .22s ease}
+  #veil.on{opacity:1}
+  #veilTxt{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:9;
+    color:var(--gold);font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+    opacity:0;transition:opacity .22s;pointer-events:none}
+  #veilTxt.on{opacity:1}
+
+  /* hole strip */
+  /* Sized, not just capped: as a flex child of a centred column the strip
+     collapses to its content width and the eighteen cells crush together. */
+  #strip{display:flex;gap:0;overflow:hidden;border-radius:9px;width:min(92vw,600px)}
+  #strip button{flex:1 1 0;min-width:26px;background:var(--panel);
+    border:1px solid var(--line);border-right:0;color:var(--dim);
+    padding:4px 0 3px;font-size:10px;line-height:1.2;backdrop-filter:blur(12px)}
+  #strip button:first-child{border-radius:9px 0 0 9px}
+  #strip button:last-child{border-right:1px solid var(--line);border-radius:0 9px 9px 0}
+  #strip button.on{color:var(--gold);background:rgba(201,162,39,.16)}
+  #strip button b{display:block;font-size:10.5px;font-weight:600}
+  #strip button i{display:block;font-style:normal;font-size:8.5px;color:var(--faint)}
+  #strip button.done i{color:var(--ink)}
+  #strip button.under i{color:var(--good)}
+  #strip button.over i{color:var(--bad)}
+  #strip .sep{flex:0 0 1px;background:var(--line)}
+
+  /* landing-zone breakdown */
+  .zrow{margin:7px 0}
+  .zhead{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px}
+  .zhead b{font-weight:600}
+  .zbar{display:flex;height:9px;border-radius:5px;overflow:hidden;background:rgba(255,255,255,.07)}
+  .zbar i{display:block;height:100%}
+  .zsub{font-size:9.5px;color:var(--faint);margin-top:2px;letter-spacing:.02em}
+  .zkey{display:flex;flex-wrap:wrap;gap:8px;font-size:9.5px;color:var(--faint);margin-top:8px}
+  .zkey span{display:flex;align-items:center;gap:4px}
+  .zkey i{width:8px;height:8px;border-radius:2px;display:block}
+
+  /* scorecard */
+  #cardWrap{width:min(760px,94vw);padding:18px 18px 14px}
+  #sc{width:100%;border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums}
+  #sc th,#sc td{border:1px solid rgba(255,255,255,.08);padding:4px 2px;text-align:center}
+  #sc th{color:var(--faint);font-weight:500;font-size:9.5px;letter-spacing:.08em}
+  #sc td.lbl{text-align:left;padding-left:8px;color:var(--dim);white-space:nowrap}
+  #sc td.tot{background:rgba(255,255,255,.045);font-weight:600}
+  #sc td.under{color:var(--good)}
+  #sc td.over{color:var(--bad)}
+  #sc td.eagle{color:var(--good);font-weight:700}
+
+  @media (max-width:1180px){
+    #left,#right{width:255px}
+  }
+  @media (max-width:900px){
+    #left,#right{position:static;width:auto}
+    .hud{overflow-y:auto}
+  }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="labels"><div id="flash"></div></div>
+
+<div class="hud">
+  <!-- ------------------------------------------------------------- left -->
+  <div id="left">
+    <div class="panel" id="brand">
+      <div id="crest">CH</div>
+      <div>
+        <div class="t">Cog Hill · <em>Dubsdread</em></div>
+        <div class="s">Course No. 4 · <span id="bThru">18 holes</span></div>
+      </div>
+    </div>
+
+    <div class="panel" id="card">
+      <div class="pb">
+        <div id="hNum">1</div>
+        <div style="flex:1">
+          <div id="hMeta">Par 4 · Stroke 9</div>
+          <div id="hYds">458 <span>yards</span></div>
+        </div>
+        <div style="text-align:right">
+          <div id="hMeta2" style="font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint)">Score</div>
+          <div id="hScore" class="big" style="color:var(--gold)">—</div>
+          <div id="hTot" style="font-size:10.5px;color:var(--dim);cursor:pointer"
+               title="Open the scorecard">—</div>
+        </div>
+      </div>
+      <div id="hDesc"></div>
+    </div>
+
+    <div class="panel" id="mapWrap">
+      <div id="mapTabs">
+        <button data-tab="map" class="on">Hole</button>
+        <button data-tab="book">Green book</button>
+      </div>
+      <canvas id="map"></canvas>
+      <canvas id="book"></canvas>
+    </div>
+
+    <div class="panel" id="shotsPanel" style="display:flex;flex-direction:column;min-height:0">
+      <div class="ph"><b>Shots</b><span id="shotSum"></span></div>
+      <div id="shots" class="pb" style="padding:4px 8px"><table><tbody id="shotBody"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- ------------------------------------------------------------ right -->
+  <div id="right">
+    <div class="panel" id="caddiePanel">
+      <div class="ph"><b>Caddie</b><span id="lieChip" class="chip">Tee</span></div>
+      <div class="pb">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px">
+          <div>
+            <div class="big" id="cPin">—<small> yds to pin</small></div>
+            <div style="font-size:11px;color:var(--dim)" id="cPlays"></div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)">Club</div>
+            <div style="font-size:15px;color:var(--gold)" id="cRec">—</div>
+          </div>
+        </div>
+        <hr class="sep">
+        <div class="row"><span class="k">Wind</span><span class="v" id="cWind">Calm</span></div>
+        <div class="row"><span class="k">Elevation</span><span class="v" id="cElev">—</span></div>
+        <div class="row"><span class="k">Green</span><span class="v" id="cGreen">—</span></div>
+        <div id="cCarries" style="font-size:11px;color:var(--dim);margin-top:6px"></div>
+        <div id="cLieNote" style="font-size:11px;color:var(--warn);margin-top:4px"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="shotPanel">
+      <div class="ph"><b>Shot</b><span id="strokeTag">Stroke 1</span></div>
+      <div class="pb">
+        <div id="fullControls">
+          <select id="club"></select>
+          <div class="row" style="margin-top:6px"><span class="k">Shape</span><span class="v" id="shapeVal">Straight</span></div>
+          <input type="range" id="shape" min="-100" max="100" value="0">
+          <div class="row"><span class="k">Aim</span>
+            <span><button class="btn2" id="aimL" style="padding:3px 9px">◀</button>
+                  <button class="btn2" id="aimR" style="padding:3px 9px">▶</button></span></div>
+        </div>
+        <div id="puttControls" style="display:none">
+          <div class="row"><span class="k">Read</span><span class="v" id="pRead">—</span></div>
+          <div class="row"><span class="k">Pace</span><span class="v" id="pPaceVal">Read pace</span></div>
+          <input type="range" id="pPace" min="60" max="145" value="100">
+          <div class="row"><span class="k">Aim</span>
+            <span><button class="btn2" id="paimL" style="padding:3px 9px">◀</button>
+                  <button class="btn2" id="paimR" style="padding:3px 9px">▶</button></span></div>
+        </div>
+        <button class="btn" id="swing" style="margin-top:9px">Swing <small style="opacity:.65">space</small></button>
+        <div class="grid3" style="margin-top:6px">
+          <button class="btn2" id="autoBtn">Auto</button>
+          <button class="btn2" id="restart" title="Back to the tee on this hole (R)">Restart hole</button>
+          <button class="btn2" id="cardBtn">Card</button>
+        </div>
+        <hr class="sep">
+        <div class="row"><span class="k">You play as</span><span class="v" id="skillName">Tour</span></div>
+        <select id="profileSel"></select>
+        <div class="row" style="margin-top:6px"><span class="k">Tees</span><span class="v" id="teeName">—</span></div>
+        <select id="teeSel"></select>
+      </div>
+    </div>
+
+    <div class="panel" id="zonePanel">
+      <div class="ph"><b>Landing zones</b><span id="zoneTag">off</span></div>
+      <div class="pb">
+        <div style="font-size:11px;color:var(--dim);margin-bottom:6px">
+          Where this shot actually finishes, sampled from the same flight model —
+          trees, wind and roll included.
+        </div>
+        <button class="btn2" id="zoneBtn" style="width:100%">Show landing zones</button>
+        <div id="zoneOut" style="margin-top:8px"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="condPanel">
+      <div class="ph"><b>Conditions</b><span id="sunTag"></span></div>
+      <div class="pb">
+        <div class="row"><span class="k">Time</span><span class="v" id="tVal">17:30</span></div>
+        <input type="range" id="clock" min="240" max="1320" value="1050">
+        <div class="row"><span class="k">Cloud</span><span class="v" id="cvVal">36%</span></div>
+        <input type="range" id="cover" min="0" max="100" value="36">
+        <div class="row"><span class="k">Haze</span><span class="v" id="tbVal">2.4</span></div>
+        <input type="range" id="turb" min="10" max="70" value="24">
+        <div class="row"><span class="k">Wind</span><span class="v" id="wVal">Calm</span></div>
+        <input type="range" id="wind" min="0" max="16" step="0.5" value="0">
+        <input type="range" id="wdir" min="0" max="359" value="200">
+        <div class="row"><span class="k">Temperature</span><span class="v" id="tmpVal">22 °C</span></div>
+        <input type="range" id="temp" min="2" max="38" value="22">
+        <div class="row"><span class="k">Green speed</span><span class="v" id="stVal">11.0 ft</span></div>
+        <input type="range" id="stimp" min="80" max="140" value="110">
+      </div>
+    </div>
+
+    <div class="panel" id="lookPanel">
+      <div class="ph"><b>Rendering</b><span id="renderTag"></span></div>
+      <div class="pb">
+        <div class="toggle"><span>Atmosphere &amp; cloud shadows</span><div class="sw on" id="swCloud"><i></i></div></div>
+        <div class="toggle"><span>Ambient occlusion</span><div class="sw on" id="swAO"><i></i></div></div>
+        <div class="toggle"><span>Depth of field</span><div class="sw on" id="swDof"><i></i></div></div>
+        <div class="toggle"><span>Sun shafts</span><div class="sw on" id="swShaft"><i></i></div></div>
+        <div class="toggle"><span>AgX tonemap <small style="color:var(--faint)">vs ACES</small></span><div class="sw on" id="swAgx"><i></i></div></div>
+        <div class="toggle"><span>Grass detail</span><div class="sw on" id="swGrass"><i></i></div></div>
+        <hr class="sep">
+        <div class="row"><span class="k">Aperture</span><span class="v" id="apVal">f/5.6</span></div>
+        <input type="range" id="ap" min="0" max="8" value="4">
+        <div class="row"><span class="k">Quality</span>
+          <span><button class="btn2" data-q="min" style="padding:3px 7px">Min</button>
+                <button class="btn2" data-q="low" style="padding:3px 7px">Low</button>
+                <button class="btn2" data-q="fast" style="padding:3px 7px">Fast</button>
+                <button class="btn2 on" data-q="high" style="padding:3px 7px">High</button></span></div>
+        <div class="grid2" style="margin-top:8px">
+          <button class="btn2" id="abBtn">Hold to compare</button>
+          <button class="btn2" id="photoBtn">Photo mode</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ----------------------------------------------------------- bottom -->
+  <div id="bottom">
+    <div class="panel" id="meter">
+      <div class="mlabel"><span id="mL">Power</span><span id="mR"></span></div>
+      <div class="bar" id="barPower"><div class="over"></div><div class="mark" style="left:89.3%"></div><div class="fill"></div><div class="needle"></div></div>
+      <div class="bar" id="barStrike" style="display:none"><div class="zone"></div><div class="needle"></div></div>
+      <div id="mHint">Click or press space to set the power</div>
+    </div>
+    <div id="camBar"></div>
+    <div id="strip"></div>
+  </div>
+</div>
+
+<div id="veil"></div>
+<div id="veilTxt">Walking to the next tee</div>
+
+<div id="fps"></div>
+<div id="note"></div>
+
+<div id="done"><div class="panel" id="doneCard">
+  <div id="doneScore">4</div>
+  <div id="doneName">Par</div>
+  <div id="doneTot" style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+       color:var(--faint);margin:-8px 0 14px"></div>
+  <div id="doneList"></div>
+  <button class="btn" id="nextBtn">Next hole</button>
+  <div class="grid2" style="margin-top:6px">
+    <button class="btn2" id="againBtn">Restart hole</button>
+    <button class="btn2" id="cardBtn2">Scorecard</button>
+  </div>
+</div></div>
+
+<div id="cardModal" style="position:fixed;inset:0;z-index:10;display:none;place-items:center;
+     background:rgba(4,7,6,.66);backdrop-filter:blur(4px)">
+  <div class="panel" id="cardWrap">
+    <div class="ph" style="margin:-18px -18px 12px"><b>Scorecard</b><span id="scTot"></span></div>
+    <div style="overflow-x:auto"><table id="sc"></table></div>
+    <div class="grid2" style="margin-top:12px">
+      <button class="btn2" id="scClose">Close</button>
+      <button class="btn2" id="scNew">New round</button>
+    </div>
+  </div>
+</div>
+
+<div id="load"><div id="lw">
+  <div id="lTitle">Cog Hill No. 4 · <em>Dubsdread</em></div>
+  <div id="lSub">Hole 1 — rendering &amp; play proof of concept</div>
+  <div id="bar"><div></div></div>
+  <div id="loadMsg">Starting…</div>
+  <div id="err"></div>
+  <div id="lStuck" style="display:none;margin-top:18px;font-size:11.5px;color:var(--dim);
+       line-height:1.7;text-align:left">
+    Still going. Startup builds the course, the tree line and a dozen shader
+    programs before the first frame, and on a slow machine that is a minute.<br>
+    If it never finishes:
+    <a href='/check' style='color:var(--gold)'>run the check page</a> ·
+    <a href="?q=min" style="color:var(--gold)">try the lightest build</a> ·
+    <a href='/flat' style='color:var(--gold)'>play without a GPU</a>
+  </div>
+</div></div>
+
+<script src="course-data.js"></script>
+<script src="branding.js"></script>
+<script src="js/math.js"></script>
+<script src="js/gl.js"></script>
+<script src="js/shaders.js"></script>
+<script src="js/field.js"></script>
+<script src="js/terrain.js"></script>
+<script src="js/foliage.js"></script>
+<script src="js/shot.js"></script>
+<script src="js/app.js"></script>
+<script src="poc/sky-model.js"></script>
+<script src="poc/foliage-poc.js"></script>
+<script src="poc/shaders-poc.js"></script>
+<script src="poc/render-poc.js"></script>
+<script src="poc/shot-poc.js"></script>
+<script src="poc/play.js"></script>
+<script src="poc/ui-poc.js"></script>
+</body>
+</html>
