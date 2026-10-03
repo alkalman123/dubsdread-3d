@@ -1,4 +1,4 @@
-name: Fetch CC0 textures and skies (temporary)
+name: Fetch CC0 textures and skies, part 2 (temporary)
 on:
   push:
     branches: [claude/golf-hole-poc-realistic-0lfn8x]
@@ -9,50 +9,36 @@ jobs:
   fetch:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with: { ref: asset-staging, path: stage }
       - name: Download
+        working-directory: stage
         run: |
-          set -x
-          mkdir -p stage/acg stage/ph stage/hdri stage/atlas
-          cd stage
-          for id in Grass001 Grass002 Grass004 Grass005 Grass006 Grass008 Ground101 Ground033 Ground027 Ground090 Bark012 Bark014 Bark006 Ground037 Ground011 Ground020; do
-            curl -sfL "https://ambientcg.com/get?file=${id}_2K-JPG.zip" -o "acg/$id.zip" || echo "fail $id"
+          UA='Mozilla/5.0 (X11; Linux x86_64) dubsdread-asset-fetch'
+          mkdir -p ph hdri atlas
+          for id in LeafSet016 LeafSet024 LeafSet010 LeafSet009 LeafSet005 LeafSet014 LeafSet022 LeafSet023 LeafSet027 PineNeedles001 Foliage008 Foliage001; do
+            curl -sfL -A "$UA" "https://ambientcg.com/get?file=${id}_2K-PNG.zip" -o "atlas/$id.zip" || echo "::warning::fail atlas $id"
           done
-          curl -sfL 'https://ambientcg.com/api/v2/full_json?type=Atlas&limit=200&include=tagData' -o atlas/atlas-list.json || true
-          python3 - <<'PY'
-          import json, urllib.request, os
-          d = json.load(open('atlas/atlas-list.json'))
-          ids = [a['assetId'] for a in d.get('foundAssets', []) if any(t in ' '.join(a.get('tags', [])).lower() for t in ['leaf', 'leaves', 'foliage', 'branch', 'plant'])]
-          print('atlas ids', ids)
-          for i in ids[:14]:
-              try:
-                  urllib.request.urlretrieve('https://ambientcg.com/get?file=%s_2K-PNG.zip' % i, 'atlas/%s.zip' % i)
-              except Exception as e:
-                  print('fail', i, e)
-          def ph(id, kind):
-              f = json.load(urllib.request.urlopen('https://api.polyhaven.com/files/' + id))
-              if kind == 'hdri':
-                  url = f['hdri']['2k']['hdr']['url']
-                  urllib.request.urlretrieve(url, 'hdri/%s_2k.hdr' % id)
-                  return
-              for m in ['Diffuse', 'nor_gl', 'Rough']:
-                  if m in f:
-                      url = f[m]['2k']['jpg']['url']
-                      urllib.request.urlretrieve(url, 'ph/%s_%s.jpg' % (id, m))
-          for t in ['sand_01', 'sand_02', 'sand_03', 'forest_leaves_02', 'forrest_ground_01', 'forest_floor', 'asphalt_02', 'clean_asphalt', 'bark_brown_02', 'jolcham_oak_bark_01', 'leafy_grass', 'sparse_grass']:
-              try: ph(t, 'tex')
-              except Exception as e: print('fail', t, e)
-          for h in ['kloofendal_48d_partly_cloudy_puresky', 'kloofendal_43d_clear_puresky', 'belfast_sunset_puresky', 'kloppenheim_06_puresky']:
-              try: ph(h, 'hdri')
-              except Exception as e: print('fail', h, e)
-          PY
-          du -sh acg ph hdri atlas; ls -la acg ph hdri atlas
-      - name: Push to staging branch
+          ph() { # id kind
+            curl -sfL -A "$UA" "https://api.polyhaven.com/files/$1" -o /tmp/f.json || { echo "::warning::fail api $1"; return; }
+            if [ "$2" = hdri ]; then
+              u=$(python3 -c "import json;print(json.load(open('/tmp/f.json'))['hdri']['2k']['hdr']['url'])")
+              curl -sfL -A "$UA" "$u" -o "hdri/$1_2k.hdr" || echo "::warning::fail hdr $1"
+            else
+              for m in Diffuse nor_gl Rough; do
+                u=$(python3 -c "import json,sys;f=json.load(open('/tmp/f.json'));print(f['$m']['2k']['jpg']['url'] if '$m' in f else '')")
+                [ -n "$u" ] && curl -sfL -A "$UA" "$u" -o "ph/$1_$m.jpg"
+              done
+            fi
+          }
+          for t in sand_01 sand_02 sand_03 forest_leaves_02 forrest_ground_01 forest_floor asphalt_02 clean_asphalt bark_brown_02 jolcham_oak_bark_01 leafy_grass sparse_grass; do ph $t tex; done
+          for h in kloofendal_48d_partly_cloudy_puresky kloofendal_43d_clear_puresky belfast_sunset_puresky kloppenheim_06_puresky; do ph $h hdri; done
+          du -sh ph hdri atlas; ls -la ph hdri atlas
+      - name: Push
+        working-directory: stage
         run: |
-          cd stage
-          git init -q -b asset-staging
           git config user.name asset-fetch
           git config user.email actions@users.noreply.github.com
           git add -A
-          git commit -qm "Raw CC0 downloads (Poly Haven, ambientCG) for processing"
-          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
-          git push -f origin asset-staging
+          git commit -qm "More raw CC0 downloads: leaf atlases, Poly Haven textures, skies"
+          git push origin HEAD:asset-staging
