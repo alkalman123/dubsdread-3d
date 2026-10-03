@@ -88,6 +88,16 @@
     fast: { res: 1.00, dpr: 1.0, sm: 2048, cascades: 2, hdr: true,
             ao: true,  dof: false, shafts: true,  bloom: true,
             grassR: 15, grassN: 15000, leaves: 0.55, dimples: false },
+    /* Phones. A phone GPU is quick at plain shading and slow at fill and
+       bandwidth, and its screen is three device pixels to the CSS pixel. So
+       full resolution at a capped 1.5x (sharp enough on a retina screen, under
+       a quarter of the native fill), real shadows from one small cascade, HDR
+       and bloom kept because they are most of what makes the light look like
+       daylight, and the screen-space passes — occlusion, depth of field,
+       shafts — left off, since each one is another full-screen read. */
+    mobile: { res: 1.00, dpr: 1.5, sm: 1024, cascades: 1, hdr: true,
+            ao: false, dof: false, shafts: false, bloom: true,
+            grassR: 9,  grassN: 5000,  leaves: 0.36, dimples: false },
     low:  { res: 0.80, dpr: 1.0, sm: 1024, cascades: 1, hdr: false,
             ao: false, dof: false, shafts: false, bloom: true,
             grassR: 9,  grassN: 4200,  leaves: 0.30, dimples: false },
@@ -96,7 +106,7 @@
             grassR: 0,  grassN: 0,     leaves: 0.18, dimples: false }
   };
 
-  App.TIER_ORDER = ['high', 'fast', 'low', 'min'];
+  App.TIER_ORDER = ['high', 'fast', 'mobile', 'low', 'min'];
 
   App.tier = function () {
     return this.TIERS[this.quality] || this.TIERS.fast;
@@ -545,7 +555,7 @@
    * mown surfaces too, at a length that matches the cut.
    */
 
-  function scatterGrassPoc(field, fx, fz, radius, count, seed) {
+  function scatterGrassPoc(field, fx, fz, radius, count, seed, pin) {
     const R = rng(seed || 777);
     const a = new Float32Array(count * 4);
     const b = new Float32Array(count * 4);
@@ -558,6 +568,8 @@
       const x = fx + Math.cos(ang) * rr;
       const z = fz + Math.sin(ang) * rr;
       if (!field.contains(x, z, 2)) continue;
+      // nothing grows out of the cup, or leans over its edge
+      if (pin && Math.hypot(x - pin[0], z - pin[2]) < 0.09) continue;
       const dSa = field.sample(field.sdfSa, x, z);
       const dWa = field.sample(field.sdfWa, x, z);
       const dPa = field.sample(field.sdfPa, x, z);
@@ -571,7 +583,9 @@
       // Height of cut, in metres. These are the real numbers: greens run about
       // 3 mm, fairways 12, first cut 20, rough 60-75, native fescue knee high.
       let hoc, prob, hue;
-      if (dGr < 0.2) { hoc = 0.010; prob = 0.30; hue = 0.15; }
+      // a green is cut too short for a blade to stand up and be seen; drawn
+      // blades there read as specks of dirt on the putting surface
+      if (dGr < 0.2) continue;
       else if (dGr < 1.2) { hoc = 0.016; prob = 0.40; hue = 0.22; }
       else if (dFw < 0 || dTe < 0) { hoc = 0.026; prob = 0.42; hue = 0.28; }
       else if (dFw < 2.5) { hoc = 0.042; prob = 0.55; hue = 0.34; }
@@ -616,7 +630,7 @@
     const fx = c[0], fz = c[2];
     if (!this.field.contains(fx, fz, 20)) { if (this.grass) this.grass.n = 0; return; }
     const budget = Math.round(this.tier().grassN * this.poc.grassDensity);
-    const pack = scatterGrassPoc(this.field, fx, fz, radius, budget, 4242);
+    const pack = scatterGrassPoc(this.field, fx, fz, radius, budget, 4242, this.pin);
     this.grassAt = [fx, fz];
     const gl = this.gl;
     if (!this.grassA) { this.grassA = gl.createBuffer(); this.grassB = gl.createBuffer(); }
@@ -831,6 +845,22 @@
     return clamp(this._focus, 0.5, 4000);
   };
 
+  /**
+   * Vertical field of view, in radians, for this screen shape.
+   *
+   * Every camera mode frames its shot as a vertical angle, which is right on a
+   * landscape screen and wrong on a phone held upright: 46 degrees of height on
+   * a screen half as wide as it is tall is about 22 degrees across — a long
+   * lens, with the fairway cropped to a slot. Below a reference aspect the
+   * width is held instead, so the hole still fits across the screen.
+   */
+  App.effectiveFov = function (fovDeg, aspect) {
+    const v = fovDeg * Math.PI / 180;
+    const REF = 0.85;
+    if (!(aspect > 0) || aspect >= REF) return v;
+    return 2 * Math.atan(Math.tan(v * 0.5) * REF / aspect);
+  };
+
   /* -------------------------------------------------------------- render */
 
   App.render = function (dt) {
@@ -857,7 +887,7 @@
     } else {
       P.focal = 24 / (2 * Math.tan((this.fov || 45) * Math.PI / 360));
     }
-    const vfov = (this.fov || 45) * Math.PI / 180;
+    const vfov = this.effectiveFov(this.fov || 45, aspect);
     M4.perspective(this.mProj, vfov, aspect, 0.22, 7000);
     M4.lookAt(this.mView, this.camPos, this.camLook, [0, 1, 0]);
     M4.mul(this.mVP, this.mProj, this.mView);
@@ -901,6 +931,8 @@
         const r = this.fieldRect(field);
         p.v4('uFieldRect', r[0], r[1], r[2], r[3]);
         p.f('uDetail', detail);
+        const pin = this.pin || this.pinPos();
+        p.v4('uCup', pin[0], pin[1], pin[2], detail > 0.5 ? this.CUP_R : 0);
         p.tex('uFieldA', field.texA).tex('uFieldB', field.texB);
         if (detail > 0.5 && this.scarTex) {
           p.tex('uScar', this.scarTex);
@@ -975,7 +1007,9 @@
       gl.enable(gl.CULL_FACE);
     }
 
-    if (this.tracerMesh && this.shotAnim > 0 && this.showTracer !== false) {
+    // a putt is followed by eye; a tracer ribbon on the green is a white sheet
+    if (this.tracerMesh && this.shotAnim > 0 && this.showTracer !== false &&
+        !(this.shot && this.shot.putt)) {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
       gl.depthMask(false);
@@ -1126,7 +1160,8 @@
     }
 
     /* --- contact shadow ------------------------------------------------ */
-    const F = this.poc.contact ? this.field : null;
+    const inHole = root.Play && root.Play.state && root.Play.state.holed;
+    const F = this.poc.contact && !inHole ? this.field : null;
     if (F) {
       const gy = F.height(b[0], b[2]);
       const air = Math.max(0, b[1] - gy);
@@ -1187,7 +1222,29 @@
     // it; three millimetres is the difference between resting and hovering.
     const fld = this.field;
     const bed = fld && b[1] - fld.height(b[0], b[2]) < 0.01 ? 0.0032 : 0;
-    m[12] = b[0]; m[13] = b[1] + 0.0213 - bed; m[14] = b[2];
+    /* On a phone held upright a real-size ball three or four metres away is
+       a few pixels — present, but easy to lose. Draw it half as big again
+       there; the physics, the cup and everything else stay real size. */
+    const c = this.canvas;
+    const bs = c && c.clientHeight > c.clientWidth * 1.2 ? 1.5 : 1.0;
+    m[0] = m[5] = m[10] = bs;
+    m[12] = b[0]; m[13] = b[1] + 0.0213 * bs - bed; m[14] = b[2];
+    /* In the hole. The roll ends two centimetres down, at the rim; from there
+       the ball drops to the floor of the cup, quickly, the way it does. */
+    const pin = this.pin;
+    const holed = root.Play && root.Play.state && root.Play.state.holed;
+    if (pin && (holed || (Math.hypot(b[0] - pin[0], b[2] - pin[2]) < this.CUP_R &&
+                          b[1] < pin[1] - 0.005))) {
+      // the roll is captured anywhere within 75 mm of the centre; once it is
+      // in, it is in the cup, against the stick
+      const t = this._dropT = Math.min(1, (this._dropT || 0) + 0.12);
+      const off = Math.max(0, this.CUP_R - 0.0225 * bs);
+      const ax = b[0] - pin[0], az = b[2] - pin[2], al = Math.hypot(ax, az) || 1;
+      m[12] = pin[0] + ax / al * off; m[14] = pin[2] + az / al * off;
+      m[13] = lerp(pin[1] - 0.005 + 0.0213 * bs, pin[1] - this.CUP_DEPTH + 0.0213 * bs, t * t);
+    } else {
+      this._dropT = 0;
+    }
     if (this.pg.ball) {
       const p = this.pg.ball.use();
       this.applyEnv(p);
@@ -1313,6 +1370,45 @@
    * painted timber sitting on the ground, and a flagstick tapers.
    */
 
+  /* Cup dimensions, in metres: the rules say 108 mm across, and a liner
+     sits about an inch below the surface and runs four inches down. */
+  App.CUP_R = 0.054;
+  App.CUP_DEPTH = 0.102;
+
+  /** An open-topped cup: walls facing inward, and a floor. */
+  App.buildCup = function (B, pin) {
+    const R = this.CUP_R, D = this.CUP_DEPTH, SEG = 20;
+    const F = this.field;
+    const soil = [0.15, 0.105, 0.07], liner = [0.80, 0.80, 0.77], floor = [0.05, 0.045, 0.04];
+    // the wall in two bands: soil at the top, the liner below it
+    const bands = [[0, 0.026, soil], [0.026, D, liner]];
+    for (const [d0, d1, col] of bands) {
+      const v0 = B.pos.length / 3;
+      for (let j = 0; j <= 1; j++) {
+        for (let i = 0; i <= SEG; i++) {
+          const a = i / SEG * Math.PI * 2;
+          const cx = Math.cos(a), cz = Math.sin(a);
+          const x = pin[0] + cx * R, z = pin[2] + cz * R;
+          // the top edge follows the green, so no sliver of wall shows above it
+          const top = F ? F.height(x, z) : pin[1];
+          const y = j === 0 ? (d0 === 0 ? top + 0.002 : pin[1] - d0) : pin[1] - d1;
+          B._push([x, y, z], [-cx, 0.15, -cz], col, 0);
+        }
+      }
+      for (let i = 0; i < SEG; i++) {
+        const a = v0 + i, b = a + 1, c = a + SEG + 1, d = c + 1;
+        B.idx.push(a, b, c, b, d, c);
+      }
+    }
+    const c0 = B.pos.length / 3;
+    B._push([pin[0], pin[1] - D, pin[2]], [0, 1, 0], floor, 0);
+    for (let i = 0; i <= SEG; i++) {
+      const a = i / SEG * Math.PI * 2;
+      B._push([pin[0] + Math.cos(a) * R, pin[1] - D, pin[2] + Math.sin(a) * R], [0, 1, 0], floor, 0);
+    }
+    for (let i = 0; i < SEG; i++) B.idx.push(c0, c0 + 2 + i, c0 + 1 + i);
+  };
+
   App.buildHoleProps = function () {
     const gl = this.gl;
     const H = this.holeData;
@@ -1323,11 +1419,16 @@
 
     const pin = this.pinPos();
     this.pin = pin;
-    // tapered fibreglass stick, black ferrule at the bottom, cup liner
-    B.cylinder(pin[0], pin[1], pin[2], 0.011, 0.008, 2.28, [0.94, 0.94, 0.91], 7);
-    B.cylinder(pin[0], pin[1] + 0.02, pin[2], 0.017, 0.017, 0.16, [0.08, 0.08, 0.08], 7);
-    B.cylinder(pin[0], pin[1] - 0.10, pin[2], 0.054, 0.054, 0.10, [0.09, 0.09, 0.08], 14);
-    B.cylinder(pin[0], pin[1] - 0.012, pin[2], 0.058, 0.056, 0.014, [0.86, 0.86, 0.83], 14);
+    /* The hole. It used to be two capped cylinders sitting on the green, so
+       what you saw was a grey disc where the hole should be. Now the terrain
+       shader cuts the green open over CUP_R (see uCup) and this is what is
+       underneath: an inch of soil, the white plastic liner, and a dark bottom
+       — open at the top. */
+    this.buildCup(B, pin);
+    // tapered fibreglass stick standing in the bottom of the cup, black ferrule
+    const D = this.CUP_DEPTH;
+    B.cylinder(pin[0], pin[1] - D, pin[2], 0.011, 0.008, 2.28 + D, [0.94, 0.94, 0.91], 7);
+    B.cylinder(pin[0], pin[1] - D + 0.005, pin[2], 0.017, 0.017, 0.07, [0.08, 0.08, 0.08], 7);
     // A flag you can actually pick out from 200 yards. Slightly oversized against
     // the real 45 cm, because at that range it is a couple of pixels and it is
     // the thing the whole shot is aimed at.

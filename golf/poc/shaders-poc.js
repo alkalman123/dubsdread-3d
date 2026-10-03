@@ -575,6 +575,7 @@ uniform vec4  uFieldRect;     // x0, z0, size, 1/size
 uniform vec2  uMowDir;
 uniform float uDetail;        // 1 = near field, 0 = distant context
 uniform float uDew;           // 0..1, dawn moisture on the turf
+uniform vec4  uCup;           // the hole: centre xyz, radius (0 = none)
 
 /* Divots, pitch marks and foot traffic the game paints as it is played. */
 uniform sampler2D uScar;
@@ -617,6 +618,8 @@ float bladeGrain(vec2 xz, float scale, out vec2 grad){
 
 void main(){
   vec2 xz = vWorld.xz;
+  // the green is cut open over the cup, so the cup underneath can be seen
+  if (uCup.w > 0.0 && distance(xz, uCup.xz) < uCup.w) discard;
   vec4 A = fieldA(xz);
   vec4 B = fieldB(xz);
   float dFw = A.x, dGr = A.y, dSa = A.z, dWa = A.w;
@@ -673,7 +676,7 @@ void main(){
 
   // poa patches: a yellower, coarser grass that invades bent fairways
   float poa = smoothstep(0.62, 0.86, clump) * (1.0 - wGreen * 0.55);
-  cFairway = mix(cFairway, vec3(0.286, 0.372, 0.146), poa * 0.5);
+  cFairway = mix(cFairway, vec3(0.286, 0.372, 0.146), poa * 0.34);
   cGreen   = mix(cGreen,   vec3(0.268, 0.396, 0.176), poa * 0.28);
   cNative = mix(cNative, vec3(0.230,0.226,0.116), smoothstep(10.0, 48.0, dCo) * 0.62);
 
@@ -717,7 +720,7 @@ void main(){
    * letting the view-dependent part of it grow with a low sun is what makes a
    * fairway look cut from the tee instead of like a green sheet. */
   float stripeView = 1.0 - abs(dot(normalize(vec2(V.x, V.z) + 1e-5), grainDir));
-  float stripeGain = 0.175 + wGreen * 0.060 + stripeView * 0.075;
+  float stripeGain = 0.175 + wGreen * 0.095 + stripeView * 0.075;
   albedo *= 1.0 + stripeAmt * stripeMask * stripeGain;
 
   // The collar is a distinct cut, about a metre wide, kept a shade darker than
@@ -726,10 +729,13 @@ void main(){
   albedo *= 1.0 - collar * 0.10;
 
   float smoothTurf = 1.0 - wGreen * 0.82;
-  albedo *= 1.0 + ((fine - 0.5) * 0.20 * lodFine * (1.0 - wSand)
-                 + (micro - 0.5) * 0.17 * lodMicro) * smoothTurf;
-  albedo *= 1.0 + (fbm2r(xz * 0.30, 3) - 0.5) * 0.15 * smoothTurf;
-  if (lodFine > 0.004) albedo *= 1.0 + (fbm2r(xz * 0.55, 2) - 0.5) * 0.10 * smoothTurf * lodFine;
+  /* Mottling. Kept, but gentler than it was: at full strength the fairway
+     close up read as camouflage, and real mown turf from standing height is a
+     much finer, flatter texture with the stripes doing most of the work. */
+  albedo *= 1.0 + ((fine - 0.5) * 0.08 * lodFine * (1.0 - wSand)
+                 + (micro - 0.5) * 0.06 * lodMicro) * smoothTurf;
+  albedo *= 1.0 + (fbm2r(xz * 0.30, 3) - 0.5) * 0.10 * smoothTurf;
+  if (lodFine > 0.004) albedo *= 1.0 + (fbm2r(xz * 0.55, 2) - 0.5) * 0.06 * smoothTurf * lodFine;
   albedo *= 1.0 - (1.0 - smoothstep(0.0, 1.4, abs(dFw))) * 0.07;
 
   /* ---- bunkers ---------------------------------------------------------
@@ -808,7 +814,10 @@ void main(){
     float h0 = fbm2r(xz * 1.4, 2);
     float hx = fbm2r((xz + vec2(e,0.0)) * 1.4, 2);
     float hz = fbm2r((xz + vec2(0.0,e)) * 1.4, 2);
-    float amp = mix(0.42, 0.07, wGreen) * mix(1.0, 1.5, wRough) * (1.0 - wPath) * lodBump;
+    /* Mown turf is close to flat at this scale: a strong bump here, under a
+       low sun, came out as dark blotches across every tee and fairway. Rough
+       keeps its lumps. */
+    float amp = mix(mix(0.15, 0.42, wRough), 0.025, wGreen) * (1.0 - wPath) * lodBump;
     Nb = normalize(N + vec3(-(hx-h0)/e, 0.0, -(hz-h0)/e) * amp);
   }
   // blade-scale grain: only within a few metres, where a pixel is smaller than
@@ -816,7 +825,9 @@ void main(){
   if (lodBlade > 0.004){
     vec2 g;
     bladeGrain(xz, mix(9.0, 26.0, wGreen), g);
-    float amp = mix(0.55, 0.16, wGreen) * mix(1.0, 1.8, wRough) * lodBlade * wTurf;
+    // a green is cut to three millimetres and rolled: from standing height it
+    // is velvet, not grain, and a grainy normal there sparkles under the sheen
+    float amp = mix(0.36, 0.045, wGreen) * mix(1.0, 2.6, wRough) * lodBlade * wTurf;
     Nb = normalize(Nb + vec3(-g.x, 0.0, -g.y) * amp);
   }
   if (dent > 0.001){
@@ -840,7 +851,7 @@ void main(){
                      - Nb * dot(Nb, vec3(grainDir.x, 0.0, grainDir.y)));
   float tl = dot(T, uSunDir), tv = dot(T, V);
   float k = clamp(sqrt(max(1.0-tl*tl,0.0)) * sqrt(max(1.0-tv*tv,0.0)) - tl*tv, 0.0, 1.0);
-  float sheen = pow(k, 42.0) * 0.62 + pow(k, 9.0) * 0.20;
+  float sheen = pow(k, 42.0) * 0.62 * (1.0 - wGreen * 0.6) + pow(k, 9.0) * (0.20 + wGreen * 0.10);
   float sheenAmt = (wFw*0.9 + wGreen*1.30 + wTee*0.9 + wRough*0.45) * (1.0 - wSand);
 
   // dew: a wet sward at dawn is markedly more specular and scatters a bright

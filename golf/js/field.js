@@ -199,9 +199,47 @@
     edt2d(_bin, w, h, false, _dOut);
     edt2d(_bin, w, h, true, _dIn);
     const sdf = (into && into.length === N) ? into : new Float32Array(N);
-    for (let i = 0; i < N; i++) sdf[i] = (_bin[i] ? -_dIn[i] : _dOut[i]) * mpp;
+    /* Sub-pixel edges.
+     *
+     * The transform measures from pixel centre to pixel centre on a mask that
+     * is either in or out, so every boundary on the course — bunker lips, cart
+     * paths, the edge of the green — landed on the pixel grid and drew as a
+     * staircase a metre a step. The edge is really half a pixel short of the
+     * neighbour's centre, and where it crosses a pixel the canvas has already
+     * said how far, as antialiased coverage. Use both, then one light blur:
+     * a distance field is close to linear, so the blur leaves it in place and
+     * only takes the corners off the steps. */
+    if (!_tmp || _tmp.length !== N) _tmp = new Float32Array(N);
+    const t = _tmp;
+    for (let i = 0; i < N; i++) {
+      let d = _bin[i] ? -_dIn[i] : _dOut[i];
+      d += d > 0 ? -0.5 : 0.5;
+      const a = cov[i] / 255;
+      if (a > 0.02 && a < 0.98) d = 0.5 - a;
+      t[i] = d;
+    }
+    // separable [1 2 1] / 4, horizontally into sdf, then vertically back into t
+    for (let y = 0; y < h; y++) {
+      const r = y * w;
+      sdf[r] = t[r];
+      sdf[r + w - 1] = t[r + w - 1];
+      for (let x = 1; x < w - 1; x++) {
+        const i = r + x;
+        sdf[i] = (t[i - 1] + 2 * t[i] + t[i + 1]) * 0.25;
+      }
+    }
+    for (let i = 0; i < w; i++) { t[i] = sdf[i]; t[N - w + i] = sdf[N - w + i]; }
+    for (let y = 1; y < h - 1; y++) {
+      const r = y * w;
+      for (let x = 0; x < w; x++) {
+        const i = r + x;
+        t[i] = (sdf[i - w] + 2 * sdf[i] + sdf[i + w]) * 0.25;
+      }
+    }
+    for (let i = 0; i < N; i++) sdf[i] = t[i] * mpp;
     return sdf;
   }
+  let _tmp = null;
 
   /* ---------------------------------------------------------------- Field */
   class Field {

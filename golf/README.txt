@@ -3,9 +3,10 @@ Dubsdread — Cog Hill No. 4
 
 Static site. No build step, no server, nothing fetched at runtime.
 
-  index.html     the round, drawn in software — no GPU needed, runs on a phone
-  webgl.html     the same round on the WebGL 2 renderer (needs a GPU)
-  flat.html      old address of index.html; forwards there
+  index.html     the round, in full 3D (WebGL 2) — desktop and phone layouts
+  flat.html      the same round drawn in software, for browsers without WebGL 2;
+                 index.html sends those browsers here by itself
+  webgl.html     old address; forwards to index.html
   check.html     what this browser can do, probe by probe
   preview.html   the original 18-hole preview, unchanged, for comparison
 
@@ -20,18 +21,23 @@ and ?tee=1 for a forward tee.
 On an iPhone
 ------------
 Open the link in Safari, then Share -> Add to Home Screen. It opens full
-screen from the icon like an app. Hold the phone upright: aim with the arrows
-either side of the big button (or tap the spot on the course you want), pick a
-club from the row above, and tap the big button to start and stop the needle.
-On the green it becomes the putter: one tap starts the needle, the second
-stops it, and the white line is the pace the caddie reads.
+screen from the icon like an app. On a phone the side panels give way to a
+status rail across the top and a thumb bar along the bottom: pick a club from
+the row of chips, aim with the arrows either side of the big button (or tap
+the spot on the course you want), and tap the big button to start and stop
+the needle. On the green it becomes the putter: one tap starts the needle, the
+second stops it, and the green mark is the pace the caddie reads. View, Map,
+Zones and Card are underneath; More opens everything else — every hole, the
+conditions, the rendering settings — as a sheet.
 
-The picture is only redrawn when something in it changes, so standing over a
-shot costs no battery.
+Graphics pick themselves: a phone gets a tier built for it (shadows, HDR light
+and bloom at 1.5x resolution), a computer starts at "fast", and either one
+steps down by itself if it cannot hold about 24 frames a second.
 
 If it says WebGL 2 is required
 ------------------------------
-There is a build that does not need a GPU at all: index.html, the home page. It draws the course in perspective from behind the ball
+There is a build that does not need a GPU at all: flat.html, and the home
+page sends you there automatically. It draws the course in perspective from behind the ball
 — projected, shaded and depth-sorted in JavaScript onto a 2D canvas, with no
 WebGL anywhere. Same course, same ball flight, caddie, dispersion zones and
 putting. Press V, or use the View buttons, to swap between the down-the-line
@@ -72,7 +78,7 @@ working HUD used to mean.
 If something still will not draw, add ?safe=1 to the URL for the simplest path
 any WebGL2 device can run:
 
-  webgl.html?safe=1
+  index.html?safe=1
 
 If you get a message at the top of the screen, send it along — it names the
 exact thing that failed.
@@ -92,6 +98,8 @@ than anything that shipped before:
   fast   as high without depth of field, ~13,000 blades
   low    one 1024 shadow cascade, no occlusion, no depth of field, no shafts,
          ~3,800 blades, rendered at 80% and upscaled
+  mobile phones: one 1024 shadow cascade, HDR and bloom, no occlusion, depth
+         of field or shafts, 1.5x resolution, ~5,000 blades
   min    no shadows, no grass, no post-processing, rendered at 65%
 
 The tier is chosen from what the driver reports. Only hardware known to take it
@@ -112,7 +120,7 @@ machine can hold.
 To send someone a specific shot, use the deep links below — the address bar keeps
 the hole you are on, so you can just copy it.
 
-Locally, opening webgl.html by double-clicking works too: every texture is
+Locally, opening index.html by double-clicking works too: every texture is
 generated procedurally and the canvas stays origin-clean, so it runs off the
 filesystem. If your browser blocks local files, serve the folder:
   python3 -m http.server 8099
@@ -139,7 +147,7 @@ Worth trying
 
 Deep links
 ----------
-  webgl.html?hole=7&t=1190&cover=30&wind=6&q=fast&cam=play&f=2.8
+  index.html?hole=7&t=1190&cover=30&wind=6&q=fast&cam=play&f=2.8
 
   hole   1-18                tee   0 (back) upward
   t      local time in minutes (1190 = 19:50)

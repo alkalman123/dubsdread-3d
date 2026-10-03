@@ -919,6 +919,9 @@
 
     inCup(App, b) {
       const pin = App.pinPos();
+      // holed counts wherever the roll stopped: capture is anywhere within
+      // 75 mm of the centre, and the ball is in the cup after that
+      if (root.Play && root.Play.state && root.Play.state.holed) return true;
       return Math.hypot(b[0] - pin[0], b[2] - pin[2]) < this.CUP_R &&
              b[1] < App.heightAt(b[0], b[2]) - 0.004;
     },
@@ -988,9 +991,11 @@
           /* The roll ends two centimetres down, which at the drawn ball size
              would leave it sitting on the rim. Sink it by how far down it has
              got, so it drops from level with the green to below the lip. */
+          const holed = root.Play && root.Play.state && root.Play.state.holed;
           const gy = App.heightAt(b[0], b[2]);
-          const sink = clamp((gy - b[1]) / 0.02, 0, 1);
-          const bq = to(b[0], gy + this.BALL_R - sink * this.BALL_R * 1.7, b[2]);
+          const sink = holed ? 1 : clamp((gy - b[1]) / 0.02, 0, 1);
+          const bx = holed ? pin[0] : b[0], bz = holed ? pin[2] : b[2];
+          const bq = to(bx, gy + this.BALL_R - sink * this.BALL_R * 1.7, bz);
           if (bq) {
             const rad = Math.max(1.4, this.BALL_R * focal / bq.d);
             g.fillStyle = '#d6d6cf';
