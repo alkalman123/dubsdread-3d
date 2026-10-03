@@ -28,7 +28,8 @@
      the same golf course. */
   const SURF = {
     fairway: [122, 168, 92], green: [140, 196, 104], fringe: [128, 178, 96],
-    tee: [122, 168, 92], rough: [82, 122, 66], native: [156, 146, 92],
+    tee: [122, 168, 92], rough: [74, 114, 58], native: [156, 146, 92],
+    cut: [100, 146, 76],
     sand: [222, 206, 166], path: [156, 154, 148], water: [70, 128, 158]
   };
 
@@ -51,6 +52,55 @@
     return top + ((c + (d - c) * sx) - top) * sz;
   }
 
+  /**
+   * Fill one triangle into a 32-bit pixel buffer, interpolating the colour
+   * across it. Colours are packed 0xBBGGRR; alpha is set opaque. Pixels are
+   * sampled at their centres, and anything thinner than a pixel is splatted
+   * as its average colour instead, so the rows near the horizon — dozens of
+   * them inside a few pixels — do not drop out and leave holes.
+   */
+  function tri(buf, W, H, ax, ay, ac, bx, by, bc, cx, cy, cc) {
+    let x0 = Math.floor(Math.min(ax, bx, cx)), x1 = Math.ceil(Math.max(ax, bx, cx));
+    let y0 = Math.floor(Math.min(ay, by, cy)), y1 = Math.ceil(Math.max(ay, by, cy));
+    if (x1 < 0 || y1 < 0 || x0 >= W || y0 >= H) return;
+    const ar = ac & 255, ag = (ac >> 8) & 255, ab = (ac >> 16) & 255;
+    const br = bc & 255, bg = (bc >> 8) & 255, bb = (bc >> 16) & 255;
+    const cr = cc & 255, cg = (cc >> 8) & 255, cb = (cc >> 16) & 255;
+    const area = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
+    if (y1 - y0 <= 1 || x1 - x0 <= 1 || Math.abs(area) < 0.5) {
+      const r = (ar + br + cr) / 3 | 0, g = (ag + bg + cg) / 3 | 0, b = (ab + bb + cb) / 3 | 0;
+      const v = 0xff000000 | (b << 16) | (g << 8) | r;
+      const yy = Math.max(0, Math.min(H - 1, Math.round((ay + by + cy) / 3 - 0.5)));
+      for (let x = Math.max(0, x0); x <= Math.min(W - 1, x1 - 1); x++) buf[yy * W + x] = v;
+      if (x1 - x0 < 1) {
+        const xx = Math.max(0, Math.min(W - 1, Math.round((ax + bx + cx) / 3 - 0.5)));
+        buf[yy * W + xx] = v;
+      }
+      return;
+    }
+    if (x0 < 0) x0 = 0; if (y0 < 0) y0 = 0;
+    if (x1 > W) x1 = W; if (y1 > H) y1 = H;
+    const inv = 1 / area, e = -0.02;
+    for (let y = y0; y < y1; y++) {
+      const py = y + 0.5;
+      let o = y * W + x0;
+      for (let x = x0; x < x1; x++, o++) {
+        const px = x + 0.5;
+        const wa = ((bx - px) * (cy - py) - (by - py) * (cx - px)) * inv;
+        if (wa < e) continue;
+        const wb = ((cx - px) * (ay - py) - (cy - py) * (ax - px)) * inv;
+        if (wb < e) continue;
+        const wc = 1 - wa - wb;
+        if (wc < e) continue;
+        const r = ar * wa + br * wb + cr * wc;
+        const g = ag * wa + bg * wb + cg * wc;
+        const b = ab * wa + bb * wb + cb * wc;
+        buf[o] = 0xff000000 | ((b < 0 ? 0 : b > 255 ? 255 : b) << 16) |
+                 ((g < 0 ? 0 : g > 255 ? 255 : g) << 8) | (r < 0 ? 0 : r > 255 ? 255 : r);
+      }
+    }
+  }
+
   /* Canopy tints per archetype, roughly the leaf colours the 3D build uses. */
   const TREE = [[74, 104, 52], [92, 124, 62], [108, 140, 70], [58, 92, 62]];
 
@@ -58,8 +108,8 @@
     /* Rows: how far the ground is drawn and at what spacing. NEAR is the first
        row's distance, FAR the last, and the ratio between consecutive rows is
        constant, which is what keeps screen-space density even. */
-    ROWS: 54,
-    COLS: 74,
+    ROWS: 64,
+    COLS: 88,
     NEAR: 1.5,
     FAR: 340,
     fov: 52 * Math.PI / 180,
@@ -68,7 +118,7 @@
        one that could not give us a GPU, so "fast enough" is not a safe
        assumption to make once and forget. */
     STEPS: [[44, 60], [54, 74], [64, 88], [74, 104]],
-    stepIx: 1,
+    stepIx: 2,
 
     /* Resolution steps for the backing store.
      *
@@ -82,8 +132,16 @@
      * blockiness we were fighting anyway.
      */
     SCALES: [0.50, 0.62, 0.78, 1.0],
-    scaleIx: 2,
-    renderScale: 0.78,
+    scaleIx: 3,
+    renderScale: 1.0,
+
+    /* The band of the canvas that is not under the HUD, in backing pixels.
+       Set by the page on resize. The ball is placed inside this band rather
+       than at a fixed fraction of the canvas, because on a phone the action bar
+       covers the bottom quarter of the screen — exactly where a camera behind
+       the ball puts the ball. */
+    viewTop: 0,
+    viewBottom: 0,
 
     attach(canvas) {
       this.cv = canvas;
@@ -129,13 +187,17 @@
       this.ROWS = this.STEPS[ix][0];
       this.COLS = this.STEPS[ix][1];
       this._half = null;
-      this.buildRows();
+      this.dist = null;
+      this.buildRows(this._near);
     },
 
-    buildRows() {
-      const k = Math.pow(this.FAR / this.NEAR, 1 / (this.ROWS - 1));
+    buildRows(near) {
+      near = near || this.NEAR;
+      if (this.dist && this._near === near && this.dist.length === this.ROWS) return;
+      this._near = near;
+      const k = Math.pow(this.FAR / near, 1 / (this.ROWS - 1));
       this.dist = [];
-      for (let i = 0, d = this.NEAR; i < this.ROWS; i++, d *= k) this.dist.push(d);
+      for (let i = 0, d = near; i < this.ROWS; i++, d *= k) this.dist.push(d);
       // lateral fan, in radians off the view axis: half the field of view plus
       // a margin so the edges of the screen are covered when the camera rolls
       this.fan(this.fov * 0.92);
@@ -192,11 +254,59 @@
       if (this.mode === 'fly') return this.flyCamera(App);
       const b = App.ballPos || App.teePos();
       const aim = Play && Play.state.active ? Play.aim : App.aim;
-      const back = 5.4, height = 1.72;
+      /* On the green, stand closer and lower: a putt is read from a few feet
+         behind the ball, and from 5 m back a 2 m putt is a smudge. */
+      const putting = Play && Play.isPutting && Play.state.active &&
+                      (Play.isPutting() || (Play.pending && Play.pending.kind === 'putt'));
+      const back = putting ? 3.0 : 6.0, height = putting ? 1.25 : 2.3;
       const ex = b[0] - Math.cos(aim) * back;
       const ez = b[2] - Math.sin(aim) * back;
-      const ey = Math.max(App.heightAt(ex, ez) + height, b[1] + 1.0);
-      return { x: ex, y: ey, z: ez, yaw: aim, pitch: 0.050 };
+      const ey = Math.max(App.heightAt(ex, ez) + height, b[1] + (putting ? 0.8 : 1.0));
+      return { x: ex, y: ey, z: ez, yaw: aim, pitch: 0.050, ball: b };
+    },
+
+    /**
+     * Focal length in backing pixels.
+     *
+     * The field of view is vertical, which is fine on a landscape screen and
+     * wrong on a phone held upright: 52 degrees of height on a narrow screen
+     * is about 25 degrees of width, a telephoto lens. Hold a minimum width
+     * instead, so the fairway still fits across the screen.
+     */
+    focalFor(W, H) {
+      const f = (H * 0.5) / Math.tan(this.fov * 0.5);
+      return Math.min(f, (W * 0.5) / Math.tan(this.hfovMin * 0.5));
+    },
+    hfovMin: 46 * Math.PI / 180,
+
+    /**
+     * Where the horizon goes this frame.
+     *
+     * For the play camera this is solved backwards from the ball: pick the
+     * screen row the ball should sit on — most of the way down the band the
+     * HUD leaves clear — and put the horizon wherever that requires. A fixed
+     * pitch put the ball under the action bar on a phone, and on a sloping
+     * green it wandered off the screen entirely. Eased, so a shot taking off
+     * does not snap the view.
+     */
+    horizonFor(cam, focal, W, H) {
+      if (!cam.ball) {
+        this._hz = null; this.settling = false;
+        return H * 0.5 - focal * Math.tan(cam.pitch || 0);
+      }
+      const top = this.viewTop || 0;
+      const bot = this.viewBottom || H;
+      const want = top + (bot - top) * 0.80;
+      const b = cam.ball;
+      const dx = b[0] - cam.x, dz = b[2] - cam.z;
+      const f = Math.max(0.5, dx * Math.cos(cam.yaw) + dz * Math.sin(cam.yaw));
+      let hz = want + focal * ((b[1] - cam.y) / f);
+      // never let the sky take more than about half the clear band
+      hz = clamp(hz, top + (bot - top) * 0.12, top + (bot - top) * 0.55);
+      if (this._hz == null || Math.abs(this._hz - hz) > H) this._hz = hz;
+      else this._hz += (hz - this._hz) * 0.3;
+      this.settling = Math.abs(this._hz - hz) > 0.5;
+      return this._hz;
     },
 
     /**
@@ -212,9 +322,9 @@
       const cv = this.cv;
       if (!cv) return null;
       const W = cv.width, H = cv.height;
-      const cam = this.camera(App, Play);
-      const focal = (H * 0.5) / Math.tan(this.fov * 0.5);
-      const horizon = H * 0.5 - focal * Math.tan(cam.pitch);
+      const cam = this._cam || this.camera(App, Play);
+      const focal = this._focal || this.focalFor(W, H);
+      const horizon = this._horizon != null ? this._horizon : H * 0.5;
       // canvas is CSS-scaled, so put the click into buffer pixels first
       const bx = sx * (W / cv.clientWidth), by = sy * (H / cv.clientHeight);
       const dyOverF = (horizon - by) / focal;          // rise per unit forward
@@ -235,23 +345,70 @@
 
     /* ------------------------------------------------------------- paint */
 
+    /**
+     * The ground is painted into a smaller canvas and stretched over the
+     * frame.
+     *
+     * Every quad of ground is one flat colour, and at full resolution the
+     * steps between neighbouring quads show as a grid of blocks — worst on the
+     * grass right in front of the ball, which is where you look. Painted at a
+     * fraction of the size, each quad is two or three pixels, and the bilinear
+     * stretch turns the steps into gradients: the colour of the turf is the
+     * same, the blocks are gone. It is also less than a fifth of the pixels to
+     * fill, which on a phone is most of the frame time.
+     *
+     * Trees, the flag, the ball and everything drawn over the course stay at
+     * full resolution, on top.
+     */
+    GROUND_SCALE: 0.5,
+
+    groundCtx(W, H) {
+      const k = this.GROUND_SCALE;
+      const w = Math.max(2, Math.round(W * k)), h = Math.max(2, Math.round(H * k));
+      if (!this._gcv) {
+        this._gcv = document.createElement('canvas');
+        this._gctx = this._gcv.getContext('2d');
+      }
+      if (this._gcv.width !== w || this._gcv.height !== h) {
+        this._gcv.width = w; this._gcv.height = h;
+      }
+      // draw in full-frame coordinates; the transform does the shrinking
+      this._gctx.setTransform(w / W, 0, 0, h / H, 0, 0);
+      return this._gctx;
+    },
+
     draw(App, Play) {
       const t0 = performance.now();
-      const cv = this.cv, g = this.ctx;
+      const cv = this.cv, gm = this.ctx;
       const W = cv.width, H = cv.height;
+      const g = this.groundCtx(W, H);
       const cam = this.camera(App, Play);
       const F = App.field;
       if (!F) return;
 
       const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw);
-      const focal = (H * 0.5) / Math.tan(this.fov * 0.5);
-      const horizon = H * 0.5 - focal * Math.tan(cam.pitch);
+      const focal = this.focalFor(W, H);
+      const horizon = this.horizonFor(cam, focal, W, H);
+      this._cam = cam; this._horizon = horizon;
       // one column of margin past the edge, so the outermost quad is complete
       this.fan(Math.atan((W * 0.5) / focal) * 1.06);
+      /* Start the rows at the bottom edge of the frame, not at a fixed metre and
+         a half. Rows are spaced geometrically, so every row spent on ground
+         behind the bottom of the screen is a row taken from the ground that is
+         on it — from the camera behind the ball that was a fifth of them. */
+      if (cam.ball) {
+        const drop = cam.y - App.heightAt(cam.x, cam.z);
+        const below = H - horizon;
+        const dBottom = below > 4 ? focal * drop / below : this.NEAR;
+        this.buildRows(clamp(Math.round(dBottom * 0.85 * 4) / 4, 0.8, 80));
+      } else {
+        this.buildRows(this.NEAR);
+      }
 
       /* Sun: the same direction the WebGL build computes, so the shading of a
          slope agrees between the two views. */
       const sun = App.sunDir ? App.sunDir() : [0.4, 0.7, 0.3];
+      this.shadowMap(App, sun);
 
       // the direction the mower ran, i.e. the line of the hole
       const tee = App.teePos(), pin0 = App.pinPos();
@@ -260,7 +417,7 @@
       this._az = (pin0[2] - tee[2]) / al;
       this._yaw = cam.yaw; this._focal = focal;
 
-      this.sky(g, W, H, horizon, sun);
+      this.sky(gm, W, H, horizon, sun);
 
       /* Project one ground sample. Returns null behind the camera. */
       const px = [], py = [], pv = [];
@@ -281,12 +438,55 @@
          rather than all being drawn on top of it. */
       const buckets = this.treeBuckets(App, cam, cy, sy);
 
-      /* ------------------------------------------------- ground, far to near */
-      let prev = null;
+      /* The cup goes in the same depth order as everything else, so a rise in
+         the green between the ball and the hole hides it, as it would. */
+      const to = (wx, wy, wz) => {
+        const dx = wx - cam.x, dz = wz - cam.z;
+        const f = dx * cy + dz * sy;
+        if (f < 0.25) return null;
+        const r = -dx * sy + dz * cy;
+        return { x: W * 0.5 + focal * (r / f), y: horizon - focal * ((wy - cam.y) / f), d: f };
+      };
+      const pin = App.pinPos();
+      const pf = (pin[0] - cam.x) * cy + (pin[2] - cam.z) * sy;
+      let pinRow = -2;
+      if (pf > 0.25 && pf < this.FAR) {
+        pinRow = -1;
+        for (let i = 0; i < this.ROWS; i++) if (this.dist[i] < pf) pinRow = i;
+      }
+
+      /* ------------------------------------------------- ground, far to near
+       *
+       * Shaded at the vertices and filled by hand, not by the canvas.
+       *
+       * Filling quads through the canvas API paints each one a single flat
+       * colour, which shows as a grid of blocks however fine the grid, and the
+       * path calls cost more than the shading did. So each grid point gets its
+       * colour, and the triangles between them are rasterised straight into a
+       * pixel buffer with the colour interpolated across them — Gouraud
+       * shading, the way every 3D card did it in 1998. The grass is a gradient
+       * between samples instead of a step at each one, and the whole ground is
+       * one putImageData.
+       */
+      const gw = this._gcv.width, gh = this._gcv.height;
+      const kx = gw / W, ky = gh / H;
+      if (!this._img || this._img.width !== gw || this._img.height !== gh) {
+        this._img = g.createImageData(gw, gh);
+        this._buf = new Uint32Array(this._img.data.buffer);
+      }
+      const buf = this._buf;
+      buf.fill(0);
+      const C = this.COLS;
+      if (!this._rowA || this._rowA.n !== C) {
+        const mk = () => ({ n: C, x: new Float32Array(C), y: new Float32Array(C),
+                            c: new Int32Array(C), ok: new Uint8Array(C) });
+        this._rowA = mk(); this._rowB = mk();
+      }
+      let row = this._rowA, prev = this._rowB, have = false;
       for (let i = this.ROWS - 1; i >= 0; i--) {
         const d = this.dist[i];
-        const row = new Array(this.COLS);
-        for (let j = 0; j < this.COLS; j++) {
+        const cheap = d >= 40;
+        for (let j = 0; j < C; j++) {
           const a = this.ang[j];
           // a fan in camera space: forward d, lateral d*tan(a)
           const lf = d, lr = d * Math.tan(a);
@@ -297,55 +497,56 @@
           const dx = wx - cam.x, dz = wz - cam.z;
           const ff = dx * cy + dz * sy;
           const rr = -dx * sy + dz * cy;
-          row[j] = ff < 0.35 ? null : {
-            x: W * 0.5 + focal * (rr / ff),
-            y: horizon - focal * ((wy - cam.y) / ff),
-            wx: wx, wz: wz, wy: wy, d: ff
-          };
+          if (ff < 0.35) { row.ok[j] = 0; continue; }
+          row.ok[j] = 1;
+          row.x[j] = (W * 0.5 + focal * (rr / ff)) * kx;
+          row.y[j] = (horizon - focal * ((wy - cam.y) / ff)) * ky;
+          /* Far away, shade every other point and average the ones between:
+             neighbouring samples there are a fraction of a pixel apart. */
+          if (cheap && (j & 1) && j < C - 1) { row.c[j] = -1; continue; }
+          this.shade(F, App, wx, wz, wy, sun, ff);
+          row.c[j] = (this._oB << 16) | (this._oG << 8) | this._oR;
         }
-
-        if (prev) {
-          let lastCol = null;
-          for (let j = 0; j < this.COLS - 1; j++) {
-            const a = row[j], b = row[j + 1], c = prev[j + 1], e = prev[j];
-            if (!a || !b || !c || !e) continue;
-            // skip anything that has collapsed to nothing on screen
-            if (Math.abs(b.x - a.x) < 0.35 && Math.abs(e.y - a.y) < 0.35) continue;
-            /* Shade every other column and reuse it for its neighbour. Two
-               adjacent quads in the same row differ by a fraction of a degree
-               of view angle; the colour difference is below what the eye picks
-               out of a gradient, and the saving is half the shading in the
-               frame. */
-            let col;
-            if ((j & 1) === 0 || !lastCol) {
-              const mx = (a.wx + b.wx) * 0.5, mz = (a.wz + b.wz) * 0.5;
-              col = lastCol = this.shade(F, App, mx, mz, a.wy, sun, a.d);
-            } else {
-              col = lastCol;
-            }
-            g.fillStyle = col;
-            g.beginPath();
-            g.moveTo(a.x, a.y); g.lineTo(b.x, b.y);
-            g.lineTo(c.x, c.y); g.lineTo(e.x, e.y);
-            g.closePath();
-            g.fill();
-            /* Canvas antialiases the edge of every fill, so two quads sharing an
-               edge leave a hairline of whatever was underneath between them — a
-               grid of pale seams across the whole ground. Stroking each quad in
-               its own colour covers its half of that seam. */
-            g.strokeStyle = col;
-            g.lineWidth = 1;
-            g.stroke();
+        if (cheap) {
+          for (let j = 1; j < C - 1; j += 2) {
+            if (row.c[j] !== -1) continue;
+            const p = row.c[j - 1], q = row.c[j + 1];
+            row.c[j] = ((((p >> 16) & 255) + ((q >> 16) & 255)) >> 1) << 16 |
+                       ((((p >> 8) & 255) + ((q >> 8) & 255)) >> 1) << 8 |
+                       (((p & 255) + (q & 255)) >> 1);
           }
         }
-        prev = row;
 
-        // trees that live between this row and the next one in
+        if (have) {
+          for (let j = 0; j < C - 1; j++) {
+            if (!row.ok[j] || !row.ok[j + 1] || !prev.ok[j] || !prev.ok[j + 1]) continue;
+            tri(buf, gw, gh,
+                row.x[j], row.y[j], row.c[j],
+                row.x[j + 1], row.y[j + 1], row.c[j + 1],
+                prev.x[j + 1], prev.y[j + 1], prev.c[j + 1]);
+            tri(buf, gw, gh,
+                row.x[j], row.y[j], row.c[j],
+                prev.x[j + 1], prev.y[j + 1], prev.c[j + 1],
+                prev.x[j], prev.y[j], prev.c[j]);
+          }
+        }
+        const t = prev; prev = row; row = t; have = true;
+      }
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.putImageData(this._img, 0, 0);
+
+      gm.imageSmoothingEnabled = true;
+      gm.imageSmoothingQuality = 'high';
+      gm.drawImage(this._gcv, 0, 0, W, H);
+
+      // trees and the cup, far to near, sharp
+      for (let i = this.ROWS - 1; i >= -1; i--) {
         const bucket = buckets[i];
-        if (bucket) for (const t of bucket) this.tree(g, t, cam, cy, sy, focal, W, horizon, sun);
+        if (bucket) for (const t of bucket) this.tree(gm, t, cam, cy, sy, focal, W, horizon, sun);
+        if (i === pinRow) this.cup(gm, App, Play, to, focal);
       }
 
-      this.overlay(g, App, Play, cam, cy, sy, focal, W, H, horizon);
+      this.overlay(gm, App, Play, cam, cy, sy, focal, W, H, horizon);
       if (this.mode === 'fly') {
         this.flyT += 0.0042;
         if (this.flyT >= 1) { this.flyT = 1; this.stopFly(); }
@@ -415,6 +616,59 @@
     },
 
     /**
+     * Tree shadows, baked once per hole into a one-metre grid.
+     *
+     * A shadow is the cheapest realism there is — a tree that does not darken
+     * the grass under it looks pasted on — but working out which trees shade a
+     * patch of ground, per patch, per frame, is not cheap. The sun does not
+     * move during a hole, so stamp each crown's shadow into a grid once and
+     * have the shading read it back with a bilinear lookup.
+     */
+    shadowMap(App, sun) {
+      const F = App.field;
+      const key = App.hole + ':' + F.x0 + ':' + sun.map(v => v.toFixed(2)).join(',');
+      if (this._shKey === key) return;
+      this._shKey = key;
+      const N = Math.ceil(F.size), x0 = F.x0, z0 = F.z0;
+      const m = new Uint8Array(N * N);
+      const sy = Math.max(0.3, sun[1]);
+      const ox = -sun[0] / sy, oz = -sun[2] / sy;
+      for (const t of App.trees || []) {
+        const h = t.scale * (t.hScale || 1);
+        const hc = h * 0.62;
+        const cx = t.x + ox * hc - x0, cz = t.z + oz * hc - z0;
+        const r = h * 0.36;
+        if (cx < -r || cz < -r || cx > N + r || cz > N + r) continue;
+        const i0 = Math.max(0, Math.floor(cx - r)), i1 = Math.min(N - 1, Math.ceil(cx + r));
+        const j0 = Math.max(0, Math.floor(cz - r)), j1 = Math.min(N - 1, Math.ceil(cz + r));
+        for (let j = j0; j <= j1; j++) {
+          for (let i = i0; i <= i1; i++) {
+            const d = Math.hypot(i - cx, j - cz) / r;
+            if (d >= 1) continue;
+            // dense in the middle, soft at the edge, dappled by a hash
+            const v = Math.min(1, (1 - d) * 2.2) * (0.78 + hash2(i, j) * 0.22) * 255;
+            const k = j * N + i;
+            if (v > m[k]) m[k] = v;
+          }
+        }
+      }
+      this._sh = m; this._shN = N; this._shX = x0; this._shZ = z0;
+    },
+
+    shadowAt(x, z) {
+      const m = this._sh;
+      if (!m) return 0;
+      const N = this._shN;
+      const fx = x - this._shX - 0.5, fz = z - this._shZ - 0.5;
+      const i = Math.floor(fx), j = Math.floor(fz);
+      if (i < 0 || j < 0 || i >= N - 1 || j >= N - 1) return 0;
+      const u = fx - i, v = fz - j, k = j * N + i;
+      const a = m[k] + (m[k + 1] - m[k]) * u;
+      const b = m[k + N] + (m[k + N + 1] - m[k + N]) * u;
+      return (a + (b - a) * v) / 255;
+    },
+
+    /**
      * Colour one patch of ground: its surface, lit by the sun off the local
      * slope, then faded into the haze with distance. The slope comes from the
      * same height field the ball rolls on, so a hill that breaks a putt is a
@@ -435,9 +689,11 @@
         const iv = 1 / Math.sqrt(nx0 * nx0 + nz0 * nz0 + 1);
         const l0 = clamp(0.55 + (nx0 * sun[0] + nz0 * sun[2] + sun[1]) * iv * 0.62, 0.42, 1.28);
         const f0 = clamp((dist - 60) / 320, 0, 0.72);
-        return 'rgb(' + ((b0[0] * l0 * (1 - f0) + 196 * f0) | 0) + ',' +
-                        ((b0[1] * l0 * (1 - f0) + 206 * f0) | 0) + ',' +
-                        ((b0[2] * l0 * (1 - f0) + 198 * f0) | 0) + ')';
+        const l1 = l0 * (1 - this.shadowAt(x, z) * 0.36);
+        this._oR = Math.min(255, (b0[0] * l1 * (1 - f0) + 196 * f0) | 0);
+        this._oG = Math.min(255, (b0[1] * l1 * (1 - f0) + 206 * f0) | 0);
+        this._oB = Math.min(255, (b0[2] * l1 * (1 - f0) + 198 * f0) | 0);
+        return;
       }
 
       if (inside) {
@@ -459,22 +715,39 @@
         };
         const wN = w(-S(F.sdfCo, x, z));                // outside the corridor
         lay(SURF.native, wN);
-        const wF = w(S(F.sdfFw, x, z)), wT = w(S(F.sdfTe, x, z));
-        const wG = w(S(F.sdfGr, x, z));
+        /* Rough is not one colour. Long grass lies over in clumps that catch
+           the light differently, so give it a slow, low-contrast mottle — big
+           enough to read as clumps, far too big to read as grain. */
+        const wR = 1 - wN;
+        if (wR > 0.02 && dist < 140) {
+          const cl = (vnoise(x * 0.42, z * 0.42) - 0.5) * 0.16 * wR;
+          r *= 1 + cl; g *= 1 + cl * 0.8; b *= 1 + cl;
+        }
+        const dFw = S(F.sdfFw, x, z);
+        const wF = w(dFw), wT = w(S(F.sdfTe, x, z));
+        const dGr = S(F.sdfGr, x, z);
+        const wG = w(dGr);
+        // the first cut: a mower's width of intermediate grass around the fairway
+        lay(SURF.cut, w(dFw - 2.6));
         lay(SURF.fairway, Math.max(wF, wT));
-        lay(SURF.fringe, w(S(F.sdfGr, x, z) - 1.1));
+        lay(SURF.fringe, w(dGr - 1.1));
         lay(SURF.green, wG);
         lay(SURF.path, w(S(F.sdfPa, x, z)));
-        const wS = w(S(F.sdfSa, x, z));
+        const dSa = S(F.sdfSa, x, z);
+        const wS = w(dSa);
         lay(SURF.sand, wS);
         const wW = w(S(F.sdfWa, x, z));
         lay(SURF.water, wW);
         mown = Math.max(wF, wT, wG) * (1 - Math.max(wS, wW));
         this._wet = wW;
+        this._green = wG;
+        /* A bunker is a hole with a lip, not sand paint: darken its edge, most
+           on the face turned away from the sun, so it reads as sunk. */
+        this._lip = wS > 0.05 ? clamp(1 + dSa / 1.6, 0, 1) * wS : 0;
       } else {
         const n = SURF.native;
         r = n[0]; g = n[1]; b = n[2];
-        this._wet = 0;
+        this._wet = 0; this._green = 0; this._lip = 0;
       }
       const wet = this._wet;
 
@@ -490,17 +763,34 @@
 
       /* Mowing stripes, along the line the hole is played. Real turf on a
          mown surface is striped, and it is the cue that reads as "cut". */
-      if (mown > 0.02 && this._ax !== undefined) {
-        lit *= 1 + Math.sin((x * this._ax + z * this._az) / 5.2) * 0.055 * mown;
+      if (mown > 0.02 && this._ax !== undefined && dist < 200) {
+        /* Mowing stripes, the way a course is actually cut: passes running up
+           and down the hole, each laying the grass the opposite way, so they
+           alternate light and dark across it. A softened square wave rather
+           than a sine — a real stripe has an edge. Greens are cut narrower. */
+        const across = -x * this._az + z * this._ax;
+        const along = x * this._ax + z * this._az;
+        const gr = this._green;
+        const width = 6.5 * (1 - gr) + 1.6 * gr;
+        let sq = clamp(Math.sin(across * Math.PI / width) * 4, -1, 1);
+        // greens are double-cut, so they show a faint checkerboard
+        if (gr > 0.3) sq = (sq + clamp(Math.sin(along * Math.PI / width) * 4, -1, 1) * 0.5) / 1.5;
+        const fade = 1 - clamp((dist - 90) / 110, 0, 1);
+        lit *= 1 + sq * (0.075 - gr * 0.03) * mown * fade;
       }
+      if (this._lip > 0) {
+        const away = clamp(1 - (nx * sun[0] + nz * sun[2]) * 3, 0.6, 1.4);
+        lit *= 1 - this._lip * 0.20 * away;
+      }
+      lit *= 1 - this.shadowAt(x, z) * 0.36;
 
       /* Turf grain: one fine octave only, and faded out with distance so it
          reads as texture close up and never as blotches further out. The last
          attempt at this used a six-metre octave and gave the fairway a case of
          camouflage. */
-      const near = 1 - clamp((dist - 8) / 55, 0, 1);
+      const near = 1 - clamp((dist - 6) / 40, 0, 1);
       if (near > 0.01 && wet < 0.5) {
-        lit *= 1 + (vnoise(x * 1.9, z * 1.9) - 0.5) * 0.085 * near * (1 - wet);
+        lit *= 1 + (vnoise(x * 1.15, z * 1.15) - 0.5) * 0.030 * near * (1 - wet);
       }
 
       if (wet > 0.05) {
@@ -516,7 +806,9 @@
       const R = r * lit * (1 - fog) + 196 * fog;
       const G = g * lit * (1 - fog) + 206 * fog;
       const B = b * lit * (1 - fog) + 198 * fog;
-      return 'rgb(' + (R | 0) + ',' + (G | 0) + ',' + (B | 0) + ')';
+      this._oR = clamp(R | 0, 0, 255);
+      this._oG = clamp(G | 0, 0, 255);
+      this._oB = clamp(B | 0, 0, 255);
     },
 
     /* --------------------------------------------------------------- trees */
@@ -618,8 +910,114 @@
 
     /* -------------------------------------------------- ball, flag, tracer */
 
-    /* Exaggeration for the cup, in metres. The real thing is 0.108. */
-    CUP_R: 0.42,
+    /* Cup and ball radii, in metres. The real ones are 0.054 and 0.021; both
+       are drawn at about two and a half times life size, and in proportion,
+       so the ball still fits in the hole. At the real size a cup ten metres
+       away is three pixels and a putt dropping is not something you can see. */
+    CUP_R: 0.135,
+    BALL_R: 0.052,
+
+    inCup(App, b) {
+      const pin = App.pinPos();
+      return Math.hypot(b[0] - pin[0], b[2] - pin[2]) < this.CUP_R &&
+             b[1] < App.heightAt(b[0], b[2]) - 0.004;
+    },
+
+    /**
+     * The hole: a real opening in the green, drawn in perspective.
+     *
+     * The rim is the cup's circle projected onto the ground, so it foreshortens
+     * like the green around it. Inside, the far wall is what you see from
+     * above — the white liner at the top, soil below it, and the dark bottom —
+     * done by clipping to the rim and stacking the same circle projected at
+     * increasing depth, each one lower on the screen than the last. Then the
+     * flagstick, standing in the middle of it.
+     */
+    cup(g, App, Play, to, focal) {
+      const pin = App.pinPos();
+      const R = this.CUP_R, N = 22;
+      const ring = depth => {
+        const out = [];
+        for (let k = 0; k < N; k++) {
+          const a = k / N * 6.2832;
+          const x = pin[0] + Math.cos(a) * R, z = pin[2] + Math.sin(a) * R;
+          const q = to(x, (depth ? pin[1] : App.heightAt(x, z)) - depth + 0.002, z);
+          if (!q) return null;
+          out.push(q);
+        }
+        return out;
+      };
+      const path = pts => {
+        g.beginPath();
+        g.moveTo(pts[0].x, pts[0].y);
+        for (let k = 1; k < pts.length; k++) g.lineTo(pts[k].x, pts[k].y);
+        g.closePath();
+      };
+      const rim = ring(0);
+      const c0 = to(pin[0], pin[1], pin[2]);
+      if (!rim || !c0) return;
+      const pxR = R * focal / c0.d;
+
+      if (pxR > 0.9) {
+        g.save();
+        // a ring of worn, slightly darker turf where the cup was cut in
+        path(rim);
+        g.strokeStyle = 'rgba(40,60,30,.45)';
+        g.lineWidth = Math.max(1, pxR * 0.22);
+        g.stroke();
+        g.clip();
+        /* An inch of soil at the top, then the white liner, then the dark
+           bottom. From a few metres away only the soil shows, which is why a
+           hole looks dark from where you putt; stand over it and the liner
+           appears. */
+        g.fillStyle = '#2e2216';
+        g.fill();
+        const liner = ring(R * 0.38), floor = ring(R * 1.7);
+        if (liner) { path(liner); g.fillStyle = '#cfd1c8'; g.fill(); }
+        if (floor) { path(floor); g.fillStyle = '#120d08'; g.fill(); }
+        // the flagstick, where it goes down into the cup
+        const s0 = to(pin[0], pin[1] - R * 2.2, pin[2]);
+        if (s0) {
+          g.strokeStyle = '#d9d9d2';
+          g.lineWidth = Math.max(1, 0.028 * focal / c0.d);
+          g.beginPath(); g.moveTo(s0.x, s0.y); g.lineTo(c0.x, c0.y); g.stroke();
+        }
+        // a holed ball, down in the hole and lit only from above
+        const b = App.ballPos;
+        if (b && this.inCup(App, b)) {
+          /* The roll ends two centimetres down, which at the drawn ball size
+             would leave it sitting on the rim. Sink it by how far down it has
+             got, so it drops from level with the green to below the lip. */
+          const gy = App.heightAt(b[0], b[2]);
+          const sink = clamp((gy - b[1]) / 0.02, 0, 1);
+          const bq = to(b[0], gy + this.BALL_R - sink * this.BALL_R * 1.7, b[2]);
+          if (bq) {
+            const rad = Math.max(1.4, this.BALL_R * focal / bq.d);
+            g.fillStyle = '#d6d6cf';
+            g.beginPath(); g.arc(bq.x, bq.y, rad, 0, 6.2832); g.fill();
+          }
+        }
+        g.restore();
+      } else {
+        g.fillStyle = '#15100a';
+        g.fillRect(c0.x - 1, c0.y - 0.5, 2, 1);
+      }
+
+      // the flagstick and flag, standing in the cup
+      const p1 = to(pin[0], pin[1] + 2.3, pin[2]);
+      if (!p1) return;
+      g.strokeStyle = '#f4f4ee';
+      g.lineWidth = Math.max(1, 0.028 * focal / c0.d);
+      g.beginPath(); g.moveTo(c0.x, c0.y); g.lineTo(p1.x, p1.y); g.stroke();
+      const fw = Math.max(4, 0.52 * focal / c0.d), fh = Math.max(3, 0.36 * focal / c0.d);
+      g.fillStyle = '#d8443a';
+      g.beginPath();
+      g.moveTo(p1.x, p1.y);
+      g.quadraticCurveTo(p1.x + fw * 0.5, p1.y - fh * 0.12, p1.x + fw, p1.y + fh * 0.08);
+      g.lineTo(p1.x + fw, p1.y + fh * 1.04);
+      g.quadraticCurveTo(p1.x + fw * 0.5, p1.y + fh * 0.84, p1.x, p1.y + fh);
+      g.closePath(); g.fill();
+    },
 
     overlay(g, App, Play, cam, cy, sy, focal, W, H, horizon) {
       const to = (wx, wy, wz) => {
@@ -692,38 +1090,11 @@
         g.globalAlpha = 1;
       }
 
-      /* The cup, drawn several times its real size.
-         A hole is 108 mm across: at any distance you would actually putt from
-         it is a pixel, and a ball vanishing into a pixel does not read as holing
-         out. Exaggerating it is the difference between seeing the putt drop and
-         being told about it afterwards. */
-      const pin = App.pinPos();
-      const cq = to(pin[0], pin[1] + 0.01, pin[2]);
-      if (cq) {
-        const cr = Math.max(2.5, (this.CUP_R * this._focal) / cq.d);
-        g.fillStyle = 'rgba(236,238,230,.85)';
-        g.beginPath(); g.ellipse(cq.x, cq.y, cr * 1.22, cr * 0.52, 0, 0, 6.2832); g.fill();
-        g.fillStyle = '#15100a';
-        g.beginPath(); g.ellipse(cq.x, cq.y, cr, cr * 0.42, 0, 0, 6.2832); g.fill();
-      }
-      const p0 = to(pin[0], pin[1], pin[2]);
-      const p1 = to(pin[0], pin[1] + 2.4, pin[2]);
-      if (p0 && p1) {
-        g.strokeStyle = '#f4f4ee';
-        g.lineWidth = Math.max(1, 90 / p0.d);
-        g.beginPath(); g.moveTo(p0.x, p0.y); g.lineTo(p1.x, p1.y); g.stroke();
-        const fw = Math.max(3, 150 / p0.d);
-        g.fillStyle = '#d8443a';
-        g.beginPath();
-        g.moveTo(p1.x, p1.y); g.lineTo(p1.x + fw, p1.y + fw * 0.42);
-        g.lineTo(p1.x, p1.y + fw * 0.84); g.closePath(); g.fill();
-      }
-
       // the aim line, while the ball is at rest
       const ball = App.ballPos || App.teePos();
       if (Play && Play.state.phase !== 'flying') {
         const aim = Play.aim;
-        const reach = Play.isPutting ? (Play.isPutting() ? 6 : Play.aimDistance()) : 150;
+        const reach = Play.isPutting ? (Play.isPutting() ? Math.max(1.2, Play.toPin()) : Play.aimDistance()) : 150;
         const t1 = to(ball[0] + Math.cos(aim) * reach, ball[1], ball[2] + Math.sin(aim) * reach);
         const t0 = to(ball[0], ball[1] + 0.02, ball[2]);
         if (t0 && t1) {
@@ -752,12 +1123,13 @@
         g.stroke();
       }
 
-      // the ball, with the patch of shadow under it
-      const bq = to(ball[0], ball[1] + 0.021, ball[2]);
+      // the ball, with the patch of shadow under it — unless it is in the cup,
+      // in which case the cup has already drawn it
+      const bq = this.inCup(App, ball) ? null : to(ball[0], ball[1] + this.BALL_R, ball[2]);
       if (bq) {
         const gy = App.heightAt(ball[0], ball[2]);
         const gq = to(ball[0], gy, ball[2]);
-        const rad = Math.max(1.4, 90 / bq.d);
+        const rad = Math.max(1.6, this.BALL_R * this._focal / bq.d);
         if (gq) {
           g.fillStyle = 'rgba(0,0,0,.30)';
           g.beginPath();
@@ -788,23 +1160,6 @@
       }
       g.drawImage(this._vig, 0, 0);
 
-      if (Play && Play.state.holed) {
-        const n = Play.state.stroke;
-        const par = App.holeData.par;
-        const names = { '-3': 'Albatross', '-2': 'Eagle', '-1': 'Birdie',
-                        '0': 'Par', '1': 'Bogey', '2': 'Double bogey' };
-        const label = n === 1 ? 'Hole in one!' : (names[String(n - par)] || (n - par) + ' over');
-        g.textAlign = 'center';
-        g.font = '600 30px ui-sans-serif, system-ui, sans-serif';
-        g.fillStyle = 'rgba(0,0,0,.45)';
-        g.fillText(label, W * 0.5 + 2, H * 0.30 + 2);
-        g.fillStyle = '#f0d878';
-        g.fillText(label, W * 0.5, H * 0.30);
-        g.font = '400 15px ui-sans-serif, system-ui, sans-serif';
-        g.fillStyle = 'rgba(255,255,255,.85)';
-        g.fillText('in ' + n + ' — walking to the next tee', W * 0.5, H * 0.30 + 26);
-        g.textAlign = 'left';
-      }
     }
   };
 

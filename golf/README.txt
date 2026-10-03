@@ -1,25 +1,37 @@
-Dubsdread — Hole 1 proof of concept
-===================================
+Dubsdread — Cog Hill No. 4
+==========================
 
 Static site. No build step, no server, nothing fetched at runtime.
 
-  index.html     the proof of concept: 18 playable holes, WebGL renderer
-  flat.html      the same round in 3D with no GPU at all — software rendered
+  index.html     the round, drawn in software — no GPU needed, runs on a phone
+  webgl.html     the same round on the WebGL 2 renderer (needs a GPU)
+  flat.html      old address of index.html; forwards there
   check.html     what this browser can do, probe by probe
   preview.html   the original 18-hole preview, unchanged, for comparison
 
-Netlify
--------
-Drag this whole folder onto https://app.netlify.com/drop — that is the entire
-deploy. You get a URL immediately; no account needed to start. Any other static
-host works the same way (GitHub Pages, Cloudflare Pages, S3).
+Where it lives
+--------------
+https://alkalman123.github.io/dubsdread-3d/
 
-Requires a browser with WebGL 2: Chrome, Edge, Firefox, Safari 15+.
+GitHub Pages, published by .github/workflows/deploy-crux-pages.yml whenever
+this folder changes on master. Add ?hole=2 (or any 1-18) to start on that hole,
+and ?tee=1 for a forward tee.
+
+On an iPhone
+------------
+Open the link in Safari, then Share -> Add to Home Screen. It opens full
+screen from the icon like an app. Hold the phone upright: aim with the arrows
+either side of the big button (or tap the spot on the course you want), pick a
+club from the row above, and tap the big button to start and stop the needle.
+On the green it becomes the putter: one tap starts the needle, the second
+stops it, and the white line is the pace the caddie reads.
+
+The picture is only redrawn when something in it changes, so standing over a
+shot costs no battery.
 
 If it says WebGL 2 is required
 ------------------------------
-There is a build that does not need a GPU at all: flat.html, linked straight
-from the error screen. It draws the course in perspective from behind the ball
+There is a build that does not need a GPU at all: index.html, the home page. It draws the course in perspective from behind the ball
 — projected, shaded and depth-sorted in JavaScript onto a 2D canvas, with no
 WebGL anywhere. Same course, same ball flight, caddie, dispersion zones and
 putting. Press V, or use the View buttons, to swap between the down-the-line
@@ -60,7 +72,7 @@ working HUD used to mean.
 If something still will not draw, add ?safe=1 to the URL for the simplest path
 any WebGL2 device can run:
 
-  index.html?safe=1
+  webgl.html?safe=1
 
 If you get a message at the top of the screen, send it along — it names the
 exact thing that failed.
@@ -100,7 +112,7 @@ machine can hold.
 To send someone a specific shot, use the deep links below — the address bar keeps
 the hole you are on, so you can just copy it.
 
-Locally, opening index.html by double-clicking works too: every texture is
+Locally, opening webgl.html by double-clicking works too: every texture is
 generated procedurally and the canvas stays origin-clean, so it runs off the
 filesystem. If your browser blocks local files, serve the folder:
   python3 -m http.server 8099
@@ -127,7 +139,7 @@ Worth trying
 
 Deep links
 ----------
-  index.html?hole=7&t=1190&cover=30&wind=6&q=fast&cam=play&f=2.8
+  webgl.html?hole=7&t=1190&cover=30&wind=6&q=fast&cam=play&f=2.8
 
   hole   1-18                tee   0 (back) upward
   t      local time in minutes (1190 = 19:50)

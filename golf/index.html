@@ -2,11 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<!-- This site is hosted on Netlify. Anyone can build and deploy a site
-     like this one for free: https://netlify.new/?utm_campaign=loops&utm_source=ai-legible&utm_medium=owned&utm_content=comment&utm_id=fd8c27bc-8df1-4556-b74d-c84a595741d9
-     Netlify hosting facts for this site: static/SSR served via Netlify Edge. -->
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <title>Dubsdread — Cog Hill No. 4</title>
+<!-- Add to Home Screen on an iPhone opens this full screen, like an app -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dubsdread">
+<meta name="theme-color" content="#070a09">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
 <style>
   /* ------------------------------------------------------------------ system
    * One scale, one palette, one shadow. The previous HUD was a column of
@@ -29,8 +36,14 @@
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;overflow:hidden;background:#070a09;color:var(--ink);
     font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-    -webkit-font-smoothing:antialiased;user-select:none}
-  button{font:inherit;cursor:pointer;color:inherit}
+    -webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none}
+  /* a game, not a page: no rubber-band scroll, no double-tap zoom, no grey
+     flash on every tap, no copy/lookup sheet on a long press */
+  html,body{position:fixed;inset:0;overscroll-behavior:none;touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;
+    -webkit-text-size-adjust:100%}
+  button{font:inherit;cursor:pointer;color:inherit;touch-action:manipulation}
+  #map{touch-action:manipulation}
   .num{font-variant-numeric:tabular-nums}
 
   #map{position:fixed;inset:0;width:100%;height:100%;display:block;background:#0d120f}
@@ -41,7 +54,9 @@
   /* ------------------------------------------------------------- top rail */
   #rail{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;align-items:stretch;
     gap:1px;height:56px;background:linear-gradient(180deg,rgba(8,11,10,.86),rgba(8,11,10,.42) 70%,transparent);
-    padding:8px 12px 0;pointer-events:none}
+    padding:calc(8px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 0
+      calc(12px + env(safe-area-inset-left));
+    height:calc(56px + env(safe-area-inset-top));pointer-events:none}
   #rail > *{pointer-events:auto}
   .rcell{display:flex;flex-direction:column;justify-content:center;padding:0 15px;min-width:0}
   .rcell .k{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);
@@ -88,8 +103,14 @@
   #shots .empty{padding:12px 14px;font-size:12px;color:var(--faint)}
 
   /* ------------------------------------------------------------ action bar */
-  #bar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:6;
+  #bar{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));
+    transform:translateX(-50%);z-index:6;
     width:min(760px,calc(100vw - 28px));padding:12px 14px 13px}
+  #clubs.putting{justify-content:flex-start}
+  .aim{flex:none;width:46px;padding:11px 0;border-radius:10px;border:1px solid var(--line-2);
+    background:rgba(255,255,255,.07);font-size:15px;color:var(--ink)}
+  .aim:active{background:rgba(255,255,255,.16)}
+  #more{display:contents}
   #clubs{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;padding-bottom:10px}
   #clubs::-webkit-scrollbar{display:none}
   .club{flex:none;padding:5px 11px;border-radius:8px;border:1px solid var(--line);
@@ -172,6 +193,39 @@
     #shotsPanel{display:none}
     #keys{display:none}
   }
+
+  /* ---------------------------------------------------------------- phone
+   * Thumb layout: aim either side of the big button, the occasional controls
+   * in a row of their own underneath, and a rail that fits across a phone.
+   */
+  @media (max-width:640px){
+    #rail{gap:0;padding-left:calc(8px + env(safe-area-inset-left));
+      padding-right:calc(8px + env(safe-area-inset-right))}
+    .rcell{padding:0 8px;flex:1 1 auto}
+    .rcell .k{font-size:8px;letter-spacing:.12em}
+    .rcell .v{font-size:13px}
+    #railHole .v{font-size:16px}
+    #railYds,#railSpace{display:none}
+    #railScore{border-radius:0 var(--r) var(--r) 0 !important}
+    #bar{width:calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right));
+      bottom:calc(8px + env(safe-area-inset-bottom));padding:9px 10px 10px}
+    #clubs{padding-bottom:8px}
+    .club{padding:7px 12px;font-size:12.5px}
+    #meterWrap{height:30px;margin-bottom:8px}
+    #acts{flex-wrap:wrap;gap:7px}
+    .btn{padding:14px 10px;font-size:16px}
+    #more{display:flex;width:100%;gap:6px}
+    #more .ghost{flex:1;padding:8px 4px;font-size:12px;text-align:center}
+    #toast{top:calc(64px + env(safe-area-inset-top))}
+  }
+  @media (max-height:500px) and (orientation:landscape){
+    #rail{height:calc(46px + env(safe-area-inset-top))}
+    #bar{padding:7px 10px 8px}
+    #clubs{padding-bottom:6px}
+    #meterWrap{height:22px;margin-bottom:6px}
+    .btn{padding:9px 10px}
+    .ghost,.aim{padding:7px 10px}
+  }
 </style>
 </head>
 <body>
@@ -229,12 +283,16 @@
     <div id="meterHint">Space to swing</div>
   </div>
   <div id="acts">
+    <button class="aim" id="aimL" aria-label="Aim left">&#9664;</button>
     <button class="btn" id="swing">Swing</button>
-    <button class="ghost" id="fly">Flyover</button>
-    <button class="ghost" id="viewBtn">Map</button>
-    <button class="ghost" id="zoneBtn">Zones</button>
-    <button class="ghost" id="cardBtn">Card</button>
-    <button class="ghost" id="restart">Restart</button>
+    <button class="aim" id="aimR" aria-label="Aim right">&#9654;</button>
+    <div id="more">
+      <button class="ghost" id="fly">Flyover</button>
+      <button class="ghost" id="viewBtn">Map</button>
+      <button class="ghost" id="zoneBtn">Zones</button>
+      <button class="ghost" id="cardBtn">Card</button>
+      <button class="ghost" id="restart">Restart</button>
+    </div>
   </div>
 </div>
 
@@ -248,7 +306,7 @@
 </div></div>
 
 <div id="keys">
-  <b>space</b> swing · <b>A/D</b> aim · <b>[ ]</b> club<br>
+  <b>space</b> swing · <b>A/D</b> or <b>◀ ▶</b> aim · <b>[ ]</b> club<br>
   <b>F</b> flyover · <b>V</b> view · <b>Z</b> zones · <b>S</b> card<br>
   <b>N/P</b> hole · <b>R</b> restart
 </div>
@@ -256,7 +314,7 @@
 <div id="load">
   <div id="lw">
     <div id="lTitle">Cog Hill No. 4 · <em>Dubsdread</em></div>
-    <div id="lSub">18 holes · no GPU required</div>
+    <div id="lSub">18 holes · tap the course to aim</div>
     <div id="lBar"><i></i></div>
     <div id="loadMsg">Starting…</div>
     <div id="lNote">
@@ -265,7 +323,7 @@
     </div>
     <div id="lWhy">
       Sent here because this browser would not provide WebGL 2.
-      <a href='/?nogl=stay'>Why?</a>
+      <a href='check.html'>Why?</a>
     </div>
   </div>
 </div>

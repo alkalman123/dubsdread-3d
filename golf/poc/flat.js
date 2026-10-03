@@ -369,7 +369,7 @@
      * only read is in the rail or the side panels.
      */
 
-    onPlayChanged() { this.syncHud(); },
+    onPlayChanged() { this.dirty = true; this.syncHud(); },
     onCameraChanged() {},
 
     /* ------------------------------------------------------------- clubs */
@@ -388,15 +388,60 @@
         };
         wrap.appendChild(b);
       }
+      /* The bag in shot.js has no putter — play.js switches to putting by
+         itself once the ball is on the green — but a row of irons with the
+         putter missing is the first thing anyone notices on a green. So the
+         putter is its own chip, shown on its own when it is the only club. */
+      const pt = document.createElement('button');
+      pt.className = 'club on';
+      pt.id = 'putterChip';
+      pt.textContent = 'Putter';
+      pt.style.display = 'none';
+      wrap.appendChild(pt);
     },
 
     syncClubs() {
       const P = root.Play;
-      document.querySelectorAll('#clubs .club').forEach(b => {
+      const putting = P.isPutting() && !P.state.holed;
+      $('clubs').classList.toggle('putting', putting);
+      const pc = $('putterChip');
+      if (pc) pc.style.display = putting ? '' : 'none';
+      document.querySelectorAll('#clubs .club[data-club]').forEach(b => {
+        b.style.display = putting ? 'none' : '';
         const on = b.dataset.club === P.club;
         b.classList.toggle('on', on);
-        if (on) b.scrollIntoView({ block: 'nearest', inline: 'center' });
+        if (on && !putting && this._clubWas !== P.club) {
+          b.scrollIntoView({ block: 'nearest', inline: 'center' });
+        }
       });
+      this._clubWas = putting ? null : P.club;
+    },
+
+    /**
+     * The one button. Off the green it runs the two-tap swing play.js already
+     * has. On the green a putt only needs pace — the line is the read — so it
+     * is one tap to start the needle and one to stop it, and 100% is the
+     * caddie's pace.
+     */
+    act() {
+      const P = root.Play;
+      if (P.state.holed) { this.walkOn(true); return; }
+      if (!P.isPutting() || P.state.phase === 'flying') { P.tap(); this.syncHud(); return; }
+      if (P.state.phase === 'idle') {
+        P.meter = { phase: 'power', t: 0, power: 0, strike: 0, dir: 1 };
+        P.state.phase = 'power';
+      } else if (P.state.phase === 'power') {
+        P.putt({ power: clamp(P.meter.t, 0.10, 1.12), faceErr: 0 });
+      }
+      this.syncHud();
+    },
+
+    aimBy(d) {
+      const P = root.Play;
+      if (P.state.phase !== 'idle' || P.state.holed) return;
+      P.aim += d; App.aim = P.aim; P.aimPoint = null; App.aimPoint = null;
+      P.clearPatterns();
+      this.syncHud();
     },
 
     /* --------------------------------------------------------------- rail */
@@ -425,11 +470,11 @@
         $('cadNote').textContent = '';
       } else if (P.isPutting()) {
         const rd = P.read();
-        this.target = clamp(rd.power || 0.5, 0.12, 1.12);
+        this.target = 1.0;                  // putt() reads 1.0 as the read's pace
         $('cadClub').textContent = 'Putter';
-        $('cadPct').textContent = Math.round(this.target * 100) + '%';
-        $('cadDist').textContent = (rd.distM * 3.28084).toFixed(1) + ' ft of roll';
-        $('cadNote').textContent = rd.breakText || 'plays straight';
+        $('cadPct').textContent = '100%';
+        $('cadDist').textContent = (P.toPin() * 3.28084).toFixed(1) + ' ft';
+        $('cadNote').textContent = this.breakText(rd);
       } else {
         const cad = P.caddie();
         this.target = clamp(cad.power, 0.12, 1.12);
@@ -454,13 +499,17 @@
       const sw = $('swing');
       sw.textContent = s.holed ? 'Next tee' :
         ph === 'idle' ? (P.isPutting() ? 'Putt' : 'Swing') :
-        ph === 'power' ? 'Set power' : ph === 'strike' ? 'Set the face' : 'In the air';
+        ph === 'power' ? (P.isPutting() ? 'Stop' : 'Set power')
+        : ph === 'strike' ? 'Set the face'
+        : (P.pending && P.pending.kind === 'putt' ? 'Rolling' : 'In the air');
       sw.classList.toggle('wait', ph === 'flying');
       $('meterHint').style.display = ph === 'idle' || ph === 'flying' ? 'flex' : 'none';
-      $('meterHint').textContent = ph === 'flying' ? 'Ball in the air'
+      const putting = P.isPutting() && !s.holed;
+      $('meterHint').textContent = ph === 'flying' ? (putting ? 'Rolling' : 'Ball in the air')
+        : putting ? 'Stop at the line · ' + this.breakText(P.read())
         : this.target ? 'Stop the needle at the marker — ' +
                         Math.round(this.target * 100) + '%'
-                      : 'Space to swing';
+                      : 'Tap Swing';
 
       $('fly').textContent = (root.Soft3D && root.Soft3D.mode === 'fly') ? 'Stop' : 'Flyover';
       $('fly').classList.toggle('on', !!(root.Soft3D && root.Soft3D.mode === 'fly'));
@@ -468,6 +517,16 @@
       $('zoneBtn').classList.toggle('on', this.zones);
       this.syncClubs();
       this.drawMini();
+    },
+
+    /** The read, in the units a caddie would give it: cups outside the hole. */
+    breakText(rd) {
+      if (!rd || !isFinite(rd.offsetDeg)) return 'plays straight';
+      const cups = Math.tan(Math.abs(rd.offsetDeg) * Math.PI / 180) * (rd.dist || 0) / 0.108;
+      if (cups < 0.5) return 'straight in';
+      // positive offset turns the aim anticlockwise in x/z, which on screen is right
+      return 'aim ' + (cups < 10 ? cups.toFixed(1) : Math.round(cups)) + ' cups ' +
+             (rd.offsetDeg > 0 ? 'right' : 'left');
     },
 
     /** Names for the bag, without asking play.js for something it does not have. */
@@ -614,9 +673,12 @@
         await new Promise(r => setTimeout(r, 12));
         return fn();
       };
+      const qs = new URLSearchParams(location.search);
+      const startHole = clamp(parseInt(qs.get('hole'), 10) || 1, 1, 18);
+      App.teeSet = clamp(parseInt(qs.get('tee'), 10) || 0, 0, 3);
       try {
         await step('Reading the property', () => App.buildWorld());
-        await step('Shaping the 1st', () => App.loadHole(1));
+        await step('Shaping the ' + this.ord(startHole), () => App.loadHole(startHole));
         bar.style.width = '100%';
         msg.textContent = 'Ready';
       } catch (e) {
@@ -638,7 +700,7 @@
       this.newHoleView();
       this.bind();
       const H = App.holeData;
-      this.toast('Hole 1 · par ' + H.par, H.yards + ' yards');
+      this.toast('Hole ' + App.hole + ' · par ' + H.par, H.yards + ' yards');
       setTimeout(() => $('load').classList.add('done'), 260);
       this.loop();
       root.__ready = true;
@@ -724,15 +786,30 @@
       /* The backing store is deliberately smaller than the box it is stretched
          over. See Soft3D.SCALES: pixels are what the software renderer pays
          for, and the upscale smooths the quad edges for free. */
-      const rs = (root.Soft3D && root.Soft3D.renderScale) || 1;
-      const w = Math.max(320, Math.round(c.clientWidth * rs));
+      /* Device pixels, but capped: a phone screen is three backing pixels to
+         the CSS pixel, and nine times the fill for a picture nobody can tell
+         from two and a quarter is where the lag comes from. */
+      const dpr = Math.min(root.devicePixelRatio || 1, 1.5);
+      const rs = ((root.Soft3D && root.Soft3D.renderScale) || 1) * dpr;
+      const w = Math.max(240, Math.round(c.clientWidth * rs));
       const h = Math.max(240, Math.round(c.clientHeight * rs));
+      const S = root.Soft3D;
+      if (S) {
+        // the clear band between the status rail and the action bar
+        const k = h / Math.max(1, c.clientHeight);
+        const rail = $('rail').getBoundingClientRect();
+        const bar = $('bar').getBoundingClientRect();
+        S.viewTop = Math.round(rail.bottom * k);
+        S.viewBottom = Math.round(Math.min(c.clientHeight, bar.top - 8) * k);
+      }
+      this.dirty = true;
       if (c.width === w && c.height === h) return false;
       c.width = w; c.height = h;
       return true;
     },
 
     newHoleView() {
+      this.dirty = true;
       this.fitView();
       // the top-down raster costs a second on a slow machine and is only worth
       // paying for when that is the view being looked at
@@ -749,27 +826,28 @@
       this.syncHud();
     },
 
-    async goHole(n) {
-      n = clamp(n, 1, 18);
-      if (n === App.hole || App.loading) return;
-      App.loading = true;
-      $('loadMsg').textContent = 'Walking to the ' + n + ((n % 10 === 1 && n !== 11) ? 'st' : (n % 10 === 2 && n !== 12) ? 'nd' : (n % 10 === 3 && n !== 13) ? 'rd' : 'th');
-      $('load').classList.remove('done');
-      await new Promise(r => setTimeout(r, 30));
-      App.loadHole(n);
-      App.loading = false;
-      root.Play.newHole(n);
-      this.newHoleView();
-      $('load').classList.add('done');
-    },
-
     bind() {
       const P = root.Play;
 
-      $('swing').onclick = () => {
-        if (P.state.holed) { this.walkOn(true); return; }
-        P.tap();
+      /* pointerdown, not click: a click fires when the finger lifts, which on
+         a timing meter is a stop that lands late by however long the tap was. */
+      $('swing').addEventListener('pointerdown', e => { e.preventDefault(); this.act(); });
+      const hold = (id, d) => {
+        const el = $(id);
+        let t = null;
+        const stop = () => { clearInterval(t); t = null; };
+        el.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          stop();
+          this.aimBy(d);
+          let n = 0;
+          // a tap nudges; holding keeps turning, faster the longer it is held
+          t = setInterval(() => this.aimBy(d * (++n > 8 ? 3 : 1)), 70);
+        });
+        ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => el.addEventListener(ev, stop));
       };
+      hold('aimL', -0.006);
+      hold('aimR', 0.006);
       $('restart').onclick = () => { P.restartHole(); this.syncHud(); };
       $('cardBtn').onclick = () => this.showCard(true);
       $('cardClose').onclick = () => this.showCard(false);
@@ -808,7 +886,7 @@
         const k = e.key.toLowerCase();
         if (k === ' ' || e.code === 'Space') {
           e.preventDefault();
-          if (P.state.holed) this.walkOn(true); else P.tap();
+          if (!e.repeat) this.act();
           return;
         }
         if (k === 'a') { P.aim -= 0.012; App.aim = P.aim; P.clearPatterns(); }
@@ -826,9 +904,14 @@
         this.syncHud();
       });
 
-      addEventListener('resize', () => {
+      const onResize = () => {
         if (this.resize()) { this.base = null; this._mini = null; this.newHoleView(); }
-      });
+      };
+      addEventListener('resize', onResize);
+      addEventListener('orientationchange', () => setTimeout(onResize, 250));
+      // the HUD settles after fonts and the first syncHud; measure it again
+      setTimeout(onResize, 300);
+      document.addEventListener('visibilitychange', () => { this.dirty = true; });
     },
 
     /** Walk to the next tee: on a timer after holing out, or by hand. */
@@ -882,8 +965,24 @@
                          [last.surface, last.note].filter(Boolean).join(' · '));
             }
           }
-          this.drawMeter();
-          this.draw();
+          /* Draw only when something in the picture changed. A golf game spends
+             most of its time standing still — reading, aiming, deciding — and
+             repainting an identical frame sixty times a second is what makes a
+             phone hot and everything else on it slow. */
+          const S2 = root.Soft3D;
+          const b = App.ballPos || [0, 0, 0];
+          const key = [this.view, App.hole, P.state.phase, P.state.holed, this.zones,
+                       P.aim.toFixed(4), P.club, b[0].toFixed(3), b[1].toFixed(3),
+                       b[2].toFixed(3), App.shotAnim, this.cv.width, this.cv.height,
+                       S2 ? S2.mode + S2.flyT : ''].join('|');
+          if (key !== this._key || this.dirty || (S2 && S2.settling)) {
+            this._key = key;
+            this.dirty = false;
+            this.draw();
+          }
+          const ph = P.state.phase;
+          const mkey = ph + '|' + this.target + '|' + $('meterC').clientWidth + '|' + (ph === 'power' || ph === 'strike' ? P.meter.t : '');
+          if (mkey !== this._mkey) { this._mkey = mkey; this.drawMeter(); }
         } catch (e) {
           if (!this._warned) { this._warned = true; console.error(e); }
         }
