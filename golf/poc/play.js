@@ -42,6 +42,40 @@
     origSetCamera.call(this, mode, snap);
   };
 
+  /**
+   * Tilt `look` down, if it has to be, until the ball sits above the controls.
+   *
+   * The play and putt cameras aim at where the shot is going, which puts the
+   * ball near the bottom of the frame — and on a phone the bottom of the frame
+   * is under the swing button. UI reports how much of the screen its controls
+   * cover (App.viewInset, in CSS pixels); the ball is kept a little above that.
+   * Only ever tilts down, so on a big screen with nothing in the way the
+   * framing is exactly what it was.
+   */
+  App.keepInFrame = function (eye, look, ball) {
+    const c = this.canvas;
+    if (!c || !c.clientHeight) return;
+    const H = c.clientHeight, aspect = c.clientWidth / H;
+    const inset = this.viewInset || { top: 0, bottom: 0 };
+    const band = Math.max(40, H - inset.top - inset.bottom);
+    // lowest the ball may sit, as a fraction of the screen from the top
+    const yMax = (inset.top + band * 0.80) / H;
+    const ndc = 1 - 2 * yMax;                         // negative: below centre
+    const half = this.effectiveFov(this.fovTarget || this.fov || 45, aspect) * 0.5;
+    const dx = look[0] - eye[0], dy = look[1] - eye[1], dz = look[2] - eye[2];
+    const hd = Math.hypot(dx, dz);
+    if (hd < 1e-3) return;
+    const pitch = Math.atan2(dy, hd);
+    const bh = Math.hypot(ball[0] - eye[0], ball[2] - eye[2]);
+    const beta = Math.atan2(ball[1] + 0.02 - eye[1], Math.max(bh, 0.05));
+    const maxPitch = beta - Math.atan(ndc * Math.tan(half));
+    if (pitch <= maxPitch) return;
+    const L = Math.hypot(hd, dy);
+    look[0] = eye[0] + dx / hd * Math.cos(maxPitch) * L;
+    look[2] = eye[2] + dz / hd * Math.cos(maxPitch) * L;
+    look[1] = eye[1] + Math.sin(maxPitch) * L;
+  };
+
   const origUpdateCamera = App.updateCamera;
   App.updateCamera = function (dt) {
     const P = root.Play;
@@ -52,7 +86,10 @@
       // Down the line from behind the ball, the way a player sees the shot.
       const b = this.ballPos || this.teePos();
       const a = P && P.state.active ? P.aim : this.aim;
-      const back = 5.2, height = 1.68;
+      // a little closer on a phone held upright, where the ball is otherwise a
+      // few pixels across
+      const c = this.canvas, tall = c && c.clientHeight > c.clientWidth;
+      const back = tall ? 3.9 : 5.2, height = tall ? 1.52 : 1.68;
       const ex = b[0] - Math.cos(a) * back, ez = b[2] - Math.sin(a) * back;
       const ey = Math.max(g(ex, ez) + height, b[1] + 0.9);
       // look at where the shot is meant to finish, not at the ball
@@ -60,16 +97,22 @@
       const tx = b[0] + Math.cos(a) * reach, tz = b[2] + Math.sin(a) * reach;
       eye = [ex, ey, ez];
       look = [tx, g(tx, tz) + 2.0, tz];
+      this.keepInFrame(eye, look, b);
     } else if (this.camMode === 'putt') {
-      const b = this.ballPos || this.teePos();
+      /* Behind the ball on the line of the putt, looking at the hole — and,
+         while the putt is rolling, staying behind the ball rather than behind
+         where it started, so it cannot run out of the bottom of the frame. */
+      const b = this.ballPos || (P && P.state.ballAt) || this.teePos();
       const pin = this.pinPos();
       const a = P && P.state.active ? P.aim : Math.atan2(pin[2] - b[2], pin[0] - b[0]);
       const d = Math.hypot(pin[0] - b[0], pin[2] - b[2]);
-      const back = clamp(1.4 + d * 0.10, 1.5, 4.2);
+      const back = clamp(1.6 + d * 0.10, 1.8, 4.2);
       const ex = b[0] - Math.cos(a) * back, ez = b[2] - Math.sin(a) * back;
-      const ey = g(ex, ez) + clamp(0.85 + d * 0.045, 0.9, 2.0);
+      const ey = g(ex, ez) + clamp(0.95 + d * 0.05, 1.0, 2.2);
       eye = [ex, ey, ez];
       look = [pin[0], pin[1] + 0.15, pin[2]];
+      if (d < 0.3) look = [b[0] + Math.cos(a) * 3, b[1], b[2] + Math.sin(a) * 3];
+      this.keepInFrame(eye, look, b);
     } else if (this.camMode === 'follow') {
       // Chase camera: behind and above the ball, along the direction it is
       // actually travelling, pulling back as it speeds up.

@@ -63,6 +63,15 @@
          plain question, and if the answer is no, say so and offer the build
          that does not need one. */
       if (!document.createElement('canvas').getContext('webgl2')) {
+        /* Somebody who opened the link wants to play, not to read about
+           graphics settings. Send them to the build that needs no GPU, with
+           the hole they asked for; ?stay=1 keeps the explanation instead. */
+        const q = new URLSearchParams(location.search);
+        if (q.get('stay') !== '1') {
+          q.set('from', 'nogl');
+          location.replace('flat.html?' + q.toString());
+          return;
+        }
         this.explainNoWebGL2();
         return;
       }
@@ -86,7 +95,16 @@
          increasingly refuse to give — cost and risk for a guess. The tier
          buttons are right there, and the watchdog comes down further on its
          own if even this is too much. */
-      App.quality = App.TIERS && App.TIERS[p.get('q')] ? p.get('q') : 'low';
+      /* A phone gets the tier built for it; anything else starts at "fast",
+         which is the full look less depth of field. The frame-rate watch in
+         the loop steps down on its own if this machine cannot hold it, so a
+         weak laptop ends up where "low" used to put everybody — and everybody
+         else gets shadows, occlusion and HDR light. */
+      const phone = matchMedia('(pointer: coarse)').matches &&
+                    Math.min(screen.width, screen.height) < 820;
+      App.quality = App.TIERS && App.TIERS[p.get('q')] ? p.get('q')
+                  : phone ? 'mobile' : 'fast';
+      this.qPinned = !!(App.TIERS && App.TIERS[p.get('q')]);
       /* The tier owns which passes run. Applying it here rather than only when
          the tier changes is what makes the choice mean anything on the first
          frame — which is the frame that decides whether the driver survives. */
@@ -335,6 +353,31 @@
       if (this.slow < 12) return;
       this.slow = 0;
       App.stepDownTier('frames were taking ' + Math.round(ms) + ' ms');
+    },
+
+    /**
+     * Step down when the frame rate will not hold, before the player has to
+     * go looking for a quality setting. The 120 ms guard above is for frames
+     * slow enough to upset the driver; this is for frames that are merely too
+     * slow to play — under about 24 a second for a few seconds running. Not
+     * while a hole is loading, not in the first seconds while shaders warm up,
+     * and never below "low" on its own: past there the picture costs more than
+     * it saves.
+     */
+    watchFps(fps) {
+      if (this.qPinned || App.loading || this.walking || document.hidden) return;
+      const now = performance.now();
+      this._fpsT0 = this._fpsT0 || now;
+      if (now - this._fpsT0 < 6000) return;
+      this._fpsLog = (this._fpsLog || []).concat(fps).slice(-6);
+      if (this._fpsLog.length < 6) return;
+      const avg = this._fpsLog.reduce((a, b) => a + b, 0) / this._fpsLog.length;
+      if (avg >= 24) return;
+      const i = App.TIER_ORDER.indexOf(App.quality);
+      if (i < 0 || App.TIER_ORDER[i + 1] === 'min') return;
+      this._fpsLog = [];
+      this._fpsT0 = now;
+      App.stepDownTier('about ' + Math.round(avg) + ' frames a second');
     },
 
     syncQualityButtons() {
@@ -590,7 +633,7 @@
         this.onPlayChanged();
       };
 
-      $('swing').onclick = () => Play.tap();
+      $('swing').onclick = () => this.act();
       $('autoBtn').onclick = () => {
         Play.autoSwing = !Play.autoSwing;
         $('autoBtn').classList.toggle('on', Play.autoSwing);
@@ -751,7 +794,7 @@
           $('photoBtn').click();
           return;
         }
-        if (e.key === ' ') { e.preventDefault(); Play.tap(); }
+        if (e.key === ' ') { e.preventDefault(); if (!e.repeat) this.act(); }
         else if (e.key === 'a' || e.key === 'ArrowLeft') Play.nudgeAim(Play.isPutting() ? -0.35 : -1.2);
         else if (e.key === 'd' || e.key === 'ArrowRight') Play.nudgeAim(Play.isPutting() ? 0.35 : 1.2);
         else if (e.key === 'c') {
@@ -770,6 +813,44 @@
         else if (e.key === 's') this.showScorecard();
       });
       window.addEventListener('resize', () => { App.resize(); this.draw(); });
+    },
+
+    /**
+     * The one action. Off the green it is the two-stage swing play.js already
+     * has. On the green a putt needs only pace — the line is the aim — so it is
+     * one tap to start the needle and a second to stop it, and the white mark
+     * is the caddie's pace (the pace slider moves the mark).
+     */
+    act() {
+      const st = Play.state;
+      if (st.holed) { $('nextBtn').click(); return; }
+      if (!Play.isPutting() || st.phase === 'flying') { Play.tap(); return; }
+      if (Play.autoSwing && st.phase === 'idle') {
+        Play.putt({ power: this.puttPace || 1, faceErr: 0 });
+        return;
+      }
+      if (st.phase === 'idle') {
+        Play.meter = { phase: 'power', t: 0, power: 0, strike: 0, dir: 1 };
+        st.phase = 'power';
+        Play.notify();
+      } else if (st.phase === 'power') {
+        Play.putt({ power: clamp(Play.meter.t, 0.08, 1.12), faceErr: 0 });
+      }
+    },
+
+    /** How much of the screen the controls cover, for the camera framing. */
+    measureInsets() {
+      const H = innerHeight;
+      const bot = $('bottom');
+      let b = 0;
+      if (bot) {
+        const r = bot.getBoundingClientRect();
+        b = r.height > 0 ? H - r.top : 0;
+        // the meter only appears mid-swing; leave room for it all the time so
+        // the view does not jump when it does
+        if (!$('meter').classList.contains('on')) b += 78;
+      }
+      App.viewInset = { top: 0, bottom: clamp(b, 0, H * 0.5) };
     },
 
     cycleClub(d) {
@@ -1545,15 +1626,18 @@
       if (!on) return;
       const m = Play.meter;
       if (ph === 'power') {
+        const putt = Play.isPutting();
         $('barPower').style.display = 'block';
         $('barStrike').style.display = 'none';
         this.markTarget();
         const pct = clamp(m.t / 1.12, 0, 1) * 100;
         $('barPower').querySelector('.fill').style.width = pct + '%';
         $('barPower').querySelector('.needle').style.left = pct + '%';
-        $('mL').textContent = 'Power';
+        $('mL').textContent = putt ? 'Pace' : 'Power';
         $('mR').textContent = Math.round(m.t * 100) + '%';
-        $('mHint').textContent = 'Space to set the power — past the line is an overswing';
+        $('mHint').textContent = putt
+          ? (this.touch ? 'Tap Putt' : 'Space') + ' on the green mark for the caddie\'s pace'
+          : (this.touch ? 'Tap again' : 'Space') + ' to set the power — past the line is an overswing';
       } else {
         $('barPower').style.display = 'block';
         $('barStrike').style.display = 'block';
@@ -1564,7 +1648,7 @@
         $('barStrike').querySelector('.needle').style.left = pct + '%';
         $('mL').textContent = 'Face at impact';
         $('mR').textContent = m.t < -0.08 ? 'closed' : m.t > 0.08 ? 'open' : 'square';
-        $('mHint').textContent = 'Space again in the green band for a flush strike';
+        $('mHint').textContent = (this.touch ? 'Tap' : 'Space') + ' again in the green band for a flush strike';
       }
     },
 
@@ -1578,7 +1662,11 @@
         el.style.width = '2px';
         $('barPower').appendChild(el);
       }
-      if (Play.isPutting()) { el.style.display = 'none'; return; }
+      if (Play.isPutting()) {
+        el.style.display = 'block';
+        el.style.left = (clamp((this.puttPace || 1) / 1.12, 0, 1) * 100) + '%';
+        return;
+      }
       try {
         el.style.display = 'block';
         el.style.left = (clamp(Play.plan().power / 1.12, 0, 1) * 100) + '%';
@@ -1705,7 +1793,9 @@
         this.step('labels', () => this.updateLabels());
         this.watchFrameTime(performance.now() - now);
         acc += dt; frames++;
+        if (now - (this._insT || 0) > 400) { this._insT = now; this.measureInsets(); }
         if (acc > 0.6) {
+          this.watchFps(frames / acc);
           const K = App.sky;
           if (K) {
             $('fps').textContent = Math.round(frames / acc) + ' fps · ' +
