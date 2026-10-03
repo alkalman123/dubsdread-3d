@@ -1,4 +1,4 @@
-name: Fetch CC0 asset catalogs (temporary)
+name: Fetch CC0 textures and skies (temporary)
 on:
   push:
     branches: [claude/golf-hole-poc-realistic-0lfn8x]
@@ -9,21 +9,50 @@ jobs:
   fetch:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with: { ref: claude/golf-hole-poc-realistic-0lfn8x }
-      - name: Catalogs
+      - name: Download
         run: |
-          mkdir -p asset-catalog
-          curl -sfL 'https://api.polyhaven.com/assets?t=textures' -o asset-catalog/ph-textures.json
-          curl -sfL 'https://api.polyhaven.com/assets?t=hdris' -o asset-catalog/ph-hdris.json
-          for q in Grass Ground Gravel Sand LeafSet Bark Asphalt Foliage Leaf; do
-            curl -sfL "https://ambientcg.com/api/v2/full_json?type=Material&q=$q&limit=200&include=tagData,dimensionsData" -o asset-catalog/acg-$q.json || echo "acg $q failed"
+          set -x
+          mkdir -p stage/acg stage/ph stage/hdri stage/atlas
+          cd stage
+          for id in Grass001 Grass002 Grass004 Grass005 Grass006 Grass008 Ground101 Ground033 Ground027 Ground090 Bark012 Bark014 Bark006 Ground037 Ground011 Ground020; do
+            curl -sfL "https://ambientcg.com/get?file=${id}_2K-JPG.zip" -o "acg/$id.zip" || echo "fail $id"
           done
-          ls -la asset-catalog
-      - name: Commit
+          curl -sfL 'https://ambientcg.com/api/v2/full_json?type=Atlas&limit=200&include=tagData' -o atlas/atlas-list.json || true
+          python3 - <<'PY'
+          import json, urllib.request, os
+          d = json.load(open('atlas/atlas-list.json'))
+          ids = [a['assetId'] for a in d.get('foundAssets', []) if any(t in ' '.join(a.get('tags', [])).lower() for t in ['leaf', 'leaves', 'foliage', 'branch', 'plant'])]
+          print('atlas ids', ids)
+          for i in ids[:14]:
+              try:
+                  urllib.request.urlretrieve('https://ambientcg.com/get?file=%s_2K-PNG.zip' % i, 'atlas/%s.zip' % i)
+              except Exception as e:
+                  print('fail', i, e)
+          def ph(id, kind):
+              f = json.load(urllib.request.urlopen('https://api.polyhaven.com/files/' + id))
+              if kind == 'hdri':
+                  url = f['hdri']['2k']['hdr']['url']
+                  urllib.request.urlretrieve(url, 'hdri/%s_2k.hdr' % id)
+                  return
+              for m in ['Diffuse', 'nor_gl', 'Rough']:
+                  if m in f:
+                      url = f[m]['2k']['jpg']['url']
+                      urllib.request.urlretrieve(url, 'ph/%s_%s.jpg' % (id, m))
+          for t in ['sand_01', 'sand_02', 'sand_03', 'forest_leaves_02', 'forrest_ground_01', 'forest_floor', 'asphalt_02', 'clean_asphalt', 'bark_brown_02', 'jolcham_oak_bark_01', 'leafy_grass', 'sparse_grass']:
+              try: ph(t, 'tex')
+              except Exception as e: print('fail', t, e)
+          for h in ['kloofendal_48d_partly_cloudy_puresky', 'kloofendal_43d_clear_puresky', 'belfast_sunset_puresky', 'kloppenheim_06_puresky']:
+              try: ph(h, 'hdri')
+              except Exception as e: print('fail', h, e)
+          PY
+          du -sh acg ph hdri atlas; ls -la acg ph hdri atlas
+      - name: Push to staging branch
         run: |
-          git config user.name "asset-fetch"
-          git config user.email "actions@users.noreply.github.com"
-          git add asset-catalog
-          git commit -m "Asset catalogs for picking CC0 textures (temporary)" || exit 0
-          git push
+          cd stage
+          git init -q -b asset-staging
+          git config user.name asset-fetch
+          git config user.email actions@users.noreply.github.com
+          git add -A
+          git commit -qm "Raw CC0 downloads (Poly Haven, ambientCG) for processing"
+          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
+          git push -f origin asset-staging
