@@ -195,7 +195,8 @@ def build(cfg):
     T = lambda e: e.get('tags', {})
     golf = [e for e in allel if 'golf' in T(e)]
     water = [e for e in allel if T(e).get('natural') == 'water' or T(e).get('waterway') in ('riverbank', 'pond')]
-    woods = [e for e in allel if T(e).get('natural') in ('wood', 'scrub') or T(e).get('landuse') == 'forest']
+    # scrub is left out on purpose: on a links it is the native fescue and dune, not woodland
+    woods = [e for e in allel if T(e).get('natural') == 'wood' or T(e).get('landuse') == 'forest']
     built = [e for e in allel if 'building' in T(e) or T(e).get('highway') in
              ('service', 'residential', 'unclassified', 'tertiary', 'secondary', 'primary')]
 
