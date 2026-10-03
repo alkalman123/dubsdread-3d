@@ -49,6 +49,30 @@
     }
     v4(n, x, y, z, w) { const l = this.loc(n); if (l) this.gl.uniform4f(l, x, y, z, w); return this; }
     m4(n, m) { const l = this.loc(n); if (l) this.gl.uniformMatrix4fv(l, false, m); return this; }
+    /* A texture array always gets a unit of its own, real or placeholder: a
+       sampler2DArray left on unit 0 next to an ordinary 2D sampler is two
+       texture types on one unit, and WebGL refuses the whole draw call. */
+    texArray(n, t) {
+      const l = this.loc(n);
+      if (!l) return this;
+      const gl = this.gl;
+      if (!t) {
+        if (!gl.__dummyArray) {
+          const d = gl.__dummyArray = gl.createTexture();
+          gl.bindTexture(gl.TEXTURE_2D_ARRAY, d);
+          gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.RGBA8, 1, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+                        new Uint8Array([128, 128, 255, 255]));
+          gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+          gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        }
+        t = gl.__dummyArray;
+      }
+      const u = this._unit++;
+      gl.activeTexture(gl.TEXTURE0 + u);
+      gl.bindTexture(gl.TEXTURE_2D_ARRAY, t);
+      gl.uniform1i(l, u);
+      return this;
+    }
     tex(n, t) {
       const l = this.loc(n);
       if (l && t) {
@@ -57,7 +81,21 @@
         this.gl.bindTexture(this.gl.TEXTURE_2D, t);
         this.gl.uniform1i(l, u);
       } else if (l) {
-        this._unit++;
+        // nothing to sample yet: a 1x1 placeholder on a unit of its own, so
+        // the sampler never lands on a unit holding a different kind of texture
+        const gl = this.gl;
+        if (!gl.__dummy2D) {
+          const d = gl.__dummy2D = gl.createTexture();
+          gl.bindTexture(gl.TEXTURE_2D, d);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+                        new Uint8Array([128, 128, 128, 255]));
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        }
+        const u = this._unit++;
+        gl.activeTexture(gl.TEXTURE0 + u);
+        gl.bindTexture(gl.TEXTURE_2D, gl.__dummy2D);
+        gl.uniform1i(l, u);
       }
       return this;
     }

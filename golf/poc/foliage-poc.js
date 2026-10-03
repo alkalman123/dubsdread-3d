@@ -114,6 +114,116 @@
     return t;
   }
 
+  /**
+   * The same atlas, redrawn from photographs of real leaves.
+   *
+   * Same four cells and the same channels as leafAtlas, so the tree shader
+   * does not change: brightness, yellowing, thickness, coverage. What changes
+   * is everything inside a leaf — the true outline of an oak or a maple leaf,
+   * its veins, the tone across its surface — which is what a canopy is made of
+   * when you are standing under it. Cells by species: 0 oak, 1 elm, 2 maple,
+   * and 3 needles for the spruce, which stay drawn because a needle is a line.
+   *
+   * Clusters are built back to front in three passes, darkening what is
+   * already there between passes, so the leaves at the heart of a cluster sit
+   * in its shade and the outer ones catch the light.
+   */
+  function leafAtlasFromPhotos(gl, tex, img, meta) {
+    const S = 1024, CELL = S / 2;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = S;
+    const g = cv.getContext('2d', { willReadFrequently: true });
+    const R = rng(4242);
+    const kinds = { 0: ['oak'], 1: ['elm', 'round'], 2: ['maple'] };
+    const pool = k => meta.rects.filter(r => kinds[k].indexOf(r.k) >= 0);
+
+    for (let cell = 0; cell < 4; cell++) {
+      const ox = (cell % 2) * CELL, oy = ((cell / 2) | 0) * CELL;
+      const cx = ox + CELL / 2, cy = oy + CELL / 2;
+      g.save();
+      g.beginPath(); g.rect(ox, oy, CELL, CELL); g.clip();
+      if (cell === 3) {
+        // spruce: fans of short dark needles off a twig
+        for (let t = 0; t < 26; t++) {
+          const a0 = R() * Math.PI * 2, rr = Math.pow(R(), 0.6) * CELL * 0.36;
+          const x0 = cx + Math.cos(a0) * rr, y0 = cy + Math.sin(a0) * rr;
+          const dir = R() * Math.PI * 2, len = CELL * (0.16 + R() * 0.12);
+          for (let k = 0; k < 34; k++) {
+            const f = k / 34, bx = x0 + Math.cos(dir) * len * f, by = y0 + Math.sin(dir) * len * f;
+            const side = k % 2 ? 1 : -1, na = dir + side * (0.9 + R() * 0.3);
+            const nl = CELL * (0.025 + R() * 0.02);
+            const v = 70 + R() * 90;
+            g.strokeStyle = 'rgb(' + (v * 0.55 | 0) + ',' + (v * 0.85 | 0) + ',' + (v * 0.6 | 0) + ')';
+            g.lineWidth = 2.2;
+            g.beginPath(); g.moveTo(bx, by); g.lineTo(bx + Math.cos(na) * nl, by + Math.sin(na) * nl); g.stroke();
+          }
+        }
+      } else {
+        const leaves = pool(cell);
+        // a card is a couple of metres across on a full-size tree, so a leaf
+        // has to be small on it: a few hundred of them, each a twentieth of the
+        // card, is about life size
+        const passes = [{ n: 70, sc: 0.27, spread: 0.39 }, { n: 95, sc: 0.23, spread: 0.40 },
+                        { n: 85, sc: 0.19, spread: 0.38 }];
+        passes.forEach((p, pi) => {
+          for (let i = 0; i < p.n; i++) {
+            const L = leaves[(R() * leaves.length) | 0];
+            const a = R() * Math.PI * 2;
+            const rr = Math.pow(R(), 0.62) * CELL * p.spread;
+            const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr * 0.92;
+            const sc = p.sc * (0.75 + R() * 0.45) * (CELL / 520);
+            g.save();
+            g.translate(x, y);
+            // leaves point outward from the cluster's centre, roughly
+            g.rotate(a + Math.PI / 2 + (R() - 0.5) * 1.2);
+            g.drawImage(img, L.x, L.y, L.w, L.h, -L.w * sc / 2, -L.h * sc * 0.15, L.w * sc, L.h * sc);
+            g.restore();
+          }
+          if (pi < passes.length - 1) {
+            // shade what is already down: it is now inside the cluster
+            g.globalCompositeOperation = 'source-atop';
+            g.fillStyle = 'rgba(0,0,0,0.30)';
+            g.fillRect(ox, oy, CELL, CELL);
+            g.globalCompositeOperation = 'source-over';
+          }
+        });
+      }
+      /* Fade the cluster out well inside its cell. Leaves that ran to the cell
+         edge were cut off there, and a straight cut edge on a hundred cards is
+         exactly what makes a canopy look like cardboard. A noisy rim keeps the
+         outline ragged rather than a clean circle. */
+      g.globalCompositeOperation = 'destination-in';
+      const rg = g.createRadialGradient(cx, cy, CELL * 0.30, cx, cy, CELL * 0.49);
+      rg.addColorStop(0, 'rgba(0,0,0,1)');
+      rg.addColorStop(0.55, 'rgba(0,0,0,0.85)');
+      rg.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = rg;
+      g.fillRect(ox, oy, CELL, CELL);
+      g.globalCompositeOperation = 'source-over';
+      g.restore();
+    }
+
+    /* Photograph -> the atlas channels the shader reads. */
+    const id = g.getImageData(0, 0, S, S), d = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i], gg = d[i + 1], b = d[i + 2];
+      const lum = (0.30 * r + 0.59 * gg + 0.11 * b) / 255;
+      // a green leaf scans at about 0.45 luminance; that is neutral brightness
+      const bright = clamp(lum / 0.90, 0, 1);
+      const yellow = clamp(((r - gg * 0.82) / 255) * 2.4, 0, 1);
+      const thick = clamp(0.30 + (1 - bright) * 0.6, 0, 1);
+      d[i] = bright * 255; d[i + 1] = yellow * 255; d[i + 2] = thick * 255;
+    }
+    g.putImageData(id, 0, 0);
+
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, cv);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+  }
+
   /* -------------------------------------------------------------- trunk */
 
   function tube(seg, rings, out, radiusAt, offsetAt) {
@@ -170,6 +280,10 @@
     const nTrunk = out.pos.length / 3;
 
     /* --- canopy ------------------------------------------------------ */
+    // one species per tree: archetypes 0 oak, 1 elm, 2 maple use their own
+    // cell of the atlas (see leafAtlasFromPhotos); a few cards from a
+    // neighbour keep a crown from looking stamped out of one leaf
+    const leafCell = () => (R() < 0.85 ? Math.min(arch, 2) : ((arch + 1) % 3));
     const card = (px, py, pz, nx, ny, nz, size, roll, variant, bow) => {
       // an orthonormal frame with the lobe's outward normal as the card's normal
       let ax = 0, ay = 1, az = 0;
@@ -217,7 +331,7 @@
           const nl = Math.hypot(nx, ny, nz);
           nx /= nl; ny /= nl; nz /= nl;
           card(px, py, pz, nx, ny, nz, rad * 0.42 + 0.045,
-               R() * Math.PI, (R() * 4) | 0, 0.01);
+               R() * Math.PI, 3, 0.01);
         }
       }
     } else {
@@ -257,7 +371,7 @@
           const py = L.cy + ny * L.ry * jit;
           const pz = L.cz + nz * L.rz * jit;
           const size = A.spread * (0.31 + R() * 0.17) / Math.sqrt(Math.max(dens, 0.35));
-          card(px, py, pz, nx, ny, nz, size, R() * Math.PI * 2, (R() * 4) | 0,
+          card(px, py, pz, nx, ny, nz, size, R() * Math.PI * 2, leafCell(),
                -size * 0.12);
         }
         // a few interior cards so looking into the crown is not hollow
@@ -267,7 +381,7 @@
           const nl = Math.hypot(nx, ny, nz) || 1;
           card(L.cx + nx * L.rx * 0.35, L.cy + ny * L.ry * 0.35, L.cz + nz * L.rz * 0.35,
                nx / nl, ny / nl, nz / nl, A.spread * 0.30,
-               R() * Math.PI * 2, (R() * 4) | 0, 0);
+               R() * Math.PI * 2, leafCell(), 0);
         }
       }
     }
@@ -295,5 +409,5 @@
     return { mesh, radius, top, tris: out.idx.length / 3, cards: (nAll - nTrunk) / 4 };
   }
 
-  root.FoliagePoc = { leafAtlas, buildLeafTree };
+  root.FoliagePoc = { leafAtlas, leafAtlasFromPhotos, buildLeafTree };
 })(window);

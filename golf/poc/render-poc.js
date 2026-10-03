@@ -40,6 +40,9 @@
     cloudAlt: 1500,
     cloudShadow: 0.82,
     season: 0.10,
+    /* A photographed sky (see poc/assets-poc.js): 'day', 'evening', or null
+       for the simulated sky driven by the clock. */
+    realSky: 'day',
 
     /* features */
     ao: true,
@@ -84,10 +87,10 @@
   App.TIERS = {
     high: { res: 1.00, dpr: 1.5, sm: 2048, cascades: 2, hdr: true,
             ao: true,  dof: true,  shafts: true,  bloom: true,
-            grassR: 22, grassN: 46000, leaves: 1.00, dimples: true },
+            grassR: 22, grassN: 46000, leaves: 1.30, dimples: true },
     fast: { res: 1.00, dpr: 1.0, sm: 2048, cascades: 2, hdr: true,
             ao: true,  dof: false, shafts: true,  bloom: true,
-            grassR: 15, grassN: 15000, leaves: 0.55, dimples: false },
+            grassR: 15, grassN: 15000, leaves: 0.85, dimples: false },
     /* Phones. A phone GPU is quick at plain shading and slow at fill and
        bandwidth, and its screen is three device pixels to the CSS pixel. So
        full resolution at a capped 1.5x (sharp enough on a retina screen, under
@@ -143,6 +146,10 @@
     const h = Math.floor(minutes / 60), mi = Math.round(minutes % 60);
     return new Date(Date.UTC(y, mo, d, h - tzOffset, mi));
   }
+
+  App.originLat = ORIGIN.lat;
+  App.originLon = ORIGIN.lon;
+  App.localDateFor = function (m) { return localDate(this.poc.date, m, this.poc.tzOffset); };
 
   App.refreshSky = function () {
     const P = this.poc;
@@ -854,6 +861,19 @@
    * lens, with the fairway cropped to a slot. Below a reference aspect the
    * width is held instead, so the hole still fits across the screen.
    */
+  /** Photo materials for the ground: the two arrays, and each layer's mean. */
+  App.applyPhoto = function (p) {
+    const T = this.tex || {};
+    const on = !!(this.photo && T.ground && T.groundN);
+    p.texArray('uGround', on ? T.ground : null).texArray('uGroundN', on ? T.groundN : null);
+    p.f('uPhoto', on ? 1 : 0);
+    const M = this.assets && this.assets.meta;
+    if (on && M) {
+      const l = p.loc('uMean');
+      if (l) this.gl.uniform3fv(l, new Float32Array([].concat.apply([], M.means)));
+    }
+  };
+
   App.effectiveFov = function (fovDeg, aspect) {
     const v = fovDeg * Math.PI / 180;
     const REF = 0.85;
@@ -867,6 +887,7 @@
     if (!this.ready) return;
     const gl = this.gl;
     const P = this.poc;
+    if (this.assets) this.assets.upload(gl);
     this.time += dt;
     this.resize();
     if (!this.rt) return;                  // no usable target; UI has been told
@@ -915,6 +936,9 @@
       const p = this.pg.sky.use();
       this.applyEnv(p);
       p.m4('uInvViewProj', this.mInvVP);
+      const skyT = P.realSky && this.tex && this.tex.sky && this.tex.sky[P.realSky];
+      p.tex('uSkyTex', skyT || null);
+      p.f('uSkyOn', skyT ? 1 : 0).f('uSkyRot', skyT ? this.skyRotation() : 0);
       this.fsq.draw();
     }
     gl.depthMask(true);
@@ -934,6 +958,7 @@
         const pin = this.pin || this.pinPos();
         p.v4('uCup', pin[0], pin[1], pin[2], detail > 0.5 ? this.CUP_R : 0);
         p.tex('uFieldA', field.texA).tex('uFieldB', field.texB);
+        this.applyPhoto(p);
         if (detail > 0.5 && this.scarTex) {
           p.tex('uScar', this.scarTex);
           p.v4('uScarRect', this.field.x0, this.field.z0, this.field.size, 1 / this.field.size);
@@ -967,6 +992,9 @@
       this.applyShadowUniforms(p);
       p.m4('uViewProj', this.mVP);
       p.f('uAlphaCut', 0.42).tex('uLeaf', this.leafTex);
+      const bark = this.tex && this.tex.bark, BM = this.assets && this.assets.meta;
+      p.tex('uBark', bark || null).f('uBarkOn', bark && BM ? 1 : 0);
+      if (BM) p.v3('uBarkMean', BM.barkMean[0], BM.barkMean[1], BM.barkMean[2]);
       for (let i = 0; i < 4; i++) {
         const m = this.treeMeshes[i].mesh;
         if (m.instances) m.draw();
@@ -1019,7 +1047,8 @@
       p.v3('uCamPosT', this.camPos[0], this.camPos[1], this.camPos[2]);
       const tc = this.tracerColor || [1.0, 0.93, 0.72];
       p.v3('uColor', tc[0], tc[1], tc[2]);
-      p.f('uWidth', 0.30).f('uProgress', clamp(this.shotAnim, 0, 1))
+      // world-space width, so on a long lens it would fatten: keep it a line
+      p.f('uWidth', 0.30 * clamp((this.fov || 45) / 45, 0.25, 1)).f('uProgress', clamp(this.shotAnim, 0, 1))
        .f('uExposureT', this.sky.exposure);
       this.tracerMesh.draw();
       gl.depthMask(true);

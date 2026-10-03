@@ -31,10 +31,10 @@
 
   const origSetCamera = App.setCamera;
   App.setCamera = function (mode, snap) {
-    if (mode === 'play' || mode === 'follow' || mode === 'putt') {
+    if (mode === 'play' || mode === 'follow' || mode === 'putt' || mode === 'broadcast') {
       this.camMode = mode;
       this.camFixed = null;
-      this.fovTarget = mode === 'putt' ? 34 : mode === 'follow' ? 44 : 46;
+      this.fovTarget = mode === 'putt' ? 34 : mode === 'follow' || mode === 'broadcast' ? 44 : 46;
       if (snap) { this.fov = this.fovTarget; this.camPos = null; }
       if (root.UI && root.UI.onCameraChanged) root.UI.onCameraChanged();
       return;
@@ -76,11 +76,103 @@
     look[1] = eye[1] + Math.sin(maxPitch) * L;
   };
 
+  /* ---------------------------------------------------- broadcast camera
+   *
+   * How golf looks on television. The shot starts on the camera behind the
+   * player, which stays put and follows the ball up on a long lens, zooming in
+   * as it climbs away. On anything longer than a pitch there is a hard cut,
+   * about halfway, to a camera beside the landing area, which watches the ball
+   * come down out of the sky, pitch and run out. A chip gets one camera, side
+   * on. The landing camera is placed where nothing is in the way: candidate
+   * spots either side of the landing area are scored by how far they are from
+   * the nearest tree and whether a trunk or crown blocks the view, and the
+   * best one wins.
+   */
+  App.planBroadcast = function (S) {
+    const g = (x, z) => this.heightAt(x, z);
+    const o = S.path && S.path.length ? S.path[0] : this.teePos();
+    const land = S.landPoint || S.finalPoint;
+    let dx = land[0] - o[0], dz = land[2] - o[2];
+    const carry = Math.hypot(dx, dz) || 1;
+    dx /= carry; dz /= carry;
+    const sx = -dz, sz = dx;                     // to the right of the line
+    const plan = { shot: S, carry, cut: false, dir: [dx, dz] };
+    plan.eyeA = [o[0] - dx * 5.6 + sx * 0.9, 0, o[2] - dz * 5.6 + sz * 0.9];
+    plan.eyeA[1] = g(plan.eyeA[0], plan.eyeA[2]) + 1.75;
+    if (carry < 70) {
+      // a pitch or a chip: one camera, off to the side, a little behind
+      const e = [o[0] - dx * 4 + sx * 9, 0, o[2] - dz * 4 + sz * 9];
+      e[1] = g(e[0], e[2]) + 2.4;
+      plan.eyeA = e;
+      plan.single = true;
+      return plan;
+    }
+    const trees = this.trees || [];
+    const near = trees.filter(t => Math.hypot(t.x - land[0], t.z - land[2]) < 90);
+    const blocked = (a, b) => {
+      let pen = 0;
+      for (const t of near) {
+        const h = t.scale * (t.hScale || 1), r = Math.max(1.5, h * 0.32);
+        // closest approach of the sight line to the trunk, in plan
+        const vx = b[0] - a[0], vz = b[2] - a[2], L2 = vx * vx + vz * vz || 1;
+        const u = clamp(((t.x - a[0]) * vx + (t.z - a[2]) * vz) / L2, 0, 1);
+        const px = a[0] + vx * u, pz = a[2] + vz * u;
+        const d = Math.hypot(t.x - px, t.z - pz);
+        const yLine = a[1] + (b[1] - a[1]) * u;
+        if (d < r && yLine < t.y + h) pen += 1;
+      }
+      return pen;
+    };
+    let best = null;
+    for (const along of [14, -10, 28]) {
+      for (const side of [1, -1]) {
+        for (const off of [24, 34]) {
+          const e = [land[0] + dx * along + sx * side * off, 0, land[2] + dz * along + sz * side * off];
+          e[1] = g(e[0], e[2]) + 4.5 + off * 0.08;
+          let clear = 99;
+          for (const t of near) clear = Math.min(clear, Math.hypot(t.x - e[0], t.z - e[2]));
+          const score = Math.min(clear, 14) - blocked(e, [land[0], land[1] + 1, land[2]]) * 30
+                      - blocked(e, [S.finalPoint[0], S.finalPoint[1] + 0.5, S.finalPoint[2]]) * 15
+                      - (along < 0 ? 2 : 0);
+          if (!best || score > best.score) best = { e, score };
+        }
+      }
+    }
+    plan.eyeB = best.e;
+    return plan;
+  };
+
   const origUpdateCamera = App.updateCamera;
   App.updateCamera = function (dt) {
     const P = root.Play;
     const g = (x, z) => this.heightAt(x, z);
     let eye = null, look = null, snapK = null;
+
+    if (this.camMode === 'broadcast') {
+      const S = this.shot;
+      const b = this.ballPos || (S && S.finalPoint) || this.teePos();
+      if (!S) { this.setCamera('play', false); return; }
+      let bc = this._bc;
+      if (!bc || bc.shot !== S) bc = this._bc = this.planBroadcast(S);
+      const o = S.path && S.path.length ? S.path[0] : b;
+      const gone = Math.hypot(b[0] - o[0], b[2] - o[2]);
+      if (!bc.single && !bc.cut && gone > bc.carry * 0.52) {
+        bc.cut = true;
+        this.camLook = [b[0], b[1], b[2]];      // a cut, not a pan
+      }
+      const e = bc.cut ? bc.eyeB : bc.eyeA;
+      this.camPos = e.slice();
+      if (!this.camLook) this.camLook = [b[0], b[1], b[2]];
+      // track the ball tightly, a camera operator a fraction behind it
+      const k = 1 - Math.pow(0.00002, dt);
+      for (let i = 0; i < 3; i++) this.camLook[i] = lerp(this.camLook[i], b[i] + (i === 1 ? 0.3 : 0), k);
+      // a long lens: hold the ball at roughly the same size in frame
+      const dist = Math.hypot(b[0] - e[0], b[1] - e[1], b[2] - e[2]);
+      const want = clamp(2 * Math.atan(16 / Math.max(dist, 1)) * 180 / Math.PI, 9, 46);
+      this.fovTarget = want;
+      this.fov = lerp(this.fov || want, want, 1 - Math.pow(0.05, dt));
+      return;
+    }
 
     if (this.camMode === 'play') {
       // Down the line from behind the ball, the way a player sees the shot.
@@ -755,7 +847,8 @@
 
       this.pending = { kind: 'shot', res, from: b.slice(), lie };
       this.state.phase = 'flying';
-      App.setCamera('follow', false);
+      App._bc = null;
+      App.setCamera(App.broadcast === false ? 'follow' : 'broadcast', false);
       this.notify();
       return res;
     },

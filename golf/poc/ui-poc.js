@@ -85,6 +85,8 @@
       const num = (k, dflt) => { const v = parseFloat(p.get(k)); return isNaN(v) ? dflt : v; };
       const P = App.poc;
       P.minutes = clamp(num('t', P.minutes), 240, 1320);
+      if (p.get('t') !== null) P.realSky = null;
+      if (p.get('sky') !== null) P.realSky = p.get('sky') || null;
       P.cloudCover = clamp(num('cover', P.cloudCover * 100) / 100, 0, 1);
       P.turbidity = clamp(num('haze', P.turbidity * 10) / 10, 1, 7);
       P.fStop = clamp(num('f', P.fStop), 1.8, 32);
@@ -670,7 +672,16 @@
       /* --- conditions --- */
       const clockLbl = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' +
                             String(Math.round(m % 60)).padStart(2, '0');
+      $('skySel').onchange = e => {
+        const v = e.target.value || null;
+        if (v) App.setRealSky(v);
+        else { P.realSky = null; App.refreshSky(); }
+        this.updateSunTag();
+        this.flash(v ? 'Real sky' : 'Simulated sky — set the time');
+      };
       $('clock').oninput = e => {
+        // moving the clock means the simulated sky, which follows it
+        if (P.realSky) { P.realSky = null; $('skySel').value = ''; }
         P.minutes = +e.target.value;
         $('tVal').textContent = clockLbl(P.minutes);
         App.refreshSky();
@@ -871,6 +882,7 @@
     syncConditions() {
       const P = App.poc;
       $('clock').value = P.minutes;
+      if ($('skySel')) $('skySel').value = P.realSky || '';
       $('tVal').textContent = String(Math.floor(P.minutes / 60)).padStart(2, '0') + ':' +
                               String(P.minutes % 60).padStart(2, '0');
       $('cover').value = Math.round(P.cloudCover * 100);
