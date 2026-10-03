@@ -151,10 +151,26 @@ def dep_grid(lat0, lon0, lat1, lon1, nx, ny):
             bad = ~np.isfinite(a) | (a < -500) | (a > 9000)
             if bad.all(): raise RuntimeError('all nodata')
             if bad.any(): a[bad] = float(np.median(a[~bad]))
-            return a
+            return unstretch(a, lat0, lon0, lat1, lon1)
         except Exception as e:
             print('   3dep retry', e, flush=True); time.sleep(5 + attempt * 5)
     raise RuntimeError('3DEP failed')
+
+
+def unstretch(a, lat0, lon0, lat1, lon1):
+    """The ImageServer keeps its pixels square in degrees: when the box asked
+    for is not the shape of the image, it grows the short side about the
+    centre and returns that. Resample back onto the box that was asked for."""
+    ny, nx = a.shape
+    px = max((lon1 - lon0) / nx, (lat1 - lat0) / ny)
+    cx, cy = (lon0 + lon1) / 2, (lat0 + lat1) / 2
+    W, H = px * nx, px * ny
+    u = ((np.linspace(lon0, lon1, nx) - (cx - W / 2)) / W) * (nx - 1)
+    v = (((cy + H / 2) - np.linspace(lat1, lat0, ny)) / H) * (ny - 1)   # row 0 = north
+    U, V = np.meshgrid(np.clip(u, 0, nx - 1.001), np.clip(v, 0, ny - 1.001))
+    i, j = U.astype(int), V.astype(int); fu, fv = U - i, V - j
+    return ((a[j, i] * (1 - fu) + a[j, i + 1] * fu) * (1 - fv) +
+            (a[j + 1, i] * (1 - fu) + a[j + 1, i + 1] * fu) * fv).astype(np.float32)
 
 
 # ------------------------------------------------------------------ build
