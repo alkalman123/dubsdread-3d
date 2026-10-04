@@ -876,7 +876,7 @@
       g.stroke(); g.setLineDash([]);
 
       // markers
-      const pin = P(H.green.c);
+      const pp = App.pinPos(), pin = P([pp[0], pp[2]]);
       g.fillStyle = '#e8c447';
       g.beginPath(); g.arc(pin[0], pin[1], 3.4, 0, 7); g.fill();
       g.strokeStyle = '#e8c447'; g.lineWidth = 1.2;

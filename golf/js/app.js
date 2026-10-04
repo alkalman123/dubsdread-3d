@@ -308,7 +308,7 @@
 
     pinPos() {
       const H = this.holeData;
-      const g = H.green.c;
+      const g = this.field.pinSpot ? this.field.pinSpot(H) : H.green.c;
       return [g[0], this.field.height(g[0], g[1]), g[1]];
     },
 
