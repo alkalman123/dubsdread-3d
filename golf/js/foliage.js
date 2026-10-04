@@ -388,6 +388,34 @@
           k += 4;
         }
       },
+      /** A square-section bar from one point to another, w wide and t thick,
+       *  lying flat (its broad face up) — a rake handle on the grass. */
+      bar(a, b, w, t, c) {
+        const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2];
+        const L = Math.hypot(dx, dy, dz) || 1;
+        const ax = [dx / L, dy / L, dz / L];
+        let sd = [-ax[2], 0, ax[0]];
+        const sl = Math.hypot(sd[0], sd[2]) || 1; sd = [sd[0] / sl, 0, sd[2] / sl];
+        const up = [ax[1] * sd[2] - ax[2] * sd[1], ax[2] * sd[0] - ax[0] * sd[2], ax[0] * sd[1] - ax[1] * sd[0]];
+        if (up[1] < 0) { up[0] = -up[0]; up[1] = -up[1]; up[2] = -up[2]; }
+        const P = (e, s, u) => [a[0] + ax[0] * e + sd[0] * s + up[0] * u,
+                                a[1] + ax[1] * e + sd[1] * s + up[1] * u,
+                                a[2] + ax[2] * e + sd[2] * s + up[2] * u];
+        const hw = w / 2;
+        const faces = [
+          [up, [[0, -hw, t], [L, -hw, t], [L, hw, t], [0, hw, t]]],
+          [sd, [[0, hw, 0], [0, hw, t], [L, hw, t], [L, hw, 0]]],
+          [[-sd[0], -sd[1], -sd[2]], [[0, -hw, 0], [L, -hw, 0], [L, -hw, t], [0, -hw, t]]],
+          [ax, [[L, -hw, 0], [L, hw, 0], [L, hw, t], [L, -hw, t]]],
+          [[-ax[0], -ax[1], -ax[2]], [[0, -hw, 0], [0, -hw, t], [0, hw, t], [0, hw, 0]]]
+        ];
+        let k = this.pos.length / 3;
+        for (const [n, quad] of faces) {
+          for (const q of quad) this._push(P(q[0], q[1], q[2]), n, c, 0);
+          this.idx.push(k, k + 2, k + 1, k, k + 3, k + 2);
+          k += 4;
+        }
+      },
       /** Flag cloth: a strip that ripples in the shader. */
       flag(x, y, z, dirX, dirZ, w, h, c) {
         const NX = 8, NY = 4;
