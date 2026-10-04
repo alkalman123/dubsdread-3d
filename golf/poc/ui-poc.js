@@ -1333,7 +1333,7 @@
         }
       }
 
-      const pin = Pp(H.green.c);
+      const pp = App.pinPos(), pin = Pp([pp[0], pp[2]]);
       g.fillStyle = '#e8c447';
       g.beginPath(); g.arc(pin[0], pin[1], 3.2, 0, 7); g.fill();
       g.strokeStyle = '#e8c447'; g.lineWidth = 1.1;

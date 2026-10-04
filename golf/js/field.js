@@ -256,6 +256,10 @@
       this.x0 = cx - size / 2; this.z0 = cz - size / 2;
       this.opts = opts || {};
       this.build();
+      // The buffers lent by the field this one replaces have been taken over.
+      // Holding on to it would chain every hole of the round to the next and
+      // none of them could ever be freed.
+      this.opts = Object.assign({}, this.opts, { recycle: null });
     }
 
     /* world <-> grid */
@@ -585,8 +589,9 @@
             const rr = Math.hypot(x - cxp, z - czp) / rmax;
             let hh = h0 + (x - cxp) * tdx + (z - czp) * tdz;
             if (pad.kind === 'green' && lidar) {
-              // the surveyed green: its real slopes, which is what a putt reads
-              hh = this.demSample(x, z);
+              // the surveyed green, its slopes brought within what a green is cut to
+              const G = pad.fit || (pad.fit = this.greenFit(pad, minx, maxx, minz, maxz));
+              hh = G.at(x, z);
             } else if (pad.kind === 'green') {
               // gentle crown falling away to the edges + subtle internal contour
               hh += crown * (1 - clamp(rr, 0, 1) * clamp(rr, 0, 1));
@@ -702,6 +707,116 @@
     }
 
     height(x, z) { return this.sample(this.H, x, z); }
+
+    /**
+     * A surveyed green as a putting surface.
+     *
+     * The lidar over a green is real, but an outline traced from aerial photos
+     * takes in some of the bank around it, and the survey reads every slope at
+     * full strength: greens came out tilted 4-6% with 10% spots, where real
+     * ones are cut to 1-3% so a ball can stop. Keep the green's own direction
+     * of fall and the shape of its contours, but cap the overall tilt at 2.5%
+     * and scale the contours so nine-tenths of the surface stays under 2.5%
+     * beyond that.
+     */
+    greenFit(pad, minx, maxx, minz, maxz) {
+      const ring = pad.ring, M = pad.fall + 2, S = 1;
+      const gx0 = minx - M, gz0 = minz - M;
+      const nx = Math.ceil((maxx - minx + 2 * M) / S) + 1;
+      const nz = Math.ceil((maxz - minz + 2 * M) / S) + 1;
+      const g = new Float32Array(nx * nz), ins = new Uint8Array(nx * nz);
+      let cnt = 0, mu = 0, mv = 0, mh = 0;
+      for (let j = 0; j < nz; j++) {
+        for (let i = 0; i < nx; i++) {
+          const x = gx0 + i * S, z = gz0 + j * S, k = j * nx + i;
+          g[k] = this.demSample(x, z);
+          if (distToPoly(x, z, ring) < 0) { ins[k] = 1; cnt++; mu += x; mv += z; mh += g[k]; }
+        }
+      }
+      const at0 = (x, z) => {
+        const u = clamp((x - gx0) / S, 0, nx - 1.001), v = clamp((z - gz0) / S, 0, nz - 1.001);
+        const i = u | 0, j = v | 0, fu = u - i, fv = v - j, k = j * nx + i;
+        return lerp(lerp(g[k], g[k + 1], fu), lerp(g[k + nx], g[k + nx + 1], fu), fv);
+      };
+      if (cnt < 6) return { at: at0 };
+      mu /= cnt; mv /= cnt; mh /= cnt;
+      // least-squares plane through the green
+      let suu = 0, svv = 0, suv = 0, suh = 0, svh = 0;
+      for (let k = 0; k < nx * nz; k++) {
+        if (!ins[k]) continue;
+        const u = gx0 + (k % nx) * S - mu, v = gz0 + ((k / nx) | 0) * S - mv, h = g[k] - mh;
+        suu += u * u; svv += v * v; suv += u * v; suh += u * h; svh += v * h;
+      }
+      const det = suu * svv - suv * suv;
+      const b = det ? (suh * svv - svh * suv) / det : 0;
+      const c = det ? (svh * suu - suh * suv) / det : 0;
+      const tilt = Math.hypot(b, c), TILT = 0.025, CONTOUR = 0.025;
+      const ft = tilt > TILT ? TILT / tilt : 1;
+      // how steep the contours are on their own, once the tilt is taken out
+      const res = new Float32Array(nx * nz);
+      for (let k = 0; k < nx * nz; k++) {
+        res[k] = g[k] - (mh + b * (gx0 + (k % nx) * S - mu) + c * (gz0 + ((k / nx) | 0) * S - mv));
+      }
+      const sl = [];
+      for (let j = 1; j < nz - 1; j++) {
+        for (let i = 1; i < nx - 1; i++) {
+          const k = j * nx + i;
+          if (!ins[k]) continue;
+          sl.push(Math.hypot(res[k + 1] - res[k - 1], res[k + nx] - res[k - nx]) / (2 * S));
+        }
+      }
+      sl.sort((p, q) => p - q);
+      const p90 = sl.length ? sl[Math.floor(sl.length * 0.9)] : 0;
+      const kc = p90 > CONTOUR ? CONTOUR / p90 : 1;
+      return {
+        tilt, p90, kc, ft,
+        at(x, z) {
+          const u = x - mu, v = z - mv;
+          const plane = mh + b * u + c * v;
+          return mh + (b * u + c * v) * ft + (at0(x, z) - plane) * kc;
+        }
+      };
+    }
+
+    /**
+     * Where the hole is cut. A greenkeeper puts it on a flat piece of the
+     * green a few paces in from the edge, not wherever the middle of the
+     * outline happens to fall — on a sloping green that spot can be one a ball
+     * will not stop on. Look over the green near its centre for the flattest
+     * ground, giving up a little flatness to stay near the middle.
+     */
+    pinSpot(H) {
+      const key = H.num;
+      this._pins = this._pins || {};
+      if (this._pins[key]) return this._pins[key];
+      const c = H.green.c;
+      let best = c, bestS = 1e9;
+      const slope = (x, z) => {
+        const e = 0.75;
+        const gx = this.height(x + e, z) - this.height(x - e, z);
+        const gz = this.height(x, z + e) - this.height(x, z - e);
+        return Math.hypot(gx, gz) / (2 * e);
+      };
+      if (this.contains(c[0], c[1], 2)) {
+        for (let dz = -14; dz <= 14; dz += 1) {
+          for (let dx = -14; dx <= 14; dx += 1) {
+            const r = Math.hypot(dx, dz);
+            if (r > 14) continue;
+            const x = c[0] + dx, z = c[1] + dz;
+            if (this.sample(this.sdfGr, x, z) > -3) continue;      // 3 m in from the edge
+            // the worst slope within a putter's length of the hole
+            let s = slope(x, z);
+            for (let a = 0; a < 6; a++) {
+              const t = a / 6 * Math.PI * 2;
+              s = Math.max(s, slope(x + Math.cos(t) * 1.2, z + Math.sin(t) * 1.2));
+            }
+            const score = Math.max(0, s - 0.012) + r * 0.0012;
+            if (score < bestS) { bestS = score; best = [x, z]; }
+          }
+        }
+      }
+      return (this._pins[key] = best);
+    }
 
     normal(x, z, out) {
       const e = Math.max(this.mpp, 0.8);
