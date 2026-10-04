@@ -280,6 +280,29 @@
     top:calc(var(--mrail,60px) + 8px);width:34px;height:34px;font-size:15px}
   body.phone.msheet #sndBtn{display:none}
 
+  /* On a desktop the camera bar, the hole strip and the two round buttons
+     live in the gap between the side panels, so a narrow window squeezes
+     them rather than sliding them under a panel. */
+  :root{--lw:288px;--rw:296px}
+  @media (max-width:1180px){ :root{--lw:255px;--rw:255px} }
+  body:not(.phone) #bottom{left:calc(26px + var(--lw));right:calc(26px + var(--rw));transform:none}
+  body:not(.phone) #camBar{max-width:100%}
+  @media (max-width:1180px){
+    body:not(.phone) #camBar button{padding:7px 8px;letter-spacing:.05em;min-width:0}
+  }
+  body:not(.phone) #strip{width:min(100%,600px)}
+  body:not(.phone) #strip button{min-width:0}
+  body:not(.phone) #homeBtn,body:not(.phone) #sndBtn{top:14px;bottom:auto}
+  body:not(.phone) #sndBtn{right:calc(26px + var(--rw))}
+  body:not(.phone) #homeBtn{right:calc(70px + var(--rw))}
+  @media (max-width:900px){
+    body:not(.phone) #bottom{left:50%;right:auto;transform:translateX(-50%)}
+    body:not(.phone) #strip{width:min(92vw,600px)}
+    body:not(.phone) #homeBtn,body:not(.phone) #sndBtn{top:auto;bottom:34px}
+    body:not(.phone) #sndBtn{right:14px}
+    body:not(.phone) #homeBtn{right:58px}
+  }
+
   /* ---------------------------------------------------------------- phone
    * poc/phone-poc.js sets body.phone on a small screen. The side panels go,
    * a status rail and a thumb bar come in, and the panels are a sheet away

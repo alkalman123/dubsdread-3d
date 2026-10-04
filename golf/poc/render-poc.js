@@ -1515,12 +1515,24 @@
       let sx = 0, sz = 0;
       for (const p of ring) { sx += p[0]; sz += p[1]; }
       sx /= ring.length; sz /= ring.length;
-      const ang = R() * Math.PI * 2;
-      const px = sx + Math.cos(ang) * 4.5, pz = sz + Math.sin(ang) * 4.5;
-      if (!F.contains(px, pz, 5)) continue;
-      const y = F.height(px, pz);
-      B.cylinder(px, y, pz, 0.016, 0.016, 1.55, [0.30, 0.22, 0.13], 6);
-      B.box(px, y + 0.04, pz, 0.28, 0.025, 0.045, [0.18, 0.18, 0.20]);
+      /* A rake lies on the grass at the lip of the bunker, head by the sand
+         and handle pointing away from it — the way the greenkeepers leave it. */
+      const e = ring[(R() * ring.length) | 0];
+      let ox = e[0] - sx, oz = e[1] - sz;
+      const ol = Math.hypot(ox, oz) || 1; ox /= ol; oz /= ol;
+      const sk = (R() - 0.5) * 0.7, cs = Math.cos(sk), sn = Math.sin(sk);
+      const rx = ox * cs - oz * sn, rz = ox * sn + oz * cs;
+      const hx = e[0] + ox * 0.6, hz = e[1] + oz * 0.6;
+      const tx = hx + rx * 1.55, tz = hz + rz * 1.55;
+      if (!F.contains(hx, hz, 5) || !F.contains(tx, tz, 5)) continue;
+      const sh = F.surfaceAt(hx, hz), st = F.surfaceAt(tx, tz);
+      const off = { green: 1, fringe: 1, sand: 1, water: 1 };
+      if (off[sh] || off[st]) continue;
+      const hy = F.height(hx, hz), ty = F.height(tx, tz);
+      B.bar([hx, hy + 0.012, hz], [tx, ty + 0.012, tz], 0.028, 0.026, [0.62, 0.50, 0.30]);
+      // the head: a crossbar with its tines down in the grass
+      B.bar([hx - rz * 0.30, hy + 0.004, hz + rx * 0.30], [hx + rz * 0.30, hy + 0.004, hz - rx * 0.30],
+            0.05, 0.035, [0.16, 0.16, 0.18]);
     }
 
     const teeP = this.teePos();
