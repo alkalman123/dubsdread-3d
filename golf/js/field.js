@@ -256,6 +256,10 @@
       this.x0 = cx - size / 2; this.z0 = cz - size / 2;
       this.opts = opts || {};
       this.build();
+      // The buffers lent by the field this one replaces have been taken over.
+      // Holding on to it would chain every hole of the round to the next and
+      // none of them could ever be freed.
+      this.opts = Object.assign({}, this.opts, { recycle: null });
     }
 
     /* world <-> grid */
